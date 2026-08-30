@@ -1,0 +1,51 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+    leg_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+diff_drive_controller:
+  ros__parameters:
+    left_wheel_names: ["link_004_joint"]
+    right_wheel_names: ["link_007_joint"]
+
+    wheel_separation: 0.364
+    wheel_radius: 0.07
+
+    base_frame_id: base_link
+    odom_frame_id: odom
+
+    publish_rate: 50.0
+    enable_odom_tf: true
+
+    use_stamped_vel: true
+    cmd_vel_timeout: 0.5
+
+    position_feedback: true
+    open_loop: false
+
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+    twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+
+    linear.x.has_velocity_limits: true
+    linear.x.max_velocity: 5.0
+    linear.x.min_velocity: -5.0
+
+    angular.z.has_velocity_limits: true
+    angular.z.max_velocity: 2.0
+    angular.z.min_velocity: -2.0
+
+leg_position_controller:
+  ros__parameters:
+    joints:
+      - link_002_joint
+      - link_003_joint
+      - link_005_joint
+      - link_006_joint

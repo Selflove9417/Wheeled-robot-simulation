@@ -1,0 +1,2665 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="bbot">
+
+  
+  <material name="chassis_dark">
+    <color rgba="0.18 0.18 0.20 1.0" />
+  </material>
+  <material name="thigh_silver">
+    <color rgba="0.75 0.75 0.78 1.0" />
+  </material>
+  <material name="shank_titanium">
+    <color rgba="0.35 0.35 0.38 1.0" />
+  </material>
+  <material name="wheel_rubber">
+    <color rgba="0.08 0.08 0.08 1.0" />
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.20001846 0.13261282 0.05396677" rpy="0 0 0" />
+      <mass value="14.0" />
+      <inertia ixx="0.159013" ixy="0.000083" ixz="0.000103" iyy="0.269268" iyz="-0.009342" izz="0.233977" />
+    </inertial>
+    <visual name="part_001_visual_1">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_001_solid_001.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_001_collision_1">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_001_solid_001.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_002_visual_2">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_002_solid_002.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_002_collision_2">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_002_solid_002.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_003_visual_3">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_003_solid_003.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_003_collision_3">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_003_solid_003.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_004_visual_4">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_004_solid_004.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_004_collision_4">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_004_solid_004.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_005_visual_5">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_005_solid_005.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_005_collision_5">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_005_solid_005.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_006_visual_6">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_006_solid_006.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_006_collision_6">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_006_solid_006.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_007_visual_7">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_007_solid_007.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_007_collision_7">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_007_solid_007.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_008_visual_8">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_008_solid_008.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_008_collision_8">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_008_solid_008.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_009_visual_9">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_009_solid_009.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_009_collision_9">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_009_solid_009.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_010_visual_10">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_010_solid_010.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_010_collision_10">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_010_solid_010.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_011_visual_11">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_011_solid_011.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_011_collision_11">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_011_solid_011.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_012_visual_12">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_012_solid_012.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_012_collision_12">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_012_solid_012.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_013_visual_13">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_013_solid_013.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_013_collision_13">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_013_solid_013.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_014_visual_14">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_014_solid_014.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_014_collision_14">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_014_solid_014.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_015_visual_15">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_015_solid_015.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_015_collision_15">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_015_solid_015.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_016_visual_16">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_016_solid_016.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_016_collision_16">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_016_solid_016.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_017_visual_17">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_017_solid_017.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_017_collision_17">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_017_solid_017.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_018_visual_18">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_018_solid_018.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_018_collision_18">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_018_solid_018.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_019_visual_19">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_019_solid_019.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_019_collision_19">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_019_solid_019.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_020_visual_20">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_020_solid_020.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_020_collision_20">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_020_solid_020.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_021_visual_21">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_021_solid_021.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_021_collision_21">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_021_solid_021.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_022_visual_22">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_022_solid_022.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_022_collision_22">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_022_solid_022.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_023_visual_23">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_023_solid_023.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_023_collision_23">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_023_solid_023.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_024_visual_24">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_024_solid_024.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_024_collision_24">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_024_solid_024.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_025_visual_25">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_025_solid_025.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_025_collision_25">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_025_solid_025.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_026_visual_26">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_026_solid_026.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_026_collision_26">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_026_solid_026.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_027_visual_27">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_027_solid_027.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_027_collision_27">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_027_solid_027.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_028_visual_28">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_028_solid_028.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_028_collision_28">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_028_solid_028.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_029_visual_29">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_029_solid_029.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_029_collision_29">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_029_solid_029.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_030_visual_30">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_030_solid_030.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_030_collision_30">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_030_solid_030.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_031_visual_31">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_031_solid_031.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_031_collision_31">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_031_solid_031.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_032_visual_32">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_032_solid_032.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_032_collision_32">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_032_solid_032.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_033_visual_33">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_033_solid_033.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_033_collision_33">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_033_solid_033.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_034_visual_34">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_034_solid_034.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_034_collision_34">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_034_solid_034.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_035_visual_35">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_035_solid_035.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_035_collision_35">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_035_solid_035.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_036_visual_36">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_036_solid_036.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_036_collision_36">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_036_solid_036.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_037_visual_37">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_037_solid_037.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_037_collision_37">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_037_solid_037.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_038_visual_38">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_038_solid_038.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_038_collision_38">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_038_solid_038.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_039_visual_39">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_039_solid_039.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_039_collision_39">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_039_solid_039.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_040_visual_40">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_040_solid_040.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_040_collision_40">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_040_solid_040.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_041_visual_41">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_041_solid_041.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_041_collision_41">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_041_solid_041.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_042_visual_42">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_042_solid_042.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_042_collision_42">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_042_solid_042.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_043_visual_43">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_043_solid_043.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_043_collision_43">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_043_solid_043.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_044_visual_44">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_044_solid_044.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_044_collision_44">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_044_solid_044.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_045_visual_45">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_045_solid_045.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_045_collision_45">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_045_solid_045.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_046_visual_46">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_046_solid_046.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_046_collision_46">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_046_solid_046.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_047_visual_47">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_047_solid_047.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_047_collision_47">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_047_solid_047.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_048_visual_48">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_048_solid_048.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_048_collision_48">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_048_solid_048.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_049_visual_49">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_049_solid_049.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_049_collision_49">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_049_solid_049.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_050_visual_50">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_050_solid_050.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_050_collision_50">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_050_solid_050.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_051_visual_51">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_051_solid_051.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_051_collision_51">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_051_solid_051.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_052_visual_52">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_052_solid_052.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_052_collision_52">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_052_solid_052.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_053_visual_53">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_053_solid_053.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_053_collision_53">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_053_solid_053.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_054_visual_54">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_054_solid_054.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_054_collision_54">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_054_solid_054.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_055_visual_55">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_055_solid_055.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_055_collision_55">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_055_solid_055.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_056_visual_56">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_056_solid_056.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_056_collision_56">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_056_solid_056.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_057_visual_57">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_057_solid_057.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_057_collision_57">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_057_solid_057.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_058_visual_58">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_058_solid_058.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_058_collision_58">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_058_solid_058.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_059_visual_59">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_059_solid_059.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_059_collision_59">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_059_solid_059.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_060_visual_60">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_060_solid_060.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_060_collision_60">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_060_solid_060.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_061_visual_61">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_061_solid_061.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_061_collision_61">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_061_solid_061.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_062_visual_62">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_062_solid_062.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_062_collision_62">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_062_solid_062.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_063_visual_63">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_063_solid_063.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_063_collision_63">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_063_solid_063.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_064_visual_64">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_064_solid_064.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_064_collision_64">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_064_solid_064.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_065_visual_65">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_065_solid_065.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_065_collision_65">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_065_solid_065.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_066_visual_66">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_066_solid_066.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_066_collision_66">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_066_solid_066.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_074_visual_67">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_074_solid_074.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_074_collision_67">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_074_solid_074.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_075_visual_68">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_075_solid_075.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_075_collision_68">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_075_solid_075.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_076_visual_69">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_076_solid_076.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_076_collision_69">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_076_solid_076.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_077_visual_70">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_077_solid_077.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_077_collision_70">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_077_solid_077.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_078_visual_71">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_078_solid_078.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_078_collision_71">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_078_solid_078.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_079_visual_72">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_079_solid_079.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_079_collision_72">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_079_solid_079.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_080_visual_73">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_080_solid_080.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_080_collision_73">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_080_solid_080.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_081_visual_74">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_081_solid_081.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_081_collision_74">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_081_solid_081.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_082_visual_75">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_082_solid_082.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_082_collision_75">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_082_solid_082.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_083_visual_76">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_083_solid_083.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_083_collision_76">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_083_solid_083.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_084_visual_77">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_084_solid_084.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_084_collision_77">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_084_solid_084.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_085_visual_78">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_085_solid_085.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_085_collision_78">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_085_solid_085.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_086_visual_79">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_086_solid_086.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_086_collision_79">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_086_solid_086.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_087_visual_80">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_087_solid_087.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_087_collision_80">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_087_solid_087.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_088_visual_81">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_088_solid_088.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_088_collision_81">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_088_solid_088.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_089_visual_82">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_089_solid_089.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_089_collision_82">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_089_solid_089.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_090_visual_83">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_090_solid_090.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_090_collision_83">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_090_solid_090.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_091_visual_84">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_091_solid_091.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_091_collision_84">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_091_solid_091.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_092_visual_85">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_092_solid_092.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_092_collision_85">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_092_solid_092.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_093_visual_86">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_093_solid_093.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_093_collision_86">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_093_solid_093.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_094_visual_87">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_094_solid_094.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_094_collision_87">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_094_solid_094.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_095_visual_88">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_095_solid_095.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_095_collision_88">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_095_solid_095.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_096_visual_89">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_096_solid_096.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_096_collision_89">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_096_solid_096.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_097_visual_90">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_097_solid_097.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_097_collision_90">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_097_solid_097.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_098_visual_91">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_098_solid_098.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_098_collision_91">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_098_solid_098.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_099_visual_92">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_099_solid_099.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_099_collision_92">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_099_solid_099.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_100_visual_93">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_100_solid_100.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_100_collision_93">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_100_solid_100.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_101_visual_94">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_101_solid_101.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_101_collision_94">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_101_solid_101.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_102_visual_95">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_102_solid_102.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_102_collision_95">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_102_solid_102.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_103_visual_96">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_103_solid_103.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_103_collision_96">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_103_solid_103.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_104_visual_97">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_104_solid_104.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_104_collision_97">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_104_solid_104.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_105_visual_98">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_105_solid_105.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_105_collision_98">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_105_solid_105.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_106_visual_99">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_106_solid_106.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_106_collision_99">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_106_solid_106.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_107_visual_100">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_107_solid_107.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_107_collision_100">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_107_solid_107.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_108_visual_101">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_108_solid_108.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_108_collision_101">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_108_solid_108.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_109_visual_102">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_109_solid_109.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_109_collision_102">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_109_solid_109.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_110_visual_103">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_110_solid_110.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_110_collision_103">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_110_solid_110.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_111_visual_104">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_111_solid_111.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_111_collision_104">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_111_solid_111.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_112_visual_105">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_112_solid_112.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_112_collision_105">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_112_solid_112.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_113_visual_106">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_113_solid_113.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_113_collision_106">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_113_solid_113.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_114_visual_107">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_114_solid_114.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_114_collision_107">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_114_solid_114.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_115_visual_108">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_115_solid_115.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_115_collision_108">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_115_solid_115.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_116_visual_109">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_116_solid_116.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_116_collision_109">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_116_solid_116.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_117_visual_110">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_117_solid_117.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_117_collision_110">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_117_solid_117.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_118_visual_111">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_118_solid_118.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_118_collision_111">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_118_solid_118.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_119_visual_112">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_119_solid_119.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_119_collision_112">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_119_solid_119.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_120_visual_113">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_120_solid_120.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_120_collision_113">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_120_solid_120.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_121_visual_114">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_121_solid_121.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_121_collision_114">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_121_solid_121.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_122_visual_115">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_122_solid_122.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_122_collision_115">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_122_solid_122.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_123_visual_116">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_123_solid_123.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_123_collision_116">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_123_solid_123.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_124_visual_117">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_124_solid_124.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_124_collision_117">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_124_solid_124.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_125_visual_118">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_125_solid_125.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_125_collision_118">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_125_solid_125.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_126_visual_119">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_126_solid_126.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_126_collision_119">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_126_solid_126.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_127_visual_120">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_127_solid_127.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_127_collision_120">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_127_solid_127.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_128_visual_121">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_128_solid_128.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_128_collision_121">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_128_solid_128.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_129_visual_122">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_129_solid_129.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_129_collision_122">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_129_solid_129.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_130_visual_123">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_130_solid_130.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_130_collision_123">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_130_solid_130.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_131_visual_124">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_131_solid_131.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_131_collision_124">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_131_solid_131.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_132_visual_125">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_132_solid_132.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_132_collision_125">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_132_solid_132.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_133_visual_126">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_133_solid_133.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_133_collision_126">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_133_solid_133.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_134_visual_127">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_134_solid_134.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_134_collision_127">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_134_solid_134.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_135_visual_128">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_135_solid_135.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_135_collision_128">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_135_solid_135.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_136_visual_129">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_136_solid_136.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_136_collision_129">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_136_solid_136.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_137_visual_130">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_137_solid_137.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_137_collision_130">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_137_solid_137.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_138_visual_131">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_138_solid_138.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_138_collision_131">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_138_solid_138.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_139_visual_132">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_139_solid_139.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_139_collision_132">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_139_solid_139.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_140_visual_133">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_140_solid_140.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_140_collision_133">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_140_solid_140.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_141_visual_134">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_141_solid_141.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_141_collision_134">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_141_solid_141.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_142_visual_135">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_142_solid_142.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_142_collision_135">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_142_solid_142.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_143_visual_136">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_143_solid_143.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_143_collision_136">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_143_solid_143.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_144_visual_137">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_144_solid_144.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_144_collision_137">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_144_solid_144.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_145_visual_138">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_145_solid_145.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_145_collision_138">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_145_solid_145.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_146_visual_139">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_146_solid_146.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_146_collision_139">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_146_solid_146.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_147_visual_140">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_147_solid_147.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_147_collision_140">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_147_solid_147.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_148_visual_141">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_148_solid_148.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_148_collision_141">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_148_solid_148.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_149_visual_142">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_149_solid_149.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_149_collision_142">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_149_solid_149.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_160_visual_143">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_160_solid_160.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_160_collision_143">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_160_solid_160.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_161_visual_144">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_161_solid_161.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_161_collision_144">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_161_solid_161.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_162_visual_145">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_162_solid_162.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_162_collision_145">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_162_solid_162.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_163_visual_146">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_163_solid_163.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_163_collision_146">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_163_solid_163.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_164_visual_147">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_164_solid_164.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_164_collision_147">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_164_solid_164.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_165_visual_148">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_165_solid_165.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_165_collision_148">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_165_solid_165.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_166_visual_149">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_166_solid_166.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_166_collision_149">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_166_solid_166.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_167_visual_150">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_167_solid_167.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_167_collision_150">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_167_solid_167.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_168_visual_151">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_168_solid_168.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_168_collision_151">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_168_solid_168.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_169_visual_152">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_169_solid_169.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_169_collision_152">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_169_solid_169.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_170_visual_153">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_170_solid_170.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_170_collision_153">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_170_solid_170.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_171_visual_154">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_171_solid_171.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_171_collision_154">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_171_solid_171.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_172_visual_155">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_172_solid_172.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_172_collision_155">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_172_solid_172.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_173_visual_156">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_173_solid_173.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_173_collision_156">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_173_solid_173.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_174_visual_157">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_174_solid_174.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_174_collision_157">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_174_solid_174.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_175_visual_158">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_175_solid_175.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_175_collision_158">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_175_solid_175.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_176_visual_159">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_176_solid_176.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_176_collision_159">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_176_solid_176.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_177_visual_160">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_177_solid_177.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_177_collision_160">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_177_solid_177.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_178_visual_161">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_178_solid_178.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_178_collision_161">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_178_solid_178.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_185_visual_162">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_185_solid_185.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_185_collision_162">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_185_solid_185.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_186_visual_163">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_186_solid_186.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_186_collision_163">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_186_solid_186.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_187_visual_164">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_187_solid_187.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_187_collision_164">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_187_solid_187.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_188_visual_165">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_188_solid_188.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_188_collision_165">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_188_solid_188.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_189_visual_166">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_189_solid_189.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_189_collision_166">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_189_solid_189.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_190_visual_167">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_190_solid_190.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_190_collision_167">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_190_solid_190.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_191_visual_168">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_191_solid_191.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_191_collision_168">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_191_solid_191.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_192_visual_169">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_192_solid_192.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_192_collision_169">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_192_solid_192.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_193_visual_170">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_193_solid_193.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_193_collision_170">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_193_solid_193.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_194_visual_171">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_194_solid_194.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_194_collision_171">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_194_solid_194.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_195_visual_172">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_195_solid_195.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_195_collision_172">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_195_solid_195.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_196_visual_173">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_196_solid_196.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_196_collision_173">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_196_solid_196.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_197_visual_174">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_197_solid_197.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_197_collision_174">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_197_solid_197.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_198_visual_175">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_198_solid_198.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_198_collision_175">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_198_solid_198.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_199_visual_176">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_199_solid_199.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_199_collision_176">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_199_solid_199.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_200_visual_177">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_200_solid_200.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_200_collision_177">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_200_solid_200.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_201_visual_178">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_201_solid_201.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_201_collision_178">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_201_solid_201.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_202_visual_179">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_202_solid_202.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_202_collision_179">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_202_solid_202.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_203_visual_180">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_203_solid_203.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_203_collision_180">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_203_solid_203.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_204_visual_181">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_204_solid_204.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_204_collision_181">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_204_solid_204.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_205_visual_182">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_205_solid_205.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_205_collision_182">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_205_solid_205.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_206_visual_183">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_206_solid_206.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_206_collision_183">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_206_solid_206.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_207_visual_184">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_207_solid_207.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_207_collision_184">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_207_solid_207.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_208_visual_185">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_208_solid_208.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_208_collision_185">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_208_solid_208.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_209_visual_186">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_209_solid_209.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_209_collision_186">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_209_solid_209.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_210_visual_187">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_210_solid_210.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_210_collision_187">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_210_solid_210.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_211_visual_188">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_211_solid_211.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_211_collision_188">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_211_solid_211.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_212_visual_189">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_212_solid_212.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_212_collision_189">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_212_solid_212.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_213_visual_190">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_213_solid_213.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_213_collision_190">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_213_solid_213.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_214_visual_191">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_214_solid_214.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_214_collision_191">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_214_solid_214.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_215_visual_192">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_215_solid_215.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_215_collision_192">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_215_solid_215.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_216_visual_193">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_216_solid_216.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_216_collision_193">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_216_solid_216.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_217_visual_194">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_217_solid_217.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_217_collision_194">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_217_solid_217.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_218_visual_195">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_218_solid_218.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_218_collision_195">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_218_solid_218.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_219_visual_196">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_219_solid_219.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_219_collision_196">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_219_solid_219.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_220_visual_197">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_220_solid_220.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_220_collision_197">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_220_solid_220.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_221_visual_198">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_221_solid_221.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_221_collision_198">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_221_solid_221.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_222_visual_199">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_222_solid_222.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_222_collision_199">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_222_solid_222.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_223_visual_200">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_223_solid_223.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_223_collision_200">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_223_solid_223.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_224_visual_201">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_224_solid_224.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_224_collision_201">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_224_solid_224.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_225_visual_202">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_225_solid_225.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_225_collision_202">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_225_solid_225.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_226_visual_203">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_226_solid_226.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_226_collision_203">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_226_solid_226.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_227_visual_204">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_227_solid_227.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_227_collision_204">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_227_solid_227.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_228_visual_205">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_228_solid_228.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_228_collision_205">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_228_solid_228.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_229_visual_206">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_229_solid_229.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_229_collision_206">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_229_solid_229.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_230_visual_207">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_230_solid_230.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_230_collision_207">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_230_solid_230.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_231_visual_208">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_231_solid_231.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_231_collision_208">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_231_solid_231.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_232_visual_209">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_232_solid_232.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_232_collision_209">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_232_solid_232.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_233_visual_210">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_233_solid_233.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_233_collision_210">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_233_solid_233.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_234_visual_211">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_234_solid_234.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_234_collision_211">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_234_solid_234.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_235_visual_212">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_235_solid_235.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_235_collision_212">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_235_solid_235.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_236_visual_213">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_236_solid_236.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_236_collision_213">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_236_solid_236.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_237_visual_214">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_237_solid_237.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_237_collision_214">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_237_solid_237.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_238_visual_215">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_238_solid_238.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_238_collision_215">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_238_solid_238.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_239_visual_216">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_239_solid_239.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_239_collision_216">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_239_solid_239.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_240_visual_217">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_240_solid_240.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_240_collision_217">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_240_solid_240.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_241_visual_218">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_241_solid_241.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_241_collision_218">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_241_solid_241.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_242_visual_219">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_242_solid_242.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_242_collision_219">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_242_solid_242.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_243_visual_220">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_243_solid_243.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_243_collision_220">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_243_solid_243.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_244_visual_221">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_244_solid_244.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_244_collision_221">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_244_solid_244.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_245_visual_222">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_245_solid_245.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_245_collision_222">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_245_solid_245.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_246_visual_223">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_246_solid_246.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_246_collision_223">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_246_solid_246.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_247_visual_224">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_247_solid_247.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_247_collision_224">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_247_solid_247.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_248_visual_225">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_248_solid_248.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_248_collision_225">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_248_solid_248.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_249_visual_226">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_249_solid_249.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_249_collision_226">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_249_solid_249.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_250_visual_227">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_250_solid_250.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_250_collision_227">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_250_solid_250.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_251_visual_228">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_251_solid_251.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_251_collision_228">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_251_solid_251.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_252_visual_229">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_252_solid_252.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_252_collision_229">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_252_solid_252.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_253_visual_230">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_253_solid_253.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_253_collision_230">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_253_solid_253.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_254_visual_231">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_254_solid_254.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_254_collision_231">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_254_solid_254.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_255_visual_232">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_255_solid_255.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_255_collision_232">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_255_solid_255.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_256_visual_233">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_256_solid_256.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_256_collision_233">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_256_solid_256.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_257_visual_234">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_257_solid_257.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_257_collision_234">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_257_solid_257.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_258_visual_235">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_258_solid_258.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_258_collision_235">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_258_solid_258.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_259_visual_236">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_259_solid_259.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_259_collision_236">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_259_solid_259.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_260_visual_237">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_260_solid_260.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_260_collision_237">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_260_solid_260.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_261_visual_238">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_261_solid_261.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_261_collision_238">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_261_solid_261.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_262_visual_239">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_262_solid_262.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_262_collision_239">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_262_solid_262.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_263_visual_240">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_263_solid_263.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_263_collision_240">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_263_solid_263.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_264_visual_241">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_264_solid_264.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_264_collision_241">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_264_solid_264.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_265_visual_242">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_265_solid_265.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_265_collision_242">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_265_solid_265.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_266_visual_243">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_266_solid_266.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_266_collision_243">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_266_solid_266.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_267_visual_244">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_267_solid_267.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_267_collision_244">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_267_solid_267.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_268_visual_245">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_268_solid_268.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_268_collision_245">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_268_solid_268.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_269_visual_246">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_269_solid_269.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_269_collision_246">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_269_solid_269.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_270_visual_247">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_270_solid_270.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_270_collision_247">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_270_solid_270.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_271_visual_248">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_271_solid_271.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_271_collision_248">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_271_solid_271.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_272_visual_249">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_272_solid_272.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_272_collision_249">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_272_solid_272.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_273_visual_250">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_273_solid_273.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_273_collision_250">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_273_solid_273.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_274_visual_251">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_274_solid_274.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_274_collision_251">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_274_solid_274.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_275_visual_252">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_275_solid_275.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_275_collision_252">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_275_solid_275.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_276_visual_253">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_276_solid_276.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_276_collision_253">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_276_solid_276.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_277_visual_254">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_277_solid_277.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_277_collision_254">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_277_solid_277.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_278_visual_255">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_278_solid_278.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_278_collision_255">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_278_solid_278.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_279_visual_256">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_279_solid_279.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_279_collision_256">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_279_solid_279.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_280_visual_257">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_280_solid_280.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_280_collision_257">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_280_solid_280.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_281_visual_258">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_281_solid_281.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_281_collision_258">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_281_solid_281.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_282_visual_259">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_282_solid_282.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_282_collision_259">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_282_solid_282.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_283_visual_260">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_283_solid_283.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_283_collision_260">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_283_solid_283.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_284_visual_261">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_284_solid_284.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_284_collision_261">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_284_solid_284.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_285_visual_262">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_285_solid_285.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_285_collision_262">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_285_solid_285.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_286_visual_263">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_286_solid_286.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_286_collision_263">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_286_solid_286.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_287_visual_264">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_287_solid_287.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_287_collision_264">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_287_solid_287.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_288_visual_265">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_288_solid_288.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_288_collision_265">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_288_solid_288.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_289_visual_266">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_289_solid_289.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_289_collision_266">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_289_solid_289.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_290_visual_267">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_290_solid_290.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_290_collision_267">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_290_solid_290.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_291_visual_268">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_291_solid_291.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_291_collision_268">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_291_solid_291.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_292_visual_269">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_292_solid_292.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="chassis_dark"><color rgba="0.18 0.18 0.20 1.0" /></material></visual>
+    <collision name="part_292_collision_269">
+      <origin xyz="0 0 0" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_292_solid_292.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+  </link>
+  <link name="link_002">
+    <inertial>
+      <origin xyz="0.06107357 -0.13690699 -0.02116697" rpy="0 0 0" />
+      <mass value="1.20" />
+      <inertia ixx="0.017921" ixy="0" ixz="0" iyy="0.003296" iyz="0" izz="0.016016" />
+    </inertial>
+    <visual name="part_073_visual_1">
+      <origin xyz="-0.3032 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_073_solid_073.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="thigh_silver"><color rgba="0.75 0.75 0.78 1.0" /></material></visual>
+    <collision name="part_073_collision_1">
+      <origin xyz="-0.3032 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_073_solid_073.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_070_visual_2">
+      <origin xyz="-0.3032 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_070_solid_070.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="thigh_silver"><color rgba="0.75 0.75 0.78 1.0" /></material></visual>
+    <collision name="part_070_collision_2">
+      <origin xyz="-0.3032 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_070_solid_070.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+  </link>
+  <link name="link_003">
+    <inertial>
+      <origin xyz="-0.01104398 0.11538205 -0.08532288" rpy="0 0 0" />
+      <mass value="0.80" />
+      <inertia ixx="0.013130" ixy="-0.000004" ixz="0.000003" iyy="0.004587" iyz="0.001951" izz="0.008687" />
+    </inertial>
+    <visual name="part_159_visual_1">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_159_solid_159.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_159_collision_1">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_159_solid_159.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_157_visual_2">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_157_solid_157.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_157_collision_2">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_157_solid_157.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_067_visual_3">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_067_solid_067.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_067_collision_3">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_067_solid_067.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_180_visual_4">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_180_solid_180.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_180_collision_4">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_180_solid_180.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_155_visual_5">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_155_solid_155.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_155_collision_5">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_155_solid_155.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_152_visual_6">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_152_solid_152.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_152_collision_6">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_152_solid_152.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_151_visual_7">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_151_solid_151.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_151_collision_7">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_151_solid_151.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_181_visual_8">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_181_solid_181.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_181_collision_8">
+      <origin xyz="-0.3752 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_181_solid_181.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+  </link>
+  <link name="link_004">
+    <inertial>
+      <origin xyz="0.03825001 0 0" rpy="0 0 0" />
+      <mass value="2.00" />
+      <inertia ixx="0.006481" ixy="0" ixz="0" iyy="0.004557" iyz="0" izz="0.004535" />
+    </inertial>
+    <visual name="part_184_visual_1">
+      <origin xyz="-0.3532 -0.11362779 0.3277389" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_184_solid_184.stl" scale="0.001 0.001 0.001" /></geometry>
+      <material name="wheel_rubber"><color rgba="0.08 0.08 0.08 1.0" /></material>
+    </visual>
+    <collision name="link_004_collision">
+      <origin xyz="0.03825 0 0" rpy="0 1.57079632679 0" />
+      <geometry>
+        <cylinder radius="0.07" length="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="link_005">
+    <inertial>
+      <origin xyz="-0.06077357 -0.13690699 -0.02116697" rpy="0 0 0" />
+      <mass value="1.20" />
+      <inertia ixx="0.017921" ixy="0" ixz="0" iyy="0.003296" iyz="0" izz="0.016016" />
+    </inertial>
+    <visual name="part_072_visual_1">
+      <origin xyz="-0.0965 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_072_solid_072.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="thigh_silver"><color rgba="0.75 0.75 0.78 1.0" /></material></visual>
+    <collision name="part_072_collision_1">
+      <origin xyz="-0.0965 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_072_solid_072.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_071_visual_2">
+      <origin xyz="-0.0965 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_071_solid_071.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="thigh_silver"><color rgba="0.75 0.75 0.78 1.0" /></material></visual>
+    <collision name="part_071_collision_2">
+      <origin xyz="-0.0965 -0.125 0.07" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_071_solid_071.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+  </link>
+  <link name="link_006">
+    <inertial>
+      <origin xyz="0.00604399 0.11538205 -0.08532288" rpy="0 0 0" />
+      <mass value="0.80" />
+      <inertia ixx="0.013130" ixy="0.000004" ixz="-0.000003" iyy="0.004587" iyz="0.001951" izz="0.008687" />
+    </inertial>
+    <visual name="part_156_visual_1">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_156_solid_156.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_156_collision_1">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_156_solid_156.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_158_visual_2">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_158_solid_158.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_158_collision_2">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_158_solid_158.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_069_visual_3">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_069_solid_069.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_069_collision_3">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_069_solid_069.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_154_visual_4">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_154_solid_154.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_154_collision_4">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_154_solid_154.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_182_visual_5">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_182_solid_182.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_182_collision_5">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_182_solid_182.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_153_visual_6">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_153_solid_153.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_153_collision_6">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_153_solid_153.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_150_visual_7">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_150_solid_150.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_150_collision_7">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_150_solid_150.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+    <visual name="part_179_visual_8">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_179_solid_179.stl" scale="0.001 0.001 0.001" /></geometry>
+    <material name="shank_titanium"><color rgba="0.35 0.35 0.38 1.0" /></material></visual>
+    <collision name="part_179_collision_8">
+      <origin xyz="-0.0298 0.16848091 0.13220095" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_179_solid_179.stl" scale="0.001 0.001 0.001" /></geometry>
+    </collision>
+  </link>
+  <link name="link_007">
+    <inertial>
+      <origin xyz="0.01925 0 0" rpy="0 0 0" />
+      <mass value="2.00" />
+      <inertia ixx="0.006481" ixy="0" ixz="0" iyy="0.004557" iyz="0" izz="0.004535" />
+    </inertial>
+    <visual name="part_183_visual_1">
+      <origin xyz="0.0107 -0.11362779 0.3277389" rpy="1.57079633 0 0" />
+      <geometry><mesh filename="package://bbot_description/meshes/part_183_solid_183.stl" scale="0.001 0.001 0.001" /></geometry>
+      <material name="wheel_rubber"><color rgba="0.08 0.08 0.08 1.0" /></material>
+    </visual>
+    <collision name="link_007_collision">
+      <origin xyz="0.01925 0 0" rpy="0 1.57079632679 0" />
+      <geometry>
+        <cylinder radius="0.07" length="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="link_002_joint" type="revolute">
+    <parent link="base_link" />
+    <child link="link_002" />
+    <origin xyz="0.3032 0.125 -0.07" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
+    <dynamics damping="15.0" friction="0.5" />
+  </joint>
+  <joint name="link_003_joint" type="revolute">
+    <parent link="link_002" />
+    <child link="link_003" />
+    <origin xyz="0.072 -0.29348091 -0.06220095" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
+    <dynamics damping="15.0" friction="0.5" />
+  </joint>
+  <joint name="link_004_joint" type="continuous">
+    <parent link="link_003" />
+    <child link="link_004" />
+    <origin xyz="-0.022 0.2821087 -0.19553796" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit effort="50.0" velocity="30" />
+    <dynamics damping="0.1" friction="0.05" />
+  </joint>
+  <joint name="link_005_joint" type="revolute">
+    <parent link="base_link" />
+    <child link="link_005" />
+    <origin xyz="0.0965 0.125 -0.07" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
+    <dynamics damping="15.0" friction="0.5" />
+  </joint>
+  <joint name="link_006_joint" type="revolute">
+    <parent link="link_005" />
+    <child link="link_006" />
+    <origin xyz="-0.0667 -0.29348091 -0.06220095" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
+    <dynamics damping="15.0" friction="0.5" />
+  </joint>
+  <joint name="link_007_joint" type="continuous">
+    <parent link="link_006" />
+    <child link="link_007" />
+    <origin xyz="-0.0405 0.2821087 -0.19553796" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit effort="50.0" velocity="30" />
+    <dynamics damping="0.1" friction="0.05" />
+  </joint>
+
+  
+  <ros2_control name="bbot_hardware_interface" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+
+    <joint name="link_004_joint">
+      <command_interface name="velocity">
+        <param name="min">-80</param>
+        <param name="max">80</param>
+      </command_interface>
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+
+    <joint name="link_007_joint">
+      <command_interface name="velocity">
+        <param name="min">-80</param>
+        <param name="max">80</param>
+      </command_interface>
+      <state_interface name="position" />
+      <state_interface name="velocity" />
+    </joint>
+
+    <joint name="link_002_joint">
+      <command_interface name="position">
+        <param name="min">-1.57</param>
+        <param name="max">1.57</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-75</param>
+        <param name="max">75</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+      <state_interface name="effort" />
+    </joint>
+
+    <joint name="link_003_joint">
+      <command_interface name="position">
+        <param name="min">-1.57</param>
+        <param name="max">1.57</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-60</param>
+        <param name="max">60</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+      <state_interface name="effort" />
+    </joint>
+
+    <joint name="link_005_joint">
+      <command_interface name="position">
+        <param name="min">-1.57</param>
+        <param name="max">1.57</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-75</param>
+        <param name="max">75</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+      <state_interface name="effort" />
+    </joint>
+
+    <joint name="link_006_joint">
+      <command_interface name="position">
+        <param name="min">-1.57</param>
+        <param name="max">1.57</param>
+      </command_interface>
+      <command_interface name="effort">
+        <param name="min">-60</param>
+        <param name="max">60</param>
+      </command_interface>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity" />
+      <state_interface name="effort" />
+    </joint>
+  </ros2_control>
+
+  
+  <gazebo reference="link_004">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <gazebo reference="link_007">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  
+  <gazebo>
+    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find bbot_bringup)/config/bbot_controllers.yaml</parameters>
+    </plugin>
+    <plugin filename="ignition-gazebo-imu-system" name="ignition::gazebo::systems::Imu">
+    </plugin>
+  </gazebo>
+
+  
+  <link name="imu_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.03 0.01" />
+      </geometry>
+    <material name="imu_orange"><color rgba="0.9 0.4 0.1 1.0" /></material></visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.03 0.01" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.01" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001" />
+    </inertial>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0.20 0.1326 0.054" rpy="0 0 0" />
+  </joint>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <topic>/imu</topic>
+    </sensor>
+  </gazebo>
+
+  
+  <gazebo reference="base_link">
+    <visual>
+      <material>
+        <ambient>0.18 0.18 0.20 1.0</ambient>
+        <diffuse>0.22 0.22 0.25 1.0</diffuse>
+        <specular>0.4 0.4 0.4 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_002">
+    <visual>
+      <material>
+        <ambient>0.70 0.70 0.73 1.0</ambient>
+        <diffuse>0.75 0.75 0.78 1.0</diffuse>
+        <specular>0.8 0.8 0.8 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_005">
+    <visual>
+      <material>
+        <ambient>0.70 0.70 0.73 1.0</ambient>
+        <diffuse>0.75 0.75 0.78 1.0</diffuse>
+        <specular>0.8 0.8 0.8 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_003">
+    <visual>
+      <material>
+        <ambient>0.32 0.32 0.35 1.0</ambient>
+        <diffuse>0.38 0.38 0.42 1.0</diffuse>
+        <specular>0.6 0.6 0.6 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_006">
+    <visual>
+      <material>
+        <ambient>0.32 0.32 0.35 1.0</ambient>
+        <diffuse>0.38 0.38 0.42 1.0</diffuse>
+        <specular>0.6 0.6 0.6 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_004">
+    <visual>
+      <material>
+        <ambient>0.08 0.08 0.08 1.0</ambient>
+        <diffuse>0.12 0.12 0.12 1.0</diffuse>
+        <specular>0.2 0.2 0.2 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <gazebo reference="link_007">
+    <visual>
+      <material>
+        <ambient>0.08 0.08 0.08 1.0</ambient>
+        <diffuse>0.12 0.12 0.12 1.0</diffuse>
+        <specular>0.2 0.2 0.2 1.0</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+</robot>
