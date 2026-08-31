@@ -12,10 +12,18 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     controller_type_arg = DeclareLaunchArgument(
         'controller_type',
-        default_value='pid',
-        description='Type of balance controller to run: pid, lqr, or none'
+        default_value='jump',
+        description='Type of balance controller to run: jump, lqr, pid, or none'
     )
     controller_type = LaunchConfiguration('controller_type')
+
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value='balance_test_world.sdf',
+        description='World file to load in Gazebo (e.g. balance_test_world.sdf, empty.sdf)'
+    )
+    world = LaunchConfiguration('world')
+
     ws_dir = '/home/admin/bbot_ws_new'
     opt_ros_dir = os.path.join(ws_dir, 'opt_ros/opt/ros/iron')
     
@@ -29,7 +37,7 @@ def generate_launch_description():
         os.environ['IGN_GAZEBO_SYSTEM_PLUGIN_PATH'] = f"{opt_lib}:{os.environ.get('IGN_GAZEBO_SYSTEM_PLUGIN_PATH', '')}"
         os.environ['GZ_SIM_SYSTEM_PLUGIN_PATH'] = f"{opt_lib}:{os.environ.get('GZ_SIM_SYSTEM_PLUGIN_PATH', '')}"
 
-    resource_paths = f"{os.path.join(ws_dir, 'src')}:{os.path.join(ws_dir, 'install/bbot_description/share')}"
+    resource_paths = f"{os.path.join(ws_dir, 'src')}:{os.path.join(ws_dir, 'src/bbot_bringup/worlds')}:{os.path.join(ws_dir, 'install/bbot_description/share')}:{os.path.join(ws_dir, 'install/bbot_bringup/share/bbot_bringup/worlds')}"
     os.environ['IGN_GAZEBO_RESOURCE_PATH'] = f"{resource_paths}:{os.environ.get('IGN_GAZEBO_RESOURCE_PATH', '')}"
     os.environ['GZ_SIM_RESOURCE_PATH'] = f"{resource_paths}:{os.environ.get('GZ_SIM_RESOURCE_PATH', '')}"
 
@@ -57,7 +65,7 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            'gz_args': '-r empty.sdf'
+            'gz_args': PythonExpression(["'-r ' + '", world, "'"])
         }.items()
     )
 
@@ -132,7 +140,7 @@ def generate_launch_description():
         ]
     )
 
-    load_leg_position_controller = TimerAction(
+    load_leg_controller = TimerAction(
         period=1.8,
         actions=[
             Node(
@@ -140,6 +148,24 @@ def generate_launch_description():
                 executable='spawner',
                 arguments=[
                     'leg_position_controller',
+                    '--controller-manager',
+                    '/controller_manager'
+                ],
+                output='screen'
+            )
+        ]
+    )
+
+    # 预加载 leg_effort_controller (不激活，供跳跃推地阶段动态切换)
+    load_leg_effort_controller = TimerAction(
+        period=2.2,
+        actions=[
+            Node(
+                package='controller_manager',
+                executable='spawner',
+                arguments=[
+                    'leg_effort_controller',
+                    '--inactive',
                     '--controller-manager',
                     '/controller_manager'
                 ],
@@ -177,15 +203,32 @@ def generate_launch_description():
         ]
     )
 
+    start_jump_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression(["'", controller_type, "'.lower() == 'jump'"])
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="bbot_jump_controller",
+                output="screen"
+            )
+        ]
+    )
+
     return LaunchDescription([
         controller_type_arg,
+        world_arg,
         gazebo,
         robot_state_publisher,
         spawn_robot,
         imu_clock_bridge,
         load_joint_state_broadcaster,
         load_diff_drive_controller,
-        load_leg_position_controller,
+        load_leg_controller,
+        load_leg_effort_controller,
         start_pid_controller,
-        start_lqr_controller
+        start_lqr_controller,
+        start_jump_controller
     ])

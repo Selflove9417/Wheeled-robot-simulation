@@ -11,6 +11,9 @@ controller_manager:
     leg_position_controller:
       type: position_controllers/JointGroupPositionController
 
+    leg_effort_controller:
+      type: effort_controllers/JointGroupEffortController
+
 diff_drive_controller:
   ros__parameters:
     left_wheel_names: ["link_004_joint"]
@@ -49,3 +52,12 @@ leg_position_controller:
       - link_003_joint
       - link_005_joint
       - link_006_joint
+
+leg_effort_controller:
+  ros__parameters:
+    joints:
+      - link_002_joint
+      - link_003_joint
+      - link_005_joint
+      - link_006_joint
+

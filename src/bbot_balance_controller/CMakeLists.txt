@@ -18,6 +18,7 @@ find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(bbot_kinematics REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
 
 include_directories(include)
 
@@ -64,10 +65,28 @@ ament_target_dependencies(teleop_keyboard
   std_msgs
 )
 
+# BBot 跳跃与 LQR 自平衡复合控制器
+add_executable(bbot_jump_controller
+  src/bbot_jump_controller.cpp
+  src/keyboard_reader.cpp
+)
+ament_target_dependencies(bbot_jump_controller
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  bbot_kinematics
+  controller_manager_msgs
+)
+
 # 安装规则
 install(TARGETS
   balance_controller_keyboard
   lqr_balance_controller_yaokong
+  bbot_jump_controller
   teleop_keyboard
   DESTINATION lib/${PROJECT_NAME}
 )

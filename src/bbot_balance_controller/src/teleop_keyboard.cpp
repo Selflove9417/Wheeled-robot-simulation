@@ -18,11 +18,12 @@ public:
         pub_cmd_vel_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
         pub_height_ = this->create_publisher<std_msgs::msg::Float64>("/target_height", 10);
         pub_mode_ = this->create_publisher<std_msgs::msg::String>("/robot_mode", 10);
+        pub_jump_ = this->create_publisher<std_msgs::msg::String>("/jump_cmd", 10);
 
-        speed_ = 0.35;
+        speed_ = 0.50;
         turn_ = 0.60;
-        height_ = 0.440;
-        min_height_ = 0.30;
+        height_ = 0.500;
+        min_height_ = 0.25;
         max_height_ = 0.50;
 
         print_banner();
@@ -53,10 +54,11 @@ private:
                   << "║      Space   : 停止移动 (保持原地平衡)                     ║\n"
                   << "║                                                          ║\n"
                   << "║  [高度控制]                                              ║\n"
-                  << "║      Q       : 升高机身 (+1cm, 范围 0.30 ~ 0.445m)       ║\n"
-                  << "║      E       : 降低机身 (-1cm, 范围 0.30 ~ 0.445m)       ║\n"
+                  << "║      Q       : 升高机身 (+1cm)                            ║\n"
+                  << "║      E       : 降低机身 (-1cm)                            ║\n"
                   << "║                                                          ║\n"
                   << "║  [状态模式]                                              ║\n"
+                  << "║      J       : 触发机器人跳跃 (蓄力->推地->腾空->缓冲->LQR)  ║\n"
                   << "║      R       : 触发倒地自恢复起立                         ║\n"
                   << "║      X       : 紧急停机                                  ║\n"
                   << "║      Ctrl+C  : 退出控制终端                              ║\n"
@@ -186,6 +188,14 @@ private:
             printf("\r[指令] 降低机身 → 目标高度: %.3f m                               \n", height_);
             fflush(stdout);
         }
+        else if (c == 'j' || c == 'J')
+        {
+            std_msgs::msg::String msg;
+            msg.data = "jump";
+            pub_jump_->publish(msg);
+            printf("\r[指令] 触发机器人跳跃 (蓄力->爆发推地->腾空->触地缓冲->LQR平衡)！\n");
+            fflush(stdout);
+        }
         else if (c == 'r' || c == 'R')
         {
             publish_mode("standup");
@@ -203,6 +213,7 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_cmd_vel_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_height_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_mode_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_jump_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     struct termios orig_termios_;

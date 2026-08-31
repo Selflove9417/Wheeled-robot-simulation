@@ -2403,16 +2403,16 @@
     <child link="link_002" />
     <origin xyz="0.3032 0.125 -0.07" rpy="0 0 0" />
     <axis xyz="1 0 0" />
-    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
-    <dynamics damping="15.0" friction="0.5" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="30" />
+    <dynamics damping="0.5" friction="0.1" />
   </joint>
   <joint name="link_003_joint" type="revolute">
     <parent link="link_002" />
     <child link="link_003" />
     <origin xyz="0.072 -0.29348091 -0.06220095" rpy="0 0 0" />
     <axis xyz="1 0 0" />
-    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
-    <dynamics damping="15.0" friction="0.5" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="30" />
+    <dynamics damping="0.5" friction="0.1" />
   </joint>
   <joint name="link_004_joint" type="continuous">
     <parent link="link_003" />
@@ -2427,16 +2427,16 @@
     <child link="link_005" />
     <origin xyz="0.0965 0.125 -0.07" rpy="0 0 0" />
     <axis xyz="1 0 0" />
-    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
-    <dynamics damping="15.0" friction="0.5" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="30" />
+    <dynamics damping="0.5" friction="0.1" />
   </joint>
   <joint name="link_006_joint" type="revolute">
     <parent link="link_005" />
     <child link="link_006" />
     <origin xyz="-0.0667 -0.29348091 -0.06220095" rpy="0 0 0" />
     <axis xyz="1 0 0" />
-    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="10" />
-    <dynamics damping="15.0" friction="0.5" />
+    <limit lower="-1.57" upper="1.57" effort="150.0" velocity="30" />
+    <dynamics damping="0.5" friction="0.1" />
   </joint>
   <joint name="link_007_joint" type="continuous">
     <parent link="link_006" />
@@ -2451,6 +2451,7 @@
   <ros2_control name="bbot_hardware_interface" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      <param name="position_proportional_gain">500.0</param>
     </hardware>
 
     <joint name="link_004_joint">

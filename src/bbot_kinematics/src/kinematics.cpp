@@ -122,27 +122,27 @@ Jacobian2D Kinematics::compute_jacobian(
 {
   const auto & p = params_;
 
-  // 1. 绝对角度
-  double theta_body = body_pitch;
-  double theta_thigh = theta_body - hip_angle;
-  double theta_shank = theta_thigh - knee_angle;
+  // 1. 获取包含 CAD 偏置的真实绝对角度
+  double theta_body, theta_thigh, theta_shank;
+  compute_absolute_angles(body_pitch, hip_angle, knee_angle,
+                          theta_body, theta_thigh, theta_shank);
 
   // 2. 等效质量-长度
   double a1 = p.m1 * p.x1c + (p.m2 + p.m3) * p.l1;  // 小腿等效
   double b1 = p.m2 * p.x2c + p.m3 * p.l2;           // 大腿等效
   double c1_m = p.m3 * p.l3;                         // 机身等效
 
-  // 3. 解析雅可比矩阵 (除以 M_total)
-  // J = [∂x/∂θ_hip, ∂x/∂θ_knee, ∂x/∂θ_body]
-  //     [∂z/∂θ_hip, ∂z/∂θ_knee, ∂z/∂θ_body]
+  // 3. 解析雅可比矩阵
+  // z_com = z_wheel + (a1*cos(theta_shank) + b1*cos(theta_thigh) + c1_m*cos(theta_body)) / M
+  // ∂(theta_thigh)/∂(hip) = 1,  ∂(theta_shank)/∂(hip) = 1,  ∂(theta_shank)/∂(knee) = 1
+  // ∂(theta)/∂(body) = -1
   //
-  // 推导:
-  //   M * x_com = a1*sin(θ_shank) + b1*sin(θ_thigh) + c1_m*sin(θ_body)
-  //   M * z_com = a1*cos(θ_shank) + b1*cos(θ_thigh) + c1_m*cos(θ_body)
+  // ∂z/∂hip  = (-a1*sin(theta_shank) - b1*sin(theta_thigh)) / M
+  // ∂z/∂knee = (-a1*sin(theta_shank)) / M
+  // ∂z/∂body = (a1*sin(theta_shank) + b1*sin(theta_thigh) - c1_m*sin(theta_body)) / M
   //
-  //   ∂/∂θ_hip:  ∂θ_shank/∂θ_hip=-1, ∂θ_thigh/∂θ_hip=-1
-  //   ∂/∂θ_knee: ∂θ_shank/∂θ_knee=-1, ∂θ_thigh/∂θ_knee=0
-  //   ∂/∂θ_body: ∂θ_shank/∂θ_body=1,  ∂θ_thigh/∂θ_body=1, ∂θ_body/∂θ_body=1
+  // τ = J^T * [0, Fz]^T, 当竖直向上支撑力 Fz 时,
+  // τ_hip = Jz_hip * Fz, τ_knee = Jz_knee * Fz
 
   double sin_s = std::sin(theta_shank);
   double cos_s = std::cos(theta_shank);
@@ -155,23 +155,15 @@ Jacobian2D Kinematics::compute_jacobian(
 
   Jacobian2D J;
 
-  // ∂x_com/∂θ_hip = (-a1*cos_s - b1*cos_t) / M
-  J.Jx_hip = (-a1 * cos_s - b1 * cos_t) * inv_M;
+  // x 方向
+  J.Jx_hip = (a1 * cos_s + b1 * cos_t) * inv_M;
+  J.Jx_knee = (a1 * cos_s) * inv_M;
+  J.Jx_body = (-a1 * cos_s - b1 * cos_t + c1_m * cos_b) * inv_M;
 
-  // ∂x_com/∂θ_knee = (-a1*cos_s) / M
-  J.Jx_knee = (-a1 * cos_s) * inv_M;
-
-  // ∂x_com/∂θ_body = (a1*cos_s + b1*cos_t + c1_m*cos_b) / M
-  J.Jx_body = (a1 * cos_s + b1 * cos_t + c1_m * cos_b) * inv_M;
-
-  // ∂z_com/∂θ_hip = (a1*sin_s + b1*sin_t) / M
-  J.Jz_hip = (a1 * sin_s + b1 * sin_t) * inv_M;
-
-  // ∂z_com/∂θ_knee = (a1*sin_s) / M
-  J.Jz_knee = (a1 * sin_s) * inv_M;
-
-  // ∂z_com/∂θ_body = (-a1*sin_s - b1*sin_t - c1_m*sin_b) / M
-  J.Jz_body = (-a1 * sin_s - b1 * sin_t - c1_m * sin_b) * inv_M;
+  // z 方向 (∂z_com / ∂q)
+  J.Jz_hip = (-a1 * sin_s - b1 * sin_t) * inv_M;
+  J.Jz_knee = (-a1 * sin_s) * inv_M;
+  J.Jz_body = (a1 * sin_s + b1 * sin_t - c1_m * sin_b) * inv_M;
 
   return J;
 }

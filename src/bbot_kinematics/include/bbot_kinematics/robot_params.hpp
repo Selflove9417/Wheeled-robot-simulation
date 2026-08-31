@@ -28,7 +28,7 @@ struct RobotParams
   double M_total;      // 总质量 (在构造时计算 = 22.0kg)
 
   // ======================== 质心高度范围 ========================
-  double L_MIN = 0.30;  // 最低质心高度 (蹲下)
+  double L_MIN = 0.25;  // 最低质心高度 (蹲下)
   double L_MAX = 0.45;  // 最高质心高度 (站直)
 
   // ======================== 关节限制 ========================
@@ -38,7 +38,7 @@ struct RobotParams
   double knee_limit_upper = 1.57;
 
   // ======================== 力矩限制 ========================
-  double wheel_torque_max = 7.0;    // Nm, 轮毂电机最大扭矩
+  double wheel_torque_max = 10.0;    // Nm, 轮毂电机最大扭矩
   double hip_torque_max = 75.0;     // Nm, 髋关节电机最大扭矩
   double knee_torque_max = 60.0;    // Nm, 膝关节电机最大扭矩
 

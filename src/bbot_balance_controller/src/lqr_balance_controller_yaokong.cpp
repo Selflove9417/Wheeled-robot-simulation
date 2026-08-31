@@ -60,7 +60,7 @@ public:
         current_gain_ = gain_high_;
 
         balance_offset_ = 0.034;
-        cmd_scale_ = 0.05;
+        cmd_scale_ = 0.03;
         cmd_sign_ = 1.0;
         wheel_radius_ = 0.07;
         max_cmd_x_ = 5.0;
