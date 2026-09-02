@@ -13,13 +13,11 @@
 # ================================================================
 
 /**:
-  ros__parameters:
-    position_proportional_gain: 250.0
+
 
 controller_manager:
   ros__parameters:
     update_rate: 100
-    position_proportional_gain: 250.0
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -30,7 +28,6 @@ controller_manager:
     leg_position_controller:
       type: position_controllers/JointGroupPositionController
 
-    # 力矩控制器: 接受力矩指令控制腿部关节
     leg_effort_controller:
       type: effort_controllers/JointGroupEffortController
 

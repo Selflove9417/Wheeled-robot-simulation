@@ -36,9 +36,9 @@ def plot_jump_performance(data, output_path):
     # 1. 腿长高度与状态机流转
     ax1 = axes[0]
     ax1.plot(t, data['z'], 'b-', linewidth=2.0, label='CoM Height z [m]')
-    ax1.axhline(y=0.25, color='r', linestyle='--', alpha=0.6, label='Hard Min (0.25m)')
-    ax1.axhline(y=0.39, color='g', linestyle='--', alpha=0.6, label='Takeoff Target (0.39m)')
-    ax1.axhline(y=0.45, color='r', linestyle='--', alpha=0.6, label='Hard Max (0.45m)')
+    ax1.axhline(y=0.30, color='r', linestyle='--', alpha=0.6, label='Squat / Retract Target (0.30m)')
+    ax1.axhline(y=0.475, color='g', linestyle='--', alpha=0.6, label='Takeoff Target (0.475m)')
+    ax1.axhline(y=0.45, color='orange', linestyle='--', alpha=0.6, label='Touchdown Deployment (0.45m)')
     ax1.set_ylabel('Height [m]', fontsize=11)
     ax1.set_title('BBOT Jump Control: 5-Stage FSM Telemetry & Dynamics Response', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
@@ -64,24 +64,74 @@ def plot_jump_performance(data, output_path):
     # 2. 竖直速度与加速度
     ax2 = axes[1]
     ax2.plot(t, data['z_dot'], 'm-', linewidth=1.5, label='Vertical Velocity z_dot [m/s]')
-    ax2.axhline(y=1.80, color='g', linestyle=':', alpha=0.7, label='Target v_takeoff (1.80 m/s)')
+    ax2.axhline(y=2.30, color='g', linestyle=':', alpha=0.7, label='Target v_takeoff (2.30 m/s)')
     ax2.axhline(y=0.0, color='gray', linestyle='--', alpha=0.4)
     ax2.set_ylabel('Velocity [m/s]', fontsize=11)
     ax2.grid(True, alpha=0.3)
     ax2.legend(loc='upper right', fontsize=9)
 
     # 3. 关节力矩与物理限幅
+   # 3. 实际关节力矩
     ax3 = axes[2]
-    ax3.plot(t, data['tau_ff_knee'], 'r-', linewidth=1.8, label='Left Knee Torque (cmd/ff) [Nm]')
-    ax3.plot(t, data['tau_ff_hip'], 'b-', linewidth=1.2, label='Left Hip Torque (cmd/ff) [Nm]')
-    ax3.axhline(y=60.0, color='r', linestyle='--', alpha=0.5, label='Knee Max Limit (60 Nm)')
-    ax3.axhline(y=-60.0, color='r', linestyle='--', alpha=0.5)
-    ax3.axhline(y=75.0, color='b', linestyle='--', alpha=0.5, label='Hip Max Limit (75 Nm)')
-    ax3.axhline(y=-75.0, color='b', linestyle='--', alpha=0.5)
+
+    ax3.plot(
+        t,
+        data['knee_effort_left'],
+        'r-',
+        linewidth=1.5,
+        label='Left Knee Measured Effort [Nm]'
+    )
+
+    ax3.plot(
+        t,
+        data['hip_effort_left'],
+        'b-',
+        linewidth=1.5,
+        label='Left Hip Measured Effort [Nm]'
+    )
+
+    # Effort 模式下我们自己下发的 torque command
+    ax3.plot(
+        t,
+        data['knee_cmd_left'],
+        'r--',
+        linewidth=0.8,
+        alpha=0.5,
+        label='Left Knee Effort Command [Nm]'
+    )
+
+    ax3.plot(
+        t,
+        data['hip_cmd_left'],
+        'b--',
+        linewidth=0.8,
+        alpha=0.5,
+        label='Left Hip Effort Command [Nm]'
+    )
+
+    ax3.axhline(
+        y=60.0,
+        color='r',
+        linestyle=':',
+        alpha=0.5,
+        label='Knee Max Limit (60 Nm)'
+    )
+    ax3.axhline(y=-60.0, color='r', linestyle=':', alpha=0.5)
+
+    ax3.axhline(
+        y=75.0,
+        color='b',
+        linestyle=':',
+        alpha=0.5,
+        label='Hip Max Limit (75 Nm)'
+    )
+    ax3.axhline(y=-75.0, color='b', linestyle=':', alpha=0.5)
+
     ax3.axhline(y=0.0, color='gray', linestyle=':', alpha=0.3)
+
     ax3.set_ylabel('Torque [Nm]', fontsize=11)
     ax3.grid(True, alpha=0.3)
-    ax3.legend(loc='upper right', fontsize=9)
+    ax3.legend(loc='upper right', fontsize=8)
 
     # 4. 机身俯仰角与垂直作用力
     ax4 = axes[3]

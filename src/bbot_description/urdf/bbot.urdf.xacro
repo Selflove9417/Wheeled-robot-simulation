@@ -2451,7 +2451,7 @@
   <ros2_control name="bbot_hardware_interface" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-      <param name="position_proportional_gain">500.0</param>
+      <param name="position_proportional_gain">0.1</param>
     </hardware>
 
     <joint name="link_004_joint">
