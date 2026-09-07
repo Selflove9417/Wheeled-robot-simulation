@@ -24,8 +24,8 @@ struct RobotParams
   double m0 = 4.00;    // 双轮总质量 (2 × 2.00kg)
   double m1 = 1.60;    // 双腿小腿总质量 (2 × 0.80kg)
   double m2 = 2.40;    // 双腿大腿总质量 (2 × 1.20kg)
-  double m3 = 14.00;   // 机身质量 (body)
-  double M_total;      // 总质量 (在构造时计算 = 22.0kg)
+  double m3 = 9.50;    // 机身质量 (body)
+  double M_total;      // 总质量 (在构造时计算 = 17.5kg)
 
   // ======================== 质心高度范围 ========================
   double L_MIN = 0.25;  // 最低质心高度 (蹲下)

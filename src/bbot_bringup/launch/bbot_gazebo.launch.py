@@ -13,7 +13,7 @@ def generate_launch_description():
     controller_type_arg = DeclareLaunchArgument(
         'controller_type',
         default_value='jump',
-        description='Type of balance controller to run: jump, lqr, pid, or none'
+        description='Type of balance controller to run: jump, jump_velocity, lqr, pid, or none'
     )
     controller_type = LaunchConfiguration('controller_type')
 
@@ -23,6 +23,22 @@ def generate_launch_description():
         description='World file to load in Gazebo (e.g. balance_test_world.sdf, empty.sdf)'
     )
     world = LaunchConfiguration('world')
+
+    jump_height_arg = DeclareLaunchArgument('jump_height', default_value='0.20')
+    takeoff_velocity_arg = DeclareLaunchArgument('takeoff_velocity', default_value='0.0')
+    thrust_duration_arg = DeclareLaunchArgument('thrust_duration', default_value='0.24')
+    thrust_peak_ratio_arg = DeclareLaunchArgument('thrust_peak_ratio', default_value='2.0')
+    thrust_shape_early_arg = DeclareLaunchArgument('thrust_shape_early', default_value='0.75')
+    thrust_shape_late_arg = DeclareLaunchArgument('thrust_shape_late', default_value='0.75')
+    thrust_velocity_kp_arg = DeclareLaunchArgument('thrust_velocity_kp', default_value='8.0')
+    thrust_timeout_arg = DeclareLaunchArgument('thrust_timeout', default_value='0.60')
+    sim_relax_thrust_limits_arg = DeclareLaunchArgument(
+        'sim_relax_thrust_limits', default_value='true',
+        description='Use existing 150 Nm URDF limit during velocity-jump THRUST only')
+    air_wheel_sign_arg = DeclareLaunchArgument('air_wheel_sign', default_value='1.0')
+    position_proportional_gain_arg = DeclareLaunchArgument('position_proportional_gain', default_value='0.3')
+    body_mass_arg = DeclareLaunchArgument('body_mass', default_value='9.5')
+    enable_position_handoff_arg = DeclareLaunchArgument('enable_position_handoff', default_value='true')
 
     ws_dir = '/home/admin/bbot_ws_new'
     opt_ros_dir = os.path.join(ws_dir, 'opt_ros/opt/ros/iron')
@@ -51,7 +67,11 @@ def generate_launch_description():
     ])
 
     robot_description = ParameterValue(
-        Command(['xacro ', urdf_file]),
+        Command([
+            'xacro ', urdf_file,
+            ' position_proportional_gain:=', LaunchConfiguration('position_proportional_gain'),
+            ' body_mass:=', LaunchConfiguration('body_mass')
+        ]),
         value_type=str
     )
 
@@ -102,7 +122,8 @@ def generate_launch_description():
         executable='parameter_bridge',
         arguments=[
             '/imu@sensor_msgs/msg/Imu[ignition.msgs.IMU',
-            '/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock'
+            '/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock',
+            '/model/bbot/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry'
         ],
         output='screen'
     )
@@ -217,9 +238,53 @@ def generate_launch_description():
         ]
     )
 
+    start_velocity_jump_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression(["'", controller_type, "'.lower() == 'jump_velocity'"])
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="bbot_velocity_jump_controller",
+                output="screen",
+                parameters=[{
+                    'use_sim_time': True,
+                    'jump_height': LaunchConfiguration('jump_height'),
+                    'takeoff_velocity': LaunchConfiguration('takeoff_velocity'),
+                    'thrust_duration': LaunchConfiguration('thrust_duration'),
+                    'thrust_peak_ratio': LaunchConfiguration('thrust_peak_ratio'),
+                    'thrust_shape_early': LaunchConfiguration('thrust_shape_early'),
+                    'thrust_shape_late': LaunchConfiguration('thrust_shape_late'),
+                    'thrust_velocity_kp': LaunchConfiguration('thrust_velocity_kp'),
+                    'thrust_timeout': LaunchConfiguration('thrust_timeout'),
+                    'sim_relax_thrust_limits': ParameterValue(
+                        LaunchConfiguration('sim_relax_thrust_limits'), value_type=bool),
+                    'air_wheel_sign': LaunchConfiguration('air_wheel_sign'),
+                    'position_proportional_gain': LaunchConfiguration('position_proportional_gain'),
+                    'body_mass': LaunchConfiguration('body_mass'),
+                    'enable_position_handoff': LaunchConfiguration('enable_position_handoff')
+                }]
+            )
+        ]
+    )
+
     return LaunchDescription([
         controller_type_arg,
         world_arg,
+        jump_height_arg,
+        takeoff_velocity_arg,
+        thrust_duration_arg,
+        thrust_peak_ratio_arg,
+        thrust_shape_early_arg,
+        thrust_shape_late_arg,
+        thrust_velocity_kp_arg,
+        thrust_timeout_arg,
+        sim_relax_thrust_limits_arg,
+        air_wheel_sign_arg,
+        position_proportional_gain_arg,
+        body_mass_arg,
+        enable_position_handoff_arg,
         gazebo,
         robot_state_publisher,
         spawn_robot,
@@ -230,5 +295,6 @@ def generate_launch_description():
         load_leg_effort_controller,
         start_pid_controller,
         start_lqr_controller,
-        start_jump_controller
+        start_jump_controller,
+        start_velocity_jump_controller
     ])

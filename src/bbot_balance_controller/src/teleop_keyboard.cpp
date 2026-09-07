@@ -23,7 +23,7 @@ public:
         speed_ = 0.50;
         turn_ = 0.60;
         height_ = 0.500;
-        min_height_ = 0.25;
+        min_height_ = 0.30;
         max_height_ = 0.50;
 
         print_banner();

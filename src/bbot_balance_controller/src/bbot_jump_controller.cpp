@@ -152,7 +152,7 @@ public:
         current_gain_ = gain_high_;
 
         balance_offset_ = 0.034;
-        cmd_scale_ = 0.030;
+        cmd_scale_ = 0.037;
         wheel_radius_ = 0.07;
         max_cmd_x_ = 10.0;
 
@@ -170,21 +170,21 @@ public:
 
         // ── 跳跃核心参数 ──
         L_SQUAT_ = 0.30;          // 下蹲蓄力高度 [m]
-        T_SQUAT_ = 0.45;          // 下蹲过渡时间 [s]
+        T_SQUAT_ = 0.50;          // 下蹲过渡时间 [s]
 
-        T_THRUST_ = 0.160;        // 推地规划时间 [s]
-        H_TAKEOFF_ = 0.475;       // 离地目标高度 [m]
-        V_TAKEOFF_ = 2.30;        // 离地初速度 [m/s]
-        K_BODY_P_THRUST_ = 20.0;  // 推地姿态刚度 [Nm/rad]
-        K_BODY_D_THRUST_ = 3.0;   // 推地姿态阻尼 [Nm*s/rad]
+        T_THRUST_ = 0.2;        // 推地规划时间 [s]
+        H_TAKEOFF_ = 0.50;       // 离地目标高度 [m]
+        V_TAKEOFF_ = 3.50;        // 离地初速度 [m/s]
+        K_BODY_P_THRUST_ = 30.0;  // 推地姿态刚度 [Nm/rad]
+        K_BODY_D_THRUST_ = 2.0;   // 推地姿态阻尼 [Nm*s/rad]
         TAU_HIP_BODY_MAX_ = 18.0; // 髋关节姿态补偿力矩限幅 [Nm]
         K_BODY_P_BUFFER_ = 12.0;  // 缓冲阶段姿态刚度 [Nm/rad]
         K_BODY_D_BUFFER_ = 1.0;   // 缓冲阶段姿态阻尼 [Nm*s/rad]
 
-        L_RETRACT_ = L_MIN_;      // 腾空收腿目标高度 [m]
-        L_TOUCH_ = 0.450;         // 腾空展腿着陆高度 [m]
-        T_FLIGHT_TUCK_ = 0.12;    // 收腿时间 [s]
-        T_FLIGHT_APEX_ = 0.25;    // 展腿起始时刻 [s]
+        L_RETRACT_ = 0.30;      // 腾空收腿目标高度 [m]
+        L_TOUCH_ = 0.370;         // 腾空展腿着陆高度 [m]
+        T_FLIGHT_TUCK_ = 0.10;    // 收腿时间 [s]
+        T_FLIGHT_APEX_ = 0.60;    // 展腿起始时刻 [s]
         T_FLIGHT_EXTEND_ = 0.12;  // 展腿时间 [s]
         T_FLIGHT_TIMEOUT_ = 0.60; // 腾空超时保护阈值 [s]
         PITCH_FLIGHT_GUARD_ = 0.45; // 腾空姿态保护阈值 [rad]

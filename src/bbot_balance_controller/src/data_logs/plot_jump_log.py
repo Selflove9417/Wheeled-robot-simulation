@@ -2,21 +2,28 @@
 """
 plot_jump_log.py
 ================
-读取仿真生成的 jump_control_log.csv，绘制跳跃全流程 5 阶段状态机、高度、速度、力矩及冲击力响应曲线。
-
-用法:
-  python3 plot_jump_log.py                          # 默认读取 jump_control_log.csv
-  python3 plot_jump_log.py my_jump_log.csv          # 指定文件
-  python3 plot_jump_log.py --output jump_plot.png   # 指定输出
+读取仿真生成的 jump_control_log.csv，绘制跳跃全流程动力学与状态响应曲线。
+包含：
+  1. 质心高度与轮子离地高度
+  2. 垂直运动速度与离地目标速度
+  3. 关节电机实际力矩与指令力矩响应
+  4. 机身俯仰角 (Pitch) 动态平衡响应
 """
 
+import os
+import sys
+import argparse
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import argparse
-import os
-import sys
+
+# 配置中文字体与负号显示
+plt.rcParams['font.sans-serif'] = [
+    'Noto Sans CJK JP', 'Noto Sans CJK SC', 'Droid Sans Fallback',
+    'WenQuanYi Micro Hei', 'SimHei', 'DejaVu Sans'
+]
+plt.rcParams['axes.unicode_minus'] = False
 
 
 def load_csv(filepath):
@@ -28,130 +35,219 @@ def load_csv(filepath):
     return data
 
 
-def plot_jump_performance(data, output_path):
+def field_or_default(data, field, default):
+    """Read an optional telemetry field without breaking legacy logs."""
+    names = data.dtype.names or ()
+    return data[field] if field in names else default
+
+
+def compute_jump_metrics(data):
     t = data['timestamp'] - data['timestamp'][0]
+    states = data['state'].astype(int)
+    z_leg = data['z']
+    z_dot = data['z_dot']
 
-    fig, axes = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
+    # 新日志直接使用 Gazebo 世界坐标。旧日志才回退到腿长弹道估计；
+    # 腿长变化不能当作质心高度变化，否则原地伸腿也会被画成“跳起”。
+    if 'gazebo_world_z' in (data.dtype.names or ()):
+        z_com = data['gazebo_world_z']
+        wheel_radius = 0.07
+        wheel_clearance = np.maximum(0.0, z_com - z_leg - wheel_radius)
+        return t, z_com, wheel_clearance
 
-    # 1. 腿长高度与状态机流转
+    # 计算质心高度与轮子离地高度
+    z_com = np.copy(z_leg)
+    wheel_clearance = np.zeros_like(z_leg)
+
+    flight_indices = np.where(states == 3)[0]  # 3: FLIGHT 腾空相
+    if len(flight_indices) > 0:
+        takeoff_idx = flight_indices[0]
+        t_takeoff = t[takeoff_idx]
+        z0 = z_leg[takeoff_idx]
+        v0 = z_dot[takeoff_idx]
+
+        for idx in flight_indices:
+            t_air = t[idx] - t_takeoff
+            # 腾空弹道自由落体方程: z(t) = z0 + v0*t - 0.5*g*t^2
+            z_ballistic = z0 + v0 * t_air - 0.5 * 9.81 * (t_air ** 2)
+            z_com[idx] = max(z_ballistic, z_leg[idx])
+            wheel_clearance[idx] = max(0.0, z_com[idx] - z_leg[idx])
+
+    return t, z_com, wheel_clearance
+
+
+def add_phase_spans(axes, t, states, flight_subphase, thrust_blocked):
+    """Add background spans across all axes for jump phases and subphases."""
+    if len(t) < 2:
+        return
+
+    added_labels = set()
+
+    def get_phase_info(state, subphase, blocked):
+        if state == 1:
+            return ('#FFF3E0', 0.45, '下蹲蓄力 (SQUAT)')
+        elif state == 2:
+            if blocked > 0.5:
+                return ('#FFCDD2', 0.55, '推地姿态阻塞 (THRUST BLOCKED)')
+            else:
+                return ('#FFF9C4', 0.50, '爆发推地 (THRUST)')
+        elif state == 3:
+            if subphase == 0:
+                return ('#E1BEE7', 0.55, '腾空-姿态刹车 (ARREST)')
+            elif subphase == 1:
+                return ('#BBDEFB', 0.55, '腾空-平滑收腿 (TUCK)')
+            elif subphase == 2:
+                return ('#B2EBF2', 0.55, '腾空-顶点展腿 (EXTEND)')
+            elif subphase == 3:
+                return ('#FFE0B2', 0.65, '腾空-保护展腿 (PROTECTIVE)')
+            else:
+                return ('#E1BEE7', 0.40, '腾空相 (FLIGHT)')
+        elif state == 4:
+            return ('#ECEFF1', 0.55, '触地缓冲 (BUFFER)')
+        elif state == 5:
+            return ('#E8F5E9', 0.55, '自平衡恢复 (RECOVERY)')
+        return (None, 0.0, None)
+
+    n = len(t)
+    i = 0
+    while i < n:
+        color, alpha, label = get_phase_info(states[i], flight_subphase[i], thrust_blocked[i])
+        if color is None:
+            i += 1
+            continue
+        start_idx = i
+        while (i + 1 < n and
+               get_phase_info(states[i+1], flight_subphase[i+1], thrust_blocked[i+1]) == (color, alpha, label)):
+            i += 1
+        t_start = t[start_idx]
+        t_end = t[i]
+        lbl = label if label not in added_labels else None
+        if lbl:
+            added_labels.add(lbl)
+        for ax in axes:
+            ax.axvspan(t_start, t_end, color=color, alpha=alpha, label=lbl, zorder=0)
+        i += 1
+
+
+def plot_jump_performance(data, output_path):
+    t, z_com, wheel_clearance = compute_jump_metrics(data)
+    states = data['state'].astype(int)
+    pitch = data['pitch']
+    pitch_rate = field_or_default(data, 'pitch_rate', np.zeros_like(t))
+    flight_subphase = field_or_default(data, 'flight_subphase', np.full_like(t, -1))
+    thrust_blocked = field_or_default(data, 'thrust_attitude_blocked', np.zeros_like(t))
+    left_wvel = field_or_default(data, 'left_wheel_vel', np.zeros_like(t))
+    right_wvel = field_or_default(data, 'right_wheel_vel', np.zeros_like(t))
+    cmd_x = field_or_default(data, 'cmd_x', np.zeros_like(t))
+
+    fig, axes = plt.subplots(5, 1, figsize=(14, 15.0), sharex=True)
+
+    # ── 1. 质心高度与轮子离地高度 ──
     ax1 = axes[0]
-    ax1.plot(t, data['z'], 'b-', linewidth=2.0, label='CoM Height z [m]')
-    ax1.axhline(y=0.30, color='r', linestyle='--', alpha=0.6, label='Squat / Retract Target (0.30m)')
-    ax1.axhline(y=0.475, color='g', linestyle='--', alpha=0.6, label='Takeoff Target (0.475m)')
-    ax1.axhline(y=0.45, color='orange', linestyle='--', alpha=0.6, label='Touchdown Deployment (0.45m)')
-    ax1.set_ylabel('Height [m]', fontsize=11)
-    ax1.set_title('BBOT Jump Control: 5-Stage FSM Telemetry & Dynamics Response', fontsize=14, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper right', fontsize=9)
+    ax1.plot(t, z_com, color='#1565C0', linewidth=2.0, label='质心高度 [m]')
+    ax1.plot(t, wheel_clearance, color='#FF6F00', linewidth=2.2, label='轮子离地高度 [m]')
+    ax1.set_ylabel('高度 [m]', fontsize=11, fontweight='bold')
+    ax1.set_title('BBot 双轮腿机器人跳跃控制动力学响应', fontsize=14, fontweight='bold', pad=12)
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    ax1.legend(loc='upper right', fontsize=9.0, framealpha=0.92)
 
-    # 标注状态流转背景色
-    states = data['state']
-    state_changes = np.where(np.diff(states) != 0)[0]
-    state_names = ["BALANCE", "SQUAT", "THRUST", "FLIGHT", "BUFFER", "RECOVERY", "STANDUP", "EMERGENCY"]
-    colors = ['#E8F5E9', '#FFF3E0', '#FFEBEE', '#E3F2FD', '#EDE7F6', '#F1F8E9', '#ECEFF1', '#FFCDD2']
-
-    start_idx = 0
-    for change_idx in list(state_changes) + [len(data) - 1]:
-        s = int(states[start_idx])
-        if s < len(colors):
-            ax1.axvspan(t[start_idx], t[change_idx], color=colors[s], alpha=0.4)
-            mid_t = 0.5 * (t[start_idx] + t[change_idx])
-            s_name = state_names[s] if s < len(state_names) else f"S{s}"
-            ax1.text(mid_t, ax1.get_ylim()[0] + 0.02, s_name,
-                     ha='center', va='bottom', fontsize=9, fontweight='bold', alpha=0.7)
-        start_idx = change_idx + 1
-
-    # 2. 竖直速度与加速度
+    # ── 2. 垂直运动速度 ──
     ax2 = axes[1]
-    ax2.plot(t, data['z_dot'], 'm-', linewidth=1.5, label='Vertical Velocity z_dot [m/s]')
-    ax2.axhline(y=2.30, color='g', linestyle=':', alpha=0.7, label='Target v_takeoff (2.30 m/s)')
+    world_z_dot = field_or_default(data, 'gazebo_world_z_dot', data['z_dot'])
+    velocity_label = ('世界竖直速度 [m/s]' if 'gazebo_world_z_dot' in (data.dtype.names or ())
+                      else '腿长变化率 z_dot [m/s]')
+    ax2.plot(t, world_z_dot, color='#8E24AA', linewidth=1.6, label=velocity_label)
+    target_velocity = float(np.nanmax(field_or_default(data, 'target_takeoff_velocity', 1.98091)))
+    ax2.axhline(y=target_velocity, color='#2E7D32', linestyle=':', linewidth=1.6,
+                alpha=0.85, label='目标起跳离地速度 (%.2f m/s)' % target_velocity)
     ax2.axhline(y=0.0, color='gray', linestyle='--', alpha=0.4)
-    ax2.set_ylabel('Velocity [m/s]', fontsize=11)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper right', fontsize=9)
+    airborne_confidence = field_or_default(data, 'airborne_confidence', np.zeros_like(t))
+    airborne_flag = field_or_default(data, 'wheels_airborne', np.zeros_like(t))
+    ax2b = ax2.twinx()
+    ax2b.step(t, airborne_confidence, where='post', color='#00897B', alpha=0.55,
+              linewidth=1.2, label='离地连续确认计数')
+    ax2b.step(t, airborne_flag * 3.0, where='post', color='#F57C00', alpha=0.75,
+              linewidth=1.0, linestyle='--', label='离地标志')
+    ax2b.set_ylim(-0.2, 20.5)
+    ax2b.set_ylabel('离地确认计数', fontsize=9, color='#00897B')
+    ax2b.tick_params(axis='y', labelcolor='#00897B')
+    ax2.set_ylabel('垂直速度 [m/s]', fontsize=11, fontweight='bold')
+    ax2.grid(True, alpha=0.3, linestyle='--')
+    lines1, labels1 = ax2.get_legend_handles_labels()
+    lines2, labels2 = ax2b.get_legend_handles_labels()
+    ax2.legend(lines1 + lines2, labels1 + labels2,
+               loc='upper right', fontsize=8.5, framealpha=0.92)
 
-    # 3. 关节力矩与物理限幅
-   # 3. 实际关节力矩
+    # ── 3. 关节电机力矩 ──
     ax3 = axes[2]
+    ax3.plot(t, data['knee_cmd_left'], color='#D32F2F', linewidth=1.5, label='左膝关节力矩 [N·m]')
+    ax3.plot(t, data['hip_cmd_left'], color='#1976D2', linewidth=1.5, label='左髋关节力矩 [N·m]')
+    ax3.axhline(y=0.0, color='gray', linestyle='--', alpha=0.4)
+    ax3.set_ylabel('关节力矩 [N·m]', fontsize=11, fontweight='bold')
+    ax3.grid(True, alpha=0.3, linestyle='--')
+    ax3.legend(loc='upper right', fontsize=9.0, framealpha=0.92)
 
-    ax3.plot(
-        t,
-        data['knee_effort_left'],
-        'r-',
-        linewidth=1.5,
-        label='Left Knee Measured Effort [Nm]'
-    )
-
-    ax3.plot(
-        t,
-        data['hip_effort_left'],
-        'b-',
-        linewidth=1.5,
-        label='Left Hip Measured Effort [Nm]'
-    )
-
-    # Effort 模式下我们自己下发的 torque command
-    ax3.plot(
-        t,
-        data['knee_cmd_left'],
-        'r--',
-        linewidth=0.8,
-        alpha=0.5,
-        label='Left Knee Effort Command [Nm]'
-    )
-
-    ax3.plot(
-        t,
-        data['hip_cmd_left'],
-        'b--',
-        linewidth=0.8,
-        alpha=0.5,
-        label='Left Hip Effort Command [Nm]'
-    )
-
-    ax3.axhline(
-        y=60.0,
-        color='r',
-        linestyle=':',
-        alpha=0.5,
-        label='Knee Max Limit (60 Nm)'
-    )
-    ax3.axhline(y=-60.0, color='r', linestyle=':', alpha=0.5)
-
-    ax3.axhline(
-        y=75.0,
-        color='b',
-        linestyle=':',
-        alpha=0.5,
-        label='Hip Max Limit (75 Nm)'
-    )
-    ax3.axhline(y=-75.0, color='b', linestyle=':', alpha=0.5)
-
-    ax3.axhline(y=0.0, color='gray', linestyle=':', alpha=0.3)
-
-    ax3.set_ylabel('Torque [Nm]', fontsize=11)
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(loc='upper right', fontsize=8)
-
-    # 4. 机身俯仰角与垂直作用力
+    # ── 4. 机身俯仰角与俯仰角速度动态 ──
     ax4 = axes[3]
-    ax4.plot(t, np.degrees(data['pitch']), 'k-', linewidth=1.5, label='Pitch Angle [deg]')
-    ax4.axhline(y=0.0, color='gray', linestyle='--', alpha=0.5)
-    ax4.set_xlabel('Time [s]', fontsize=12)
-    ax4.set_ylabel('Pitch [deg]', fontsize=11)
-    ax4.grid(True, alpha=0.3)
-    ax4.legend(loc='upper right', fontsize=9)
+    line_pitch = ax4.plot(t, np.degrees(pitch), color='#212121', linewidth=1.6, label='机身俯仰角 Pitch [deg]')
+    ax4.axhline(y=0.0, color='gray', linestyle='--', alpha=0.5, label='水平基准 (0 deg)')
+    ax4.set_ylabel('俯仰角 [deg]', fontsize=11, fontweight='bold')
+    ax4.grid(True, alpha=0.3, linestyle='--')
+
+    ax4b = ax4.twinx()
+    line_gyro = ax4b.plot(t, np.degrees(pitch_rate), color='#8E24AA', linewidth=1.2, linestyle='-', alpha=0.85,
+                          label='俯仰角速度 Pitch Rate [deg/s]')
+    ax4b.set_ylabel('角速度 [deg/s]', fontsize=9.5, color='#8E24AA')
+    ax4b.tick_params(axis='y', labelcolor='#8E24AA')
+
+    # 标记收腿开始时刻
+    tuck_indices = np.where((states == 3) & (flight_subphase == 1))[0]
+    line_tuck = []
+    if len(tuck_indices) > 0:
+        t_tuck_start = t[tuck_indices[0]]
+        vl = ax4.axvline(x=t_tuck_start, color='#E91E63', linestyle='-.', linewidth=1.8,
+                         label=f'收腿开始时刻 ({t_tuck_start:.2f}s)')
+        line_tuck.append(vl)
+
+    lines4_a, labels4_a = ax4.get_legend_handles_labels()
+    lines4_b, labels4_b = ax4b.get_legend_handles_labels()
+    ax4.legend(lines4_a + lines4_b, labels4_a + labels4_b,
+               loc='upper right', fontsize=8.5, framealpha=0.92)
+
+    # ── 5. 轮速指令与实际左右轮响应 ──
+    ax5 = axes[4]
+    ax5.plot(t, cmd_x, color='#1565C0', linewidth=1.8, label='车轮线速度指令 cmd_x [m/s]')
+    wheel_radius = 0.07
+    ax5.plot(t, -wheel_radius * left_wvel, color='#D32F2F', linewidth=1.3, linestyle='--',
+             label='左轮实际线速度 [m/s]')
+    ax5.plot(t, -wheel_radius * right_wvel, color='#388E3C', linewidth=1.3, linestyle=':',
+             label='右轮实际线速度 [m/s]')
+    air_cmd = field_or_default(data, 'air_wheel_cmd_raw', None)
+    if air_cmd is not None and np.any(np.abs(air_cmd) > 1e-4):
+        ax5.plot(t, air_cmd, color='#FF6F00', linewidth=1.1, alpha=0.75,
+                 label='空中轮速修正原始指令 [m/s]')
+    ax5.axhline(y=0.0, color='gray', linestyle='--', alpha=0.4)
+    ax5.set_xlabel('时间 [s]', fontsize=12, fontweight='bold')
+    ax5.set_ylabel('轮速 [m/s]', fontsize=11, fontweight='bold')
+    ax5.grid(True, alpha=0.3, linestyle='--')
+    ax5.legend(loc='upper right', fontsize=8.5, framealpha=0.92)
+
+    # 叠加推地与腾空子阶段背景色块标注
+    add_phase_spans(axes, t, states, flight_subphase, thrust_blocked)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
-    print(f"[INFO] 分析图像已成功保存至: {output_path}")
+    plt.savefig(output_path, dpi=180, bbox_inches='tight')
+    print(f"[INFO] 分析图像已成功生成并保存至: {output_path}")
 
 
 def main():
     data_dir = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser(description='BBot 跳跃全流程响应分析')
+    velocity_log = os.path.join(data_dir, 'jump_velocity_control_log.csv')
+    legacy_log = os.path.join(data_dir, 'jump_control_log.csv')
+    default_log = velocity_log if os.path.exists(velocity_log) else legacy_log
     parser.add_argument('csvfile', nargs='?',
-                        default=os.path.join(data_dir, 'jump_control_log.csv'),
+                        default=default_log,
                         help='跳跃 CSV 日志文件')
     parser.add_argument('--output', '-o', type=str,
                         default=os.path.join(data_dir, 'jump_performance_analysis.png'),

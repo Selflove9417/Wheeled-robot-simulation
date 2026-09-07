@@ -1,0 +1,2 @@
+jump_id,jump_height_target,target_takeoff_velocity,takeoff_velocity,apex_height_delta,apex_world_z_delta,max_abs_pitch,takeoff_pitch_rate,landing_pitch_err,touchdown_drift_x,max_abs_hip_torque,max_abs_knee_torque,mechanical_work,recovery_completed,failed,reason
+1,0.2,1.98091,0.603421,0.371206,0.427705,0.599507,-0.429538,0.476107,-0.0880919,35.5874,67.2305,64.2699,1,0,

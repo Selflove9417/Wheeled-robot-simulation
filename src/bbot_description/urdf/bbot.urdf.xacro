@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="bbot">
+<robot name="bbot" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   
+  <xacro:arg name="position_proportional_gain" default="0.3" />
+  <xacro:arg name="body_mass" default="9.5" />
+  <xacro:property name="body_mass_value" value="$(arg body_mass)" />
+  <xacro:property name="body_inertia_scale" value="${body_mass_value / 14.0}" />
+
   <material name="chassis_dark">
     <color rgba="0.18 0.18 0.20 1.0" />
   </material>
@@ -18,8 +23,13 @@
   <link name="base_link">
     <inertial>
       <origin xyz="0.20001846 0.13261282 0.05396677" rpy="0 0 0" />
-      <mass value="14.0" />
-      <inertia ixx="0.159013" ixy="0.000083" ixz="0.000103" iyy="0.269268" iyz="-0.009342" izz="0.233977" />
+      <mass value="${body_mass_value}" />
+      <inertia ixx="${0.159013 * body_inertia_scale}"
+               ixy="${0.000083 * body_inertia_scale}"
+               ixz="${0.000103 * body_inertia_scale}"
+               iyy="${0.269268 * body_inertia_scale}"
+               iyz="${-0.009342 * body_inertia_scale}"
+               izz="${0.233977 * body_inertia_scale}" />
     </inertial>
     <visual name="part_001_visual_1">
       <origin xyz="0 0 0" rpy="1.57079633 0 0" />
@@ -2451,7 +2461,7 @@
   <ros2_control name="bbot_hardware_interface" type="system">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-      <param name="position_proportional_gain">0.1</param>
+      <param name="position_proportional_gain">$(arg position_proportional_gain)</param>
     </hardware>
 
     <joint name="link_004_joint">
@@ -2554,6 +2564,12 @@
       <parameters>$(find bbot_bringup)/config/bbot_controllers.yaml</parameters>
     </plugin>
     <plugin filename="ignition-gazebo-imu-system" name="ignition::gazebo::systems::Imu">
+    </plugin>
+    <plugin filename="ignition-gazebo-odometry-publisher-system" name="ignition::gazebo::systems::OdometryPublisher">
+      <odom_topic>/model/bbot/odometry</odom_topic>
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <dimensions>3</dimensions>
     </plugin>
   </gazebo>
 

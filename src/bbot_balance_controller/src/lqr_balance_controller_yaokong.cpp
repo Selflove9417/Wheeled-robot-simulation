@@ -55,12 +55,15 @@ public:
     LQRBalanceController()
         : Node("lqr_balance_controller")
     {
-        gain_low_ = {-6.1624, -46.8436, -197.6985, -46.8109};
-        gain_high_ = {-6.3650, -48.5719, -229.4004, -58.6391};
+        gain_low_ = {-6.1624, -45.8436, -179.6985, -42.8109};
+        gain_high_ = {-6.3650, -49.5719, -233.4004, -62.6391};
         current_gain_ = gain_high_;
 
-        balance_offset_ = 0.034;
-        cmd_scale_ = 0.03;
+        balance_offset_ = 0.0;
+        balance_offset_min = 4.5*3.14/180.0;
+        balance_offset_max = 3.0*3.14/180.0;
+
+        cmd_scale_ = 0.04;
         cmd_sign_ = 1.0;
         wheel_radius_ = 0.07;
         max_cmd_x_ = 5.0;
@@ -406,6 +409,8 @@ private:
             return;
         }
 
+        balance_offset_ = lerp(balance_offset_min,balance_offset_max,compute_height_ratio());
+
         double pitch_err = pitch_ - balance_offset_;
 
         // 状态机：自适应起立恢复与 LQR 平衡切换
@@ -716,6 +721,8 @@ private:
     LQRGain current_gain_;
 
     double balance_offset_;
+    double balance_offset_min;
+    double balance_offset_max;
     double cmd_scale_;
     double cmd_sign_;
     double wheel_radius_;
