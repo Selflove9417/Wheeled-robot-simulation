@@ -33,6 +33,8 @@ ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=pid
 #### 方式 C：启动 LQR 自平衡控制器
 ```bash
 ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=lqr
+
+ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=gs_lqr
 ```
 
 #### 方式 D：切换回纯空场景（empty.sdf）
