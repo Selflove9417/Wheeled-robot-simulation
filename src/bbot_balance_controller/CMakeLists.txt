@@ -56,6 +56,23 @@ ament_target_dependencies(lqr_balance_controller_yaokong
   bbot_kinematics
 )
 
+# 论文版：基于轮毂力矩输入的 Gain-Scheduled LQR
+add_executable(lqr_gain_scheduled_controller
+  src/lqr_gain_scheduled_controller.cpp
+  src/keyboard_reader.cpp
+)
+
+ament_target_dependencies(lqr_gain_scheduled_controller
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  bbot_kinematics
+)
+
 # C++ 键盘控制终端 (无 Python / Conda 冲突)
 add_executable(teleop_keyboard
   src/teleop_keyboard.cpp
@@ -105,6 +122,7 @@ ament_target_dependencies(bbot_velocity_jump_controller
 install(TARGETS
   balance_controller_keyboard
   lqr_balance_controller_yaokong
+  lqr_gain_scheduled_controller
   bbot_jump_controller
   bbot_velocity_jump_controller
   teleop_keyboard
