@@ -27,9 +27,8 @@ struct RobotParams
   double m3 = 9.50;    // 机身质量 (body)
   double M_total;      // 总质量 (在构造时计算 = 17.5kg)
 
-  // ======================== 质心高度范围 ========================
-  double L_MIN = 0.25;  // 最低质心高度 (蹲下)
-  double L_MAX = 0.45;  // 最高质心高度 (站直)
+  double L_MIN = 0.30;  // base_link 最低离地高度 (m)
+  double L_MAX = 0.50;  // base_link 最高离地高度 (m)
 
   // ======================== 关节限制 ========================
   double hip_limit_lower = -1.57;   // rad
@@ -60,7 +59,7 @@ struct RobotParams
 ///   θ_thigh = body_pitch - θ_hip            (大腿绝对角)
 /// 闭合约束: body_pitch = θ_shank + θ_knee + θ_hip
 ///
-/// URDF 约定 (关节轴均为 Y):
+/// 当前 URDF 约定：髋、膝及轮关节旋转轴均为 X 轴。
 ///   hip_urdf  = -θ_hip   (大腿相对于机身, 正=前倾)
 ///   knee_urdf = -θ_knee  (小腿相对于大腿, 正=前倾)
 struct IKSolution

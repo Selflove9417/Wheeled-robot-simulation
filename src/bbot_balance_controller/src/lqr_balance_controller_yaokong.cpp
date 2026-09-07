@@ -55,17 +55,22 @@ public:
     LQRBalanceController()
         : Node("lqr_balance_controller")
     {
+        const auto &robot_params = kinematics_.get_params();
+
+        wheel_radius_ = robot_params.wheel_radius;
+        L_MIN_ = robot_params.L_MIN;
+        L_MAX_ = robot_params.L_MAX;
+
         gain_low_ = {-6.1624, -45.8436, -179.6985, -42.8109};
         gain_high_ = {-6.3650, -49.5719, -233.4004, -62.6391};
         current_gain_ = gain_high_;
 
         balance_offset_ = 0.0;
-        balance_offset_min = 4.5*3.14/180.0;
-        balance_offset_max = 3.0*3.14/180.0;
+        balance_offset_min = 4.5 * 3.14 / 180.0;
+        balance_offset_max = 3.0 * 3.14 / 180.0;
 
         cmd_scale_ = 0.04;
         cmd_sign_ = 1.0;
-        wheel_radius_ = 0.07;
         max_cmd_x_ = 5.0;
         max_safe_pitch_ = 1.20;
 
@@ -74,8 +79,7 @@ public:
         speed_ramp_time_ = 1.0;
         target_speed_smoothed_ = 0.0;
 
-        L_MIN_ = 0.30;
-        L_MAX_ = 0.50;
+
         
         target_height_ = L_MAX_;
         current_height_ = target_height_;
@@ -737,8 +741,8 @@ private:
     double speed_ramp_time_;
     double target_x_ = 0.0;
 
-    double current_height_ = 0.5490;
-    double target_height_ = 0.5490;
+    double current_height_ = 0.0;
+    double target_height_ = 0.0;
     double leg_transition_speed_;
     double L_MIN_;
     double L_MAX_;

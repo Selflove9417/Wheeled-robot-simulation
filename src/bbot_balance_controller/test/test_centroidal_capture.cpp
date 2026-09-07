@@ -116,6 +116,45 @@ int main() {
         require(late_peak<.001 && std::abs(com-axle)<.001 && std::abs(cmd)<.001,
                 "long hold resumed creeping after initial stabilization");
     }
+    // User drive must preserve the existing zero-command balance equilibrium.
+    for (double requested:{-.5,0.,.5}) {
+        require(std::abs(centroidal_catch_target(requested,0,.33,0,.07,5,requested)+requested)<1e-12,
+                "drive equilibrium reverses travel");
+    }
+    double reference=0;
+    reference=ground_drive_reference(reference,.5,.005,.5,1.0);
+    require(std::abs(reference-.005)<1e-12,"drive command jumps at enable");
+    require(ground_drive_reference(reference,NAN,.005,.5,1.0)==0,"nonfinite drive request retained");
+    // Delayed forward -> reverse -> stop, followed by squat/stand perturbation
+    // with the same controller (repeat-jump ground preparation interface).
+    for (int period:{10,20}) {
+        double com=0,axle=0,v=0,applied=0,pending=0,cmd=0,ref=0;
+        double sc=0,sa=0,sv=0,sh=.33;
+        for (int ms=0;ms<24000;++ms) {
+            const double t=.001*ms;
+            const double request=t<2 ? 0. : t<7 ? .5 : t<12 ? -.5 : 0.;
+            const double h=t<16 ? .33 : t<17 ? .33-.12*(t-16) : t<18 ? .21+.12*(t-17) : .33;
+            if (ms%period==0) { applied=pending;sc=com;sa=axle;sv=v;sh=h; }
+            if (ms%5==0) {
+                ref=ground_drive_reference(ref,request,.005,.5,1.0);
+                const double goal=centroidal_catch_target(sv,sc-sa,sh,0,.07,5,ref);
+                cmd+=std::clamp(goal-cmd,-.04,.04);pending=cmd;
+            }
+            v+=.001*9.81/h*(com-axle);com+=.001*v;axle-=.001*applied;
+            require(std::abs(com-axle)<.08,"driving lost centroidal balance");
+            if (ms==6500) require(std::abs(v-.5)<.01,"forward command ignored");
+            if (ms==11500) require(std::abs(v+.5)<.01,"reverse command ignored");
+        }
+        require(std::abs(v)<.001 && std::abs(com-axle)<.001,"stop did not restore original hold");
+    }
+    // Actual 8.154 s sample: position servo pulls backward before launch speed.
+    // Unilateral P removes only that pull; the existing D still brakes overspeed.
+    const double damping=3.0*(-2.82941-(-7.97836));
+    const double old_knee=std::clamp(22.0*(-.0879087-(-.398485))+damping,-22.,22.);
+    const double new_knee=std::clamp(22.0*thrust_knee_position_error(-.0879087,-.398485,true)+damping,-22.,22.);
+    require(new_knee>15 && new_knee<old_knee-6,"position pull remains or velocity damping was removed");
+    require(thrust_knee_position_error(-.4,-.2,true)==-.2,"extension tracking removed");
+    require(thrust_knee_position_error(-.2,-.4,false)==.2,"protective position braking removed");
     std::cout<<"PASS: aligned COM translation, wheel kinematics, "<<cases
              <<" delayed capture/stop cases (not full robot simulation)\n";
 }

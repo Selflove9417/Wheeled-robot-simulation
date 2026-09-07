@@ -110,14 +110,37 @@ inline bool touchdown_capture_settled(double pitch_error, double rate, double ca
 // forward, axle_v = -R*(wheel_rate + hip_rate + knee_rate - pitch_rate).
 inline double centroidal_catch_target(double com_velocity, double forward,
                                       double height, double shank_rate,
-                                      double wheel_radius, double speed_limit) {
+                                      double wheel_radius, double speed_limit,
+                                      double velocity_reference=0.0) {
     if (!std::isfinite(com_velocity) || !std::isfinite(forward) ||
         !std::isfinite(height) || height<=0 || !std::isfinite(shank_rate) ||
         !std::isfinite(wheel_radius) || wheel_radius<=0 ||
-        !std::isfinite(speed_limit) || speed_limit<=0) return 0.0;
+        !std::isfinite(speed_limit) || speed_limit<=0 ||
+        !std::isfinite(velocity_reference)) return 0.0;
     const double omega=std::sqrt(9.81/std::clamp(height,0.15,0.55));
-    return std::clamp(-1.25*com_velocity-omega*forward-wheel_radius*shank_rate,
+    // r_dot=-omega*r-0.25*(v-v_ref). At r=0,v=v_ref the axle follows v_ref;
+    // v_ref=0 reproduces the validated capture/stop law exactly.
+    return std::clamp(-1.25*com_velocity+0.25*velocity_reference-
+                      omega*forward-wheel_radius*shank_rate,
                       -speed_limit,speed_limit);
+}
+
+inline double ground_drive_reference(double previous, double requested, double dt,
+                                     double limit, double rate) {
+    if (!std::isfinite(previous)) previous=0.0;
+    if (!std::isfinite(requested)) requested=0.0;
+    if (!std::isfinite(dt) || dt<=0) return previous;
+    return previous+std::clamp(std::clamp(requested,-limit,limit)-previous,
+                              -rate*std::min(dt,.020),rate*std::min(dt,.020));
+}
+
+// During a force-driven stroke, the nominal position trajectory is a lower
+// extension bound, not a reason to pull an already extended knee back. Keep
+// ALL velocity damping and restore bilateral P for braking/travel protection.
+inline double thrust_knee_position_error(double desired, double measured,
+                                         bool propelling) {
+    const double error=desired-measured;
+    return propelling ? std::min(0.0,error) : error; // extension is q_knee < 0
 }
 
 // A quiet torso and small wheel spin do not establish COM equilibrium while
