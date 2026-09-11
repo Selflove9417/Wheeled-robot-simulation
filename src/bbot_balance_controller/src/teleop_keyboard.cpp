@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -19,9 +20,13 @@ public:
         pub_height_ = this->create_publisher<std_msgs::msg::Float64>("/target_height", 10);
         pub_mode_ = this->create_publisher<std_msgs::msg::String>("/robot_mode", 10);
         pub_jump_ = this->create_publisher<std_msgs::msg::String>("/jump_cmd", 10);
+        pub_adaptive_lqr_ = this->create_publisher<std_msgs::msg::String>(
+            "/adaptive_lqr/command", 10);
 
         speed_ = 0.50;
         turn_ = 0.60;
+        // Same height convention as the real robot: vertical wheel-axle to
+        // hip distance, not the Gazebo base_link height above ground.
         height_ = 0.500;
         min_height_ = 0.30;
         max_height_ = 0.50;
@@ -54,8 +59,15 @@ private:
                   << "║      Space   : 停止移动 (保持原地平衡)                     ║\n"
                   << "║                                                          ║\n"
                   << "║  [高度控制]                                              ║\n"
-                  << "║      Q       : 升高机身 (+1cm)                            ║\n"
-                  << "║      E       : 降低机身 (-1cm)                            ║\n"
+                  << "║      Q       : 增大髋部-轮轴高度 (+1cm, 0.30~0.50m)       ║\n"
+                  << "║      E       : 减小髋部-轮轴高度 (-1cm, 0.30~0.50m)       ║\n"
+                  << "║                                                          ║\n"
+                  << "║  [3.2 自适应 LQR]                                        ║\n"
+                  << "║      T       : 启用 / 关闭质心偏置自适应                  ║\n"
+                  << "║      H       : 保留补偿，暂停 / 恢复估计更新              ║\n"
+                  << "║      C       : 清零质心偏置估计                          ║\n"
+                  << "║      Space   : 同时重设自适应 LQR 的位置参考              ║\n"
+                  << "║      B       : 恢复平衡控制                              ║\n"
                   << "║                                                          ║\n"
                   << "║  [状态模式]                                              ║\n"
                   << "║      J       : 触发机器人跳跃 (蓄力->推地->腾空->缓冲->LQR)  ║\n"
@@ -109,6 +121,13 @@ private:
         std_msgs::msg::String msg;
         msg.data = mode;
         pub_mode_->publish(msg);
+    }
+
+    void publish_adaptive_lqr_command(const std::string & command)
+    {
+        std_msgs::msg::String msg;
+        msg.data = command;
+        pub_adaptive_lqr_->publish(msg);
     }
 
     void spin_keyboard()
@@ -171,21 +190,22 @@ private:
         else if (c == ' ')
         {
             publish_twist(0.0, 0.0);
-            printf("\r[指令] 停止移动 (保持原地自平衡)                                 \n");
+            publish_adaptive_lqr_command("reset_position");
+            printf("\r[指令] 停止移动，并重设自适应 LQR 位置参考                       \n");
             fflush(stdout);
         }
         else if (c == 'q' || c == 'Q')
         {
             height_ = std::min(max_height_, height_ + 0.01);
             publish_height(height_);
-            printf("\r[指令] 升高机身 → 目标高度: %.3f m                               \n", height_);
+            printf("\r[指令] 升高 → 髋部-轮轴目标高度: %.3f m                          \n", height_);
             fflush(stdout);
         }
         else if (c == 'e' || c == 'E')
         {
             height_ = std::max(min_height_, height_ - 0.01);
             publish_height(height_);
-            printf("\r[指令] 降低机身 → 目标高度: %.3f m                               \n", height_);
+            printf("\r[指令] 降低 → 髋部-轮轴目标高度: %.3f m                          \n", height_);
             fflush(stdout);
         }
         else if (c == 'j' || c == 'J')
@@ -194,6 +214,24 @@ private:
             msg.data = "jump";
             pub_jump_->publish(msg);
             printf("\r[指令] 触发机器人跳跃 (蓄力->爆发推地->腾空->触地缓冲->LQR平衡)！\n");
+            fflush(stdout);
+        }
+        else if (c == 't' || c == 'T')
+        {
+            publish_adaptive_lqr_command("toggle_adaptation");
+            printf("\r[指令] 切换质心偏置自适应状态                                   \n");
+            fflush(stdout);
+        }
+        else if (c == 'c' || c == 'C')
+        {
+            publish_adaptive_lqr_command("reset_adaptation");
+            printf("\r[指令] 清零质心偏置估计                                         \n");
+            fflush(stdout);
+        }
+        else if (c == 'h' || c == 'H')
+        {
+            publish_adaptive_lqr_command("toggle_adaptation_hold");
+            printf("\r[指令] 暂停 / 恢复偏置估计更新（保留当前补偿）                  \n");
             fflush(stdout);
         }
         else if (c == 'r' || c == 'R')
@@ -208,12 +246,19 @@ private:
             printf("\r[指令] 紧急停机！                                                \n");
             fflush(stdout);
         }
+        else if (c == 'b' || c == 'B')
+        {
+            publish_mode("balance");
+            printf("\r[指令] 恢复平衡控制                                             \n");
+            fflush(stdout);
+        }
     }
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_cmd_vel_;
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_height_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_mode_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_jump_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_adaptive_lqr_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     struct termios orig_termios_;

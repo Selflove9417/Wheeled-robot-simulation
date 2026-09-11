@@ -23,7 +23,7 @@ def generate_launch_description():
     controller_type_arg = DeclareLaunchArgument(
         "controller_type",
         default_value="jump",
-        description="Type of balance controller to run: jump, jump_velocity, lqr, gs_lqr, pid, or none",
+        description="Type of balance controller to run: jump, jump_velocity, lqr, gs_lqr, adaptive_lqr, pid, or none",
     )
     controller_type = LaunchConfiguration("controller_type")
 
@@ -62,6 +62,41 @@ def generate_launch_description():
         "position_proportional_gain", default_value="0.3"
     )
     body_mass_arg = DeclareLaunchArgument("body_mass", default_value="9.5")
+    adaptive_experiment_mode_arg = DeclareLaunchArgument(
+        "adaptive_experiment_mode",
+        default_value="adaptive",
+        description="Adaptive LQR experiment mode: nominal, oracle, or adaptive",
+    )
+    adaptive_com_y_bias_arg = DeclareLaunchArgument(
+        "adaptive_com_y_bias",
+        default_value="0.0",
+        description="Injected controller-model COM-y bias in metres",
+    )
+    adaptive_log_path_arg = DeclareLaunchArgument(
+        "adaptive_log_path",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/adaptive_lqr_log.csv",
+        description="CSV output path for the Adaptive LQR experiment",
+    )
+    adaptive_target_height_arg = DeclareLaunchArgument(
+        "adaptive_target_height",
+        default_value="0.50",
+        description="Target wheel-axle to hip height in metres (real-robot convention)",
+    )
+    adaptive_startup_height_arg = DeclareLaunchArgument(
+        "adaptive_startup_height",
+        default_value="0.36",
+        description="Safe wheel-axle to hip height used when the controller starts",
+    )
+    adaptive_apply_rate_max_arg = DeclareLaunchArgument(
+        "adaptive_apply_rate_max",
+        default_value="0.0010",
+        description="Maximum rate of applying adaptive equilibrium offset in m/s",
+    )
+    adaptive_two_stage_enabled_arg = DeclareLaunchArgument(
+        "adaptive_two_stage_enabled",
+        default_value="true",
+        description="Enable two-stage adaptive state machine (WAIT_COARSE -> APPLY_COARSE -> WAIT_FINE -> APPLY_FINE -> VERIFY -> HOLD)",
+    )
     enable_position_handoff_arg = DeclareLaunchArgument(
         "enable_position_handoff", default_value="true"
     )
@@ -186,7 +221,13 @@ def generate_launch_description():
         # drive controller claims the wheel velocity interfaces, so it must
         # not be active in that mode.
         condition=IfCondition(
-            PythonExpression(["'", controller_type, "'.lower() != 'gs_lqr'"])
+            PythonExpression(
+                [
+                    "'",
+                    controller_type,
+                    "'.lower() not in ['gs_lqr', 'adaptive_lqr']",
+                ]
+            )
         ),
         actions=[
             Node(
@@ -242,7 +283,13 @@ def generate_launch_description():
         # leaves the robot uncontrolled.
         period=1.5,
         condition=IfCondition(
-            PythonExpression(["'", controller_type, "'.lower() == 'gs_lqr'"])
+            PythonExpression(
+                [
+                    "'",
+                    controller_type,
+                    "'.lower() in ['gs_lqr', 'adaptive_lqr']",
+                ]
+            )
         ),
         actions=[
             Node(
@@ -297,6 +344,49 @@ def generate_launch_description():
                 package="bbot_balance_controller",
                 executable="lqr_gain_scheduled_controller",
                 output="screen",
+            )
+        ],
+    )
+
+    start_adaptive_lqr_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression(["'", controller_type, "'.lower() == 'adaptive_lqr'"])
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="adaptive_lqr_balance_controller",
+                output="screen",
+                parameters=[
+                    {
+                        "use_sim_time": True,
+                        "experiment.mode": LaunchConfiguration(
+                            "adaptive_experiment_mode"
+                        ),
+                        "experiment.com_y_bias": ParameterValue(
+                            LaunchConfiguration("adaptive_com_y_bias"),
+                            value_type=float,
+                        ),
+                        "target_height": ParameterValue(
+                            LaunchConfiguration("adaptive_target_height"),
+                            value_type=float,
+                        ),
+                        "height.startup_hip_axle": ParameterValue(
+                            LaunchConfiguration("adaptive_startup_height"),
+                            value_type=float,
+                        ),
+                        "adaptation.apply_rate_max": ParameterValue(
+                            LaunchConfiguration("adaptive_apply_rate_max"),
+                            value_type=float,
+                        ),
+                        "adaptation.two_stage_enabled": ParameterValue(
+                            LaunchConfiguration("adaptive_two_stage_enabled"),
+                            value_type=bool,
+                        ),
+                        "log_path": LaunchConfiguration("adaptive_log_path"),
+                    }
+                ],
             )
         ],
     )
@@ -370,6 +460,13 @@ def generate_launch_description():
             air_wheel_sign_arg,
             position_proportional_gain_arg,
             body_mass_arg,
+            adaptive_experiment_mode_arg,
+            adaptive_com_y_bias_arg,
+            adaptive_log_path_arg,
+            adaptive_target_height_arg,
+            adaptive_startup_height_arg,
+            adaptive_apply_rate_max_arg,
+            adaptive_two_stage_enabled_arg,
             enable_position_handoff_arg,
             gazebo,
             robot_state_publisher,
@@ -382,6 +479,7 @@ def generate_launch_description():
             start_pid_controller,
             start_lqr_controller,
             start_gs_lqr_controller,
+            start_adaptive_lqr_controller,
             start_jump_controller,
             start_velocity_jump_controller,
             load_wheel_effort_controller,

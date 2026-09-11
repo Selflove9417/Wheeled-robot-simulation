@@ -73,6 +73,18 @@ ament_target_dependencies(lqr_gain_scheduled_controller
   bbot_kinematics
 )
 
+# 论文 3.2：带慢速等效质心偏置估计的 Gain-Scheduled LQR
+add_executable(adaptive_lqr_balance_controller
+  src/adaptive_lqr_balance_controller.cpp
+)
+ament_target_dependencies(adaptive_lqr_balance_controller
+  rclcpp
+  sensor_msgs
+  std_msgs
+  tf2
+  bbot_kinematics
+)
+
 # C++ 键盘控制终端 (无 Python / Conda 冲突)
 add_executable(teleop_keyboard
   src/teleop_keyboard.cpp
@@ -123,6 +135,7 @@ install(TARGETS
   balance_controller_keyboard
   lqr_balance_controller_yaokong
   lqr_gain_scheduled_controller
+  adaptive_lqr_balance_controller
   bbot_jump_controller
   bbot_velocity_jump_controller
   teleop_keyboard
@@ -142,6 +155,16 @@ install(PROGRAMS
 
 include(CTest)
 if(BUILD_TESTING)
+  add_executable(
+    test_adaptive_equilibrium_estimator
+    test/test_adaptive_equilibrium_estimator.cpp
+  )
+  add_test(
+    NAME adaptive_equilibrium_estimator
+    COMMAND test_adaptive_equilibrium_estimator
+  )
+  add_executable(test_flight_trajectory test/test_flight_trajectory.cpp)
+  add_test(NAME flight_trajectory COMMAND test_flight_trajectory)
   add_executable(test_flight_joint_pd test/test_flight_joint_pd.cpp)
   target_link_libraries(test_flight_joint_pd Eigen3::Eigen)
   add_test(NAME flight_joint_pd COMMAND test_flight_joint_pd)
@@ -156,6 +179,9 @@ if(BUILD_TESTING)
   add_executable(test_centroidal_capture test/test_centroidal_capture.cpp)
   target_link_libraries(test_centroidal_capture Eigen3::Eigen)
   add_test(NAME centroidal_capture COMMAND test_centroidal_capture)
+  add_executable(test_thrust_velocity_reference test/test_thrust_velocity_reference.cpp)
+  target_link_libraries(test_thrust_velocity_reference Eigen3::Eigen)
+  add_test(NAME thrust_velocity_reference COMMAND test_thrust_velocity_reference)
   add_executable(test_centroidal_state test/test_centroidal_state.cpp)
   target_link_libraries(test_centroidal_state Eigen3::Eigen)
   add_test(NAME centroidal_state COMMAND test_centroidal_state)

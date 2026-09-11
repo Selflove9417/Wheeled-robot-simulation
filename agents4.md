@@ -1,54 +1,75 @@
-# agents4.md — BBot 跳跃控制调试交接（更新：2026-09-07）
+# agents4.md — BBot 跳跃控制调试交接（更新：2026-09-08）
 
 ## 当前结论与待办
 
-- 用户已确认 **v6.11 落地后可以稳住**。不要再把“落地后必然前倾失控”作为当前基线。
-- 用户随后反馈：跳得低；稳定后不能前进、后退或再次跳跃。
-- 当前代码为 **v6.12**，已修正稳态操作入口，并减少正常推地时膝位置P反向抵消推力的问题。
-- **v6.12 已编译、10项离线测试全部通过；尚无用户的新仿真验证。** 不能宣称操作、重复跳跃或目标0.20m跳高已在整机上验证成功。
-- 当前优先验证：保留原有稳定性 → 就绪后的行驶/停车 → 第二次跳跃 → 实际跳高变化。不要只凭机箱水平判断整机质心稳定。
+- 用户已确认 **v6.11 落地后可以稳定恢复**。不要再把“落地后必然失稳”作为当前基线。
+- v6.12恢复了RECOVERY中的行驶、停车与重复跳跃入口；v6.13把THRUST质心竖直速度参考修正到可达到约1.98m/s峰值。当前主要问题已经从“跳不起来”转到**空中后半程与落地几何**。
+- v6.14解决了原TUCK/EXTEND固定短时长导致的超速度、超加速度轨迹问题；完整收腿超预算时会进入`PROTECTIVE_DEPLOY`。
+- v6.15在Effort模式`PROTECTIVE_DEPLOY`中加入姿态退出稳定区后的连续减速保护，明显降低了触地前机身后仰：失败日志中触地附近pitch从v6.14约-0.85rad改善到v6.15约-0.155rad。但该版本会让腿停在中间构型，触地时COM仍在轮轴后约0.195m。
+- v6.16尝试在v6.15姿态保护基础上，搜索“连续制动 + 最大可行landing progress”端点。最新172列日志确认该逻辑运行：7.361s触发姿态保护，规划`T=0.125s`、`protective_landing_progress=0.652562`、`protective_landing_joint_alpha=0.48`，完整落地COM目标为`+0.040091m`，规划端点仅为`-0.019973m`。
+- **v6.16仍然轮子偏前。最新日志已经定位出更根本的问题：保护展腿轨迹用关节坐标`q_hip`规划，但真实腿在世界中的大腿绝对角由`q_hip - pitch`决定。机身pitch在轨迹执行期间显著变化，使规划末端的wheel-first条件失效。**
+- 最新日志在7.474s到7.479s之间出现明确目标跳变：`knee_pos_cmd_left`从`-0.889570rad`突变为`-1.128920rad`，单周期变化约`-0.239rad`；同时`knee_vel_cmd_left=-2.317610rad/s`，恰与当时`pitch_rate=-2.317610rad/s`一致。该跳变来自姿态制动段结束后`enforce_wheel_first_target()`重新逐帧介入。
+- 7.484s首次负轮间隙附近：`wheel_clearance=-0.000585m`、`pitch=-0.244470rad`、`com_forward_from_axle=-0.183694m`。因此“轮子偏前”仍然是在**触地前**形成，不应先去调地面CATCH。
+- **下一步为v6.17设计，不是继续调`landing_wheel_back_bias_`：把保护展腿的髋轨迹改为世界参考坐标`eta=q_hip-pitch`，并把wheel-first约束直接写成`phi2_0 + eta + q_knee`。v6.17尚未实现，不能宣称已解决。**
 
 ## 当前代码与控制架构
 
 - 主文件：`/home/admin/bbot_ws_new/src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp`。
-- 核心辅助文件在 `src/bbot_balance_controller/include/bbot_balance_controller/`：`centroidal_state.hpp`、`jump_phase_control.hpp`、`torso_pitch_control.hpp`、`ground_joint_pd.hpp`。
-- 启动标识：`[com-drive-v6.12]`；静稳后操作开放标识：`[READY v6.12]`；保持标识：`[COM_HOLD v6.12]`。
-- 环境为 ROS 2 Iron；主控制200Hz，controller_manager为100Hz。
-- 首次起跳前可使用Position；跳后保持Effort RECOVERY。`kHoldRecoveryAfterJump=true`，不会因静稳自动进入旧BALANCE或Position；`enable_position_handoff`不会绕过这个保持分支。
-- 保持RECOVERY不再等于锁死操作：静稳0.5秒后锁存`recovery_ready_`，在同一质心轮控中接受用户速度目标。
-- 临近触地、捕获、制动、保持、恢复共用质心轮控；重复跳跃的PRE_JUMP/SQUAT也保持Effort与质心轮控，准备超时退回RECOVERY。
-- 髋共同力矩继续负责独立机箱回正，保留左右髋差动和膝关节阻尼。首次起跳/空中姿态参数未随本轮操作入口修正而更换。
-- `gazebo_world_z / gazebo_world_z_dot`是机身原点状态，`com_world_z / com_world_vz`是整机质心状态。
-- 现有仿真选项只在THRUST放宽到模型已有150N·m，其余阶段髋75/膝60；`sim_relax_thrust_limits:=false`可恢复原推地上限，非仿真时钟不放宽。v6.12未再提高这些上限。
+- 当前已运行验证的版本为 **v6.16**；启动标识：`[protective-landing-progress-v6.16]`。姿态保护日志：`[PROTECTIVE_ATT_BRAKE v6.16]`。
+- v6.16日志为172列；在v6.15的167列基础上新增：`landing_com_forward_target`、`landing_com_forward_target_valid`、`protective_landing_progress`、`protective_landing_joint_alpha`、`protective_landing_com_end`。
+- v6.15新增的4列仍保留：`protective_attitude_seen_stable`、`protective_attitude_brake_active`、`protective_attitude_brake_plan_check`、`protective_attitude_brake_duration`。
+- 核心辅助文件仍在`src/bbot_balance_controller/include/bbot_balance_controller/`：`centroidal_state.hpp`、`jump_phase_control.hpp`、`torso_pitch_control.hpp`、`ground_joint_pd.hpp`、`thrust_velocity_reference.hpp`、`flight_trajectory.hpp`。
+- 环境为ROS 2 Iron；主控制200Hz。当前调试中所有5ms级目标跳变都必须按单个控制周期对待，不能当作普通轨迹变化。
+- 首次起跳前可使用Position；跳后保持Effort RECOVERY。`kHoldRecoveryAfterJump=true`，不会因静稳自动进入旧BALANCE或Position。
+- 临近触地、CATCH、BRAKE、HOLD、RECOVERY继续共用质心轮控；当前问题发生在FLIGHT/`PROTECTIVE_DEPLOY`，不要先修改地面捕获律。
+- 地面质心状态使用`centroidal_balance_.forward = COM_x - axle_x`。正值表示COM在轮轴前，负值表示轮轴在COM前。
+- 当前完整landing IK对应的`landing_com_forward_target`在最新跳跃中为`+0.040091m`，说明完整落地目标方向本身不是“把轮子放前面”。实际失败来自该目标未按世界几何持续兑现。
+- `enforce_wheel_first_target()`当前使用`theta_shank = phi2_0 + q_hip + q_knee - pitch`，并在几何超限时直接修改`q_knee`；在边界上还会令`qd_knee = pitch_rate - qd_hip`。
+- 当前保护制动段为了保持五次轨迹连续性，在执行期间暂缓逐帧wheel-first硬夹；段结束后重新启用`enforce_wheel_first_target()`。最新日志已证明这种“段内不夹、段末突然恢复”的方式会在pitch变化较大时产生关节参考跳变。
+- 现有仿真选项只在THRUST放宽到模型已有150N·m，其余阶段髋75/膝60；本轮问题不能通过继续提高轮速或关节力矩上限代替坐标修正。
 
 ## 用户操作与边界
 
 - 出现`[READY v6.12]`后：W/S前后、A/D转向、空格停车；`/cmd_vel`使用同一目标通道。
-- 行驶/转向参考上限沿用0.50m/s、0.60rad/s，参考变化率为1.0/s；地面质心轮命令仍受5m/s上限与8m/s²变化率约束。
-- 再次跳跃：先停车，再按J。RECOVERY入口要求已就绪、Effort激活、质心观测有效，并检查速度/姿态；|vCOM|必须小于0.30m/s，COM倾角小于0.06rad、变化率小于0.35rad/s，同时保留机箱姿态检查。
-- Q/E高度调节仍只接原BALANCE入口，此轮未扩展到RECOVERY。
-- vRef=0时仍是v6.11的停车保持律；不能为了恢复按键而改回已知存在支撑/轮控接管问题的旧路径。
+- 行驶/转向参考上限沿用0.50m/s、0.60rad/s，参考变化率1.0/s。
+- 地面质心轮命令请求仍可到5m/s，但实际轮关节URDF限速30rad/s、轮半径0.07m，轮面速度实际至多约2.1m/s。此前日志已出现30rad/s饱和；不要把5m/s请求当作实际轮速能力。
+- 再次跳跃：先停车，再按J。RECOVERY入口要求已就绪、Effort激活、质心观测有效，并检查速度/姿态。
+- Q/E高度调节仍只接原BALANCE入口，未扩展到RECOVERY。
+- `vRef=0`仍使用v6.11以来的质心停车保持律；不要为了修空中落地重新切回旧Position/BALANCE接管。
+- 当前调试原则：**一次只修一个因果链。** v6.17优先改空中保护展腿的坐标定义和wheel-first连续性；在该问题验证前，不同时修改THRUST、CATCH、`air_wheel_sign_`、轮速上限或固定后置偏移。
 
 ## 最新日志与下一轮检查
 
-- 最近已分析的日志属于v6.11，149列，末尾时间22.845s；不要把它误当作v6.12验证结果。
-- v6.12运行后应为154列，新增：`recovery_ready`、`recovery_drive_ref`、`recovery_yaw_ref`、`effort_jump_cycle`、`thrust_knee_position_yield`。
-- 日志路径：`src/bbot_balance_controller/src/data_logs/jump_velocity_control_log.csv`及`jump_velocity_summary.csv`。
-- 先核对启动标识及列数，再检查：
-  1. 就绪后W/S是否改变`recovery_drive_ref`，空格是否回零；`capture_world_active`在观测有效的地面阶段应保持1。
-  2. 行驶/停车时的`com_lean / com_lean_rate / capture_com_velocity`及机箱姿态是否持续收敛。
-  3. 第二次J是否进入PRE_JUMP→SQUAT→THRUST，`effort_jump_cycle=1`，是否保持Effort且不出现预充力矩跳变。
-  4. 推地`com_world_vz`、`thrust_knee_pd_left`、`thrust_knee_position_yield`与行程保护；比较离地前冲量和实际腾空高度。
-- 离地确认速度不是精确接触分离时刻速度；`apex_world_z_delta`包含从下蹲开始的伸腿/站高，不等同净腾空高度。
+- 最新CSV：`jump_velocity_control_log.csv`，**v6.16，172列，1784行，时间0.012s到10.081s**。
+- 关键时序：
+  1. `7.361s`：`PROTECTIVE_ATT_BRAKE`触发；`pitch=+0.060893rad`、`pitch_rate=-0.671010rad/s`、`com_forward_from_axle=-0.132784m`。
+  2. 同一时刻规划结果：`protective_attitude_brake_plan_check=1`、`protective_attitude_brake_duration=0.125s`、`landing_com_forward_target=+0.040091m`、`protective_landing_progress=0.652562`、`protective_landing_joint_alpha=0.48`、`protective_landing_com_end=-0.019973m`。
+  3. `7.474s`：仍在制动段末，`pitch=-0.222154rad`、`pitch_rate=-2.317610rad/s`；左髋/膝目标约`+0.692089/-0.889570rad`，目标速度约`-0.029/+0.023rad/s`。
+  4. `7.479s`：制动段结束后wheel-first硬保护重新介入，左膝目标从`-0.889570`跳到`-1.128920rad`；`knee_vel_cmd_left=-2.317610rad/s`。
+  5. `7.484s`：首次负间隙附近，`wheel_clearance=-0.000585m`、`pitch=-0.244470rad`、`pitch_rate=-2.249020rad/s`、`com_forward_from_axle=-0.183694m`。
+- 最新日志还给出一个重要事实：7.474s实际`hip_vel_left=-2.169450rad/s`、`pitch_rate=-2.317610rad/s`，因此`hip_vel_left - pitch_rate ≈ +0.14816rad/s`。即大腿在世界坐标中的角速度已经很小；但当前关节轨迹却趋向`hip_vel_cmd≈0`，等效要求世界大腿角速度约`-pitch_rate`，会随着机身旋转重新制造腿的世界角运动。
+- 下一轮v6.17应重点验证：
+  1. 保护展腿髋状态是否改为`eta = q_hip - pitch`，速度是否为`eta_dot = qd_hip - pitch_rate`。
+  2. 输出关节参考时是否严格恢复为`q_hip_des = eta_des + pitch`、`qd_hip_des = eta_dot_des + pitch_rate`。
+  3. wheel-first是否改为在世界参考轨迹内直接限制`phi2_0 + eta + q_knee`，而不是轨迹结束后再次硬改`q_knee`。
+  4. 触地前是否消除类似`-0.239rad/5ms`的膝参考跳变。
+  5. 在不恶化pitch/pitch_rate的前提下，`com_forward_from_axle`是否从当前约`-0.184m`明显向0或正值回归。
+  6. 只有上述空中几何连续性通过后，再评估是否需要进一步做COM-relative landing placement或临地轮控调整。
+- FLIGHT中的机身角速度判断继续使用`pitch_rate`；不要使用旧地面诊断量`torso_rate`代替。
+- 离地确认速度不是精确接触分离时刻速度；`apex_world_z_delta`仍包含从下蹲开始的伸腿/站高，不等于净腾空高度。
 
 ## 已完成验证与约束
 
-- 已执行`colcon build --packages-select bbot_balance_controller --symlink-install`，成功。
-- 已执行`ctest --test-dir build/bbot_balance_controller --output-on-failure`，10/10通过；`git diff --check`通过。
-- 离线检查包含30秒保持、受扰恢复、前进→后退→停车、变高度、传感器延迟及膝P/D样本回归；不等同Gazebo完整轮腿接触与重复跳跃验证。
-- 保留机箱回正阻尼、髋差动/膝阻尼和空中轨迹连续性，不盲目翻转`air_wheel_sign=+1`。
-- 不修改旧跳跃控制器；基于新日志区分原因，避免同时盲调多个控制环。不要用提高力矩上限代替定位跳低原因。
-- 完成代码、编译及必要离线检查后，由用户运行仿真；不要覆盖已有实验日志。
+- v6.14历史版本已执行`colcon build --packages-select bbot_balance_controller --symlink-install`成功，`ctest` 12/12通过，`git diff --check`通过。
+- v6.13历史版本控制器编译成功，`ctest` 11项通过；其THRUST质心速度参考修正已在后续Gazebo日志中实际运行。
+- v6.15已有167列Gazebo日志，证明姿态保护逻辑实际运行；其主要收益是显著降低触地前机身后仰，但代价是腿停在中间构型。
+- v6.16已有172列Gazebo日志，证明`protective_landing_progress`搜索逻辑实际运行；**不能因为规划值`protective_landing_progress=0.652562`就认为真实COM完成了65%落地点修正**，因为该评价使用了固定`landing_pitch_ref`，而实际pitch在轨迹期间从正值转为明显负值。
+- 当前没有记录v6.15/v6.16完整`ctest`结果；不要补写“测试全部通过”。
+- 最新日志已直接证明当前v6.16存在参考不连续：保护轨迹结束后`enforce_wheel_first_target()`可在一个5ms周期内大幅修改膝目标。v6.17必须优先消除这一结构性问题。
+- 保留v6.15已经验证有效的姿态保护思想，不回退到v6.14强行高速完成landing IK。
+- 不盲目翻转`air_wheel_sign_`，不通过提高轮速/力矩上限掩盖空中坐标问题。
+- 不修改旧跳跃控制器；新版本仅围绕`bbot_velocity_jump_controller.cpp`当前分支继续迭代。
+- 完成代码、编译及必要离线检查后仍由用户运行Gazebo；不要覆盖已有实验日志。
 
 ## 历史：v6.9机箱回正
 
@@ -105,3 +126,107 @@ v6.12：
 本轮推地仅改变膝位置P：在观测有效、尚未达95%速度、未刹腿/未姿态阻塞/未行程保护时，位置参考不反向拉回已超前伸展的膝。落后于轨迹仍保留伸展P，原Kd=3和速度参考限幅完全保留；保护/卸力条件出现立即恢复双向P。上述8.154s样本的反向PD由22降到15.44685Nm，仍保留全部速度阻尼。力矩、推力增益与行程上限均未提高。实际跳高改善量仍需仿真，不能据此宣称达到0.20m。
 
 日志追加5列（154列）：recovery_ready、recovery_drive_ref、recovery_yaw_ref、effort_jump_cycle、thrust_knee_position_yield。启动 [com-drive-v6.12]。新增离线检查覆盖行驶稳态、前进→后退→停车、准备期变高度、输入斜坡，以及日志膝P/D分解与保护时恢复P。仍未运行完整Gazebo重复跳跃；下一轮需验证第一次跳高、就绪后的行驶停车、第二次PRE_JUMP/SQUAT/THRUST及落地。
+
+
+## 2026-09-08 跳高仍不足：com-thrust-v6.13
+
+v6.12的单向位置P确实生效，但两次跳跃的速度仍约1.44m/s封顶。5.271s仍接地、COM速度1.43844/1.98091m/s；实际膝速度-10.0014，旧参考-2.93299rad/s，故单独D=+21.2052Nm。叠加前馈-25.835Nm后只剩-4.62957Nm伸腿力矩。11.523s第二跳同样出现D=+21.2966Nm、净膝力矩-8.60112Nm。随后行程保护卸力，确认离地速度分别0.651826、0.844658m/s。这次不是P改动未生效，也不是达到电机150Nm上限。
+
+修正仅针对THRUST膝速度参考：
+- 在双轮支撑假设下，`zCOM=R+world_z·(COM(q)-axle(q))`；使用质量加权COM/轮轴Jacobian、当前构型，以及原有期望髋/机箱角速度，反求共同膝速度，使其对应与推力反馈一致的目标COM上升速度。沿用原60ms反馈启动斜坡。
+- 参考不依赖实测膝速度，不通过把目标设成实际速度消掉D。Kd仍为3，PD仍限幅±22Nm；超速时仍制动。
+- `thrust_knee_velocity_limit`默认30rad/s，来自当前URDF四个腿关节的速度限制，可向下配置；此前名义IK±6rad/s限制只保留在回退路径。30是上限，不是固定指令，实际参考由目标COM速度及几何决定。
+- 新参考继续乘原有行程保护和terminal brake系数；行程scale=0时停止伸展。姿态阻塞、COM/IMU/关节状态过期、奇异或反向构型时退回旧参考。
+- 保持原髋反作用补偿使用原名义速度，避免本轮隐式调大髋补偿。推力增益、力矩预算/上限、腿行程上限、离地检测、空中/落地/行驶/重复跳跃逻辑均未更换。
+
+对固定历史状态回放，5.271s新参考=-14.1103rad/s、D=-12.3268Nm，若保持该行前馈不变，净膝力矩=-38.1618Nm；11.523s对应新参考=-13.0091、D=-8.96469Nm。回放只能证明参考/力矩方向修正，不能当作新闭环仿真或实际跳高预测。
+
+已执行控制器colcon编译成功，ctest全部11项通过；未启动Gazebo、未覆盖用户原CSV。下一轮由用户确认`[com-thrust-v6.13]`后运行，重点观察是否在行程卸力前达到所需竖直动量，以及更强伸展后的机箱姿态和落地是否仍稳定。
+
+
+## 2026-09-08 最新后倒反馈：flight-plan-v6.14
+
+本轮读取的新日志是v6.13（159列，到14.644s），不再使用上一轮“尚未仿真”的结论。首轮准备失败后恢复；第二轮12.306s进入THRUST，峰值COM速度1.9802m/s。Git HEAD保存的v6.12日志有3次腾空并恢复，三次均ARREST→PROTECTIVE_DEPLOY，从未实际验证TUCK；不能因空中代码未改就认定新推地后的空中分支已验证。
+
+关键时序：
+- 12.581s首次进入TUCK，髋/膝实际为0.988561/-1.27599rad；旧代码固定0.10s收至0.30m高度，绕过已有完整轨迹预算。
+- 12.630s髋/膝参考速度=-24.2899/+29.2775rad/s，实际=-6.5684/+8.0372rad/s。12.655s髋实际速度已到-12.3676，机箱角速度=-2.1111rad/s。
+- 12.665s进入EXTEND时髋参考=-0.2024、实际=+0.5899，参考已领先0.7923rad；展腿仍接着未兑现的参考运行。
+- 12.783s轮距地0.208m，机箱已后仰0.449rad；12.921s首次负间隙时已后仰0.931rad。12.946s进入CATCH时pitch=-1.0177、COM在轮轴后0.242m。轮过前是触地前就形成的相对几何失衡。
+
+v6.14只修收展腿轨迹规划这个主要因素：
+- 从与实际收腿入口完全一致的当前关节位置/速度规划，保留0.30m收腿、0.50m落地目标；不通过裁掉关节阻尼或翻转飞轮符号处理后倒。
+- 采用原代码已有的髋/膝速度预算7.5/10rad/s、加速度预算240/320rad/s²、位置边界1.45rad。这些是已有规划预算，不是整机动力学安全证明。
+- 原0.09s展腿自身也超预算：本次真实IK从(-0.2524,+0.3288)到(+0.1778,-0.3991)，零端速五次轨迹峰值约8.96/15.16rad/s。仅加固定时间门控会禁掉全部完整收腿，因此按五次曲线的峰速/峰加速度计算展腿所需时长，再按200Hz的5ms步长寻找可行收腿时长；名义0.10/0.09秒是最短值。
+- 两段总时长必须留出原landing_deploy_ready_margin和20ms的触地裕量，超出当前剩余飞行时间时走原保护展腿。最新失败起点不应再强行执行完整收腿；可能只看到保护收展腿，不能以“每跳都必须收至0.30m”绕过预算。
+- TUCK→EXTEND时重新检查当前连续参考及原0.12rad跟踪误差。拒绝时从同一旧轨迹边界进入原保护展腿，保留位置/速度/加速度连续性。
+- 推地、落地点偏置、空中/地面反馈增益、力矩/轮速上限、临地轮控混合与控制器切换均未改变。旧控制器未改，现有CSV未覆盖。
+
+仍有独立限制需后续用新日志评估：原临地轮控只在80→20mm混合，本次轮仍带着反向转速入地；URDF实际轮速上限2.1m/s与控制器5m/s请求不一致。这两者发生在明显空中后仰之后，本轮不同时修改，不能宣称仅本补丁已解决所有落地问题。剩余飞行时间仍沿用原机身高度/速度估计；腿部运动会影响该估计，展腿前的二次检查和保护分支继续保留。
+
+## 2026-09-08 空中姿态保护：protective-attitude-v6.15
+
+v6.14的新日志证明完整TUCK已被正确拒绝，但Effort模式`PROTECTIVE_DEPLOY`仍会在空中持续注入后仰角动量。反作用轮最终到达空中轮速命令软件限幅，而机身角速度继续恶化。
+
+v6.15只处理这一条因果链：
+- 仅在Effort模式`PROTECTIVE_DEPLOY`中启用姿态保护；首次Position跳跃路径不主动改写。
+- 复用已有`attitude_stable`判据，不新增姿态阈值。
+- 姿态曾稳定、随后退出稳定区时锁存`[PROTECTIVE_ATT_BRAKE v6.15]`。
+- 不再继续高增益追完整landing IK，而是从当前实测`q/qdot`生成连续五次减速段，基本端点为`q_stop = q + 0.5*qdot*T`，终端速度和加速度为0。
+- 继续使用已有`flight_segment_admissible()`检查速度、加速度、位置预算。
+- 姿态保护触发后，本次飞行不再由原`PROTECTIVE_REPLAN`重新强拉完整落地IK；关节反馈退回较低的空中姿态保护增益。
+
+v6.15的167列Gazebo日志显示：
+- 姿态保护在约12.024s触发。
+- 首次接触附近约12.181s：`pitch≈-0.1553rad`、`pitch_rate≈-1.5463rad/s`，相比v6.14触地接近`pitch≈-0.85rad`有明显改善。
+- 但触地时`com_forward_from_axle≈-0.1946m`，说明轮轴仍在COM前方很远。
+- 结论：**v6.15保住了机身姿态，但“姿态保护=停止继续实现落地腿型”留下了严重的落地几何误差。**
+
+## 2026-09-08 最大可行落地进度：protective-landing-progress-v6.16
+
+v6.16在v6.15基础上，不再只停在`q_stop`：
+- 先计算完整landing IK及其`landing_com_forward_target`。
+- 对每个允许的制动时长，从连续停车端点`stop_end`向完整`landing_end`搜索`alpha∈[0,1]`。
+- 每个端点继续经过`enforce_wheel_first_target()`和`flight_segment_admissible()`。
+- 用`centroidal_balance_state()`计算规划端点COM位置，优先选择最接近完整落地COM目标的可行端点。
+- 新增5列：`landing_com_forward_target`、`landing_com_forward_target_valid`、`protective_landing_progress`、`protective_landing_joint_alpha`、`protective_landing_com_end`。
+
+最新172列日志中：
+- 7.361s触发保护，规划`T=0.125s`、`alpha=0.48`、`progress=0.652562`。
+- 完整landing IK对应`landing_com_forward_target=+0.040091m`，说明完整目标本身会把COM放到轮轴前方；因此不能再把问题归结为固定`landing_wheel_back_bias_`方向错误。
+- 规划端点`protective_landing_com_end=-0.019973m`，即即使按规划端点理想到达，轮轴仍略在COM前。
+- 更严重的是，规划COM评价使用固定`landing_pitch_ref`，而真实机身在0.125s执行期间持续后仰；因此该`progress`并不代表实际世界落点进度。
+
+日志暴露出的决定性问题：
+- 7.474s：`pitch=-0.222154`、`pitch_rate=-2.317610`，左膝目标`-0.889570`。
+- 7.479s：左膝目标突然变成`-1.128920`，单个5ms周期变化约`-0.239rad`；`knee_vel_cmd_left=-2.317610`。
+- 当前`enforce_wheel_first_target()`使用`theta_shank = phi2_0 + q_hip + q_knee - pitch`。保护轨迹执行期间为了连续性暂时不逐帧硬夹，结束后再次启用时，当前pitch已与规划时显著不同，于是一次性把积累的世界几何误差补到膝目标。
+- 7.484s首次负间隙附近，`com_forward_from_axle=-0.183694m`，轮子仍明显在COM前。
+
+因此v6.16的主要结论不是“landing progress还不够大”，而是：
+**保护展腿使用关节相对坐标规划，而落地安全约束本质属于世界坐标。pitch变化使固定`q_hip`轨迹失去原来的世界腿姿态意义。**
+
+## 下一步设计：world-referenced landing leg trajectory v6.17（尚未实现）
+
+v6.17应先修坐标定义，不继续调固定落地偏置。
+
+定义世界参考髋状态：
+`eta = q_hip - pitch`
+
+对应速度：
+`eta_dot = qd_hip - pitch_rate`
+
+根据当前运动学：
+- 大腿绝对角：`theta_thigh = phi1_0 + eta`
+- 小腿绝对角：`theta_shank = phi2_0 + eta + q_knee`
+
+因此保护展腿阶段应：
+1. 用`eta / eta_dot`与`q_knee / qd_knee`作为规划状态，而不是直接用`q_hip / qd_hip`。
+2. 实际输出时恢复：`q_hip_des = eta_des + pitch`、`qd_hip_des = eta_dot_des + pitch_rate`。
+3. wheel-first直接在轨迹空间约束`abs(phi2_0 + eta + q_knee) <= landing_shank_limit()`，使约束不再显式依赖瞬时pitch。
+4. 不允许在轨迹结束后再通过一次性修改`q_knee`补偿整个pitch变化；必须保证整个保护段内位置、速度至少连续。
+5. COM落点评价应使用与实际世界姿态一致的状态，不再用固定`landing_pitch_ref`高估`protective_landing_progress`。
+6. v6.17先验证世界腿姿态连续、wheel-first连续和触地前COM位置；通过后再决定是否还需要修改COM-relative landing target或临地捕获。
+
+最新日志中7.474s实际`hip_vel_left=-2.169450rad/s`、`pitch_rate=-2.317610rad/s`，故`eta_dot≈+0.14816rad/s`，说明当时大腿在世界中已经接近静止。当前控制若简单要求`qd_hip_des≈0`，反而等效为要求世界大腿角速度`eta_dot_des≈-pitch_rate`，这正是v6.17需要消除的坐标耦合。
+

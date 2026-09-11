@@ -1,5 +1,1 @@
 jump_id,jump_height_target,target_takeoff_velocity,takeoff_velocity,apex_height_delta,apex_world_z_delta,max_abs_pitch,takeoff_pitch_rate,landing_pitch_err,touchdown_drift_x,max_abs_hip_torque,max_abs_knee_torque,mechanical_work,recovery_completed,failed,reason
-1,0.2,1.98091,0.856429,0.367937,0.444794,0.427435,-0.68029,0.294706,-0.158254,35.6728,65.7117,61.9079,1,0,
-2,0.2,1.98091,0.827866,0.369518,0.437107,0.408641,-0.650491,0.271536,-0.198259,34.1075,65.3287,58.2015,1,0,
-3,0.2,1.98091,0,0.153901,0.0311849,0.188834,0,0,0,4.74675,28.3662,3.72842,0,1,THRUST初始姿态门控超过0.20s
-4,0.2,1.98091,0.839881,0.370929,0.437874,0.417182,-0.700599,0.279134,-0.126832,33.3187,64.8256,61.1832,1,0,
