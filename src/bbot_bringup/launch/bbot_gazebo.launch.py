@@ -100,6 +100,27 @@ def generate_launch_description():
     enable_position_handoff_arg = DeclareLaunchArgument(
         "enable_position_handoff", default_value="true"
     )
+    payload_mass_arg = DeclareLaunchArgument(
+        "payload_mass", default_value="0.0", description="Mass of physical payload in kg"
+    )
+    payload_x_arg = DeclareLaunchArgument(
+        "payload_x", default_value="0.200", description="Payload X coordinate in base_link"
+    )
+    payload_y_offset_arg = DeclareLaunchArgument(
+        "payload_y_offset", default_value="0.0", description="Payload Y offset relative to hip center (0.125m) in m"
+    )
+    payload_z_arg = DeclareLaunchArgument(
+        "payload_z", default_value="0.170", description="Payload Z coordinate in base_link"
+    )
+    payload_size_x_arg = DeclareLaunchArgument(
+        "payload_size_x", default_value="0.12", description="Payload X dimension in m"
+    )
+    payload_size_y_arg = DeclareLaunchArgument(
+        "payload_size_y", default_value="0.08", description="Payload Y dimension in m"
+    )
+    payload_size_z_arg = DeclareLaunchArgument(
+        "payload_size_z", default_value="0.02", description="Payload Z dimension in m"
+    )
 
     ws_dir = "/home/admin/bbot_ws_new"
     opt_ros_dir = os.path.join(ws_dir, "opt_ros/opt/ros/iron")
@@ -144,6 +165,20 @@ def generate_launch_description():
                 LaunchConfiguration("position_proportional_gain"),
                 " body_mass:=",
                 LaunchConfiguration("body_mass"),
+                " payload_mass:=",
+                LaunchConfiguration("payload_mass"),
+                " payload_x:=",
+                LaunchConfiguration("payload_x"),
+                " payload_y_offset:=",
+                LaunchConfiguration("payload_y_offset"),
+                " payload_z:=",
+                LaunchConfiguration("payload_z"),
+                " payload_size_x:=",
+                LaunchConfiguration("payload_size_x"),
+                " payload_size_y:=",
+                LaunchConfiguration("payload_size_y"),
+                " payload_size_z:=",
+                LaunchConfiguration("payload_size_z"),
             ]
         ),
         value_type=str,
@@ -468,6 +503,13 @@ def generate_launch_description():
             adaptive_apply_rate_max_arg,
             adaptive_two_stage_enabled_arg,
             enable_position_handoff_arg,
+            payload_mass_arg,
+            payload_x_arg,
+            payload_y_offset_arg,
+            payload_z_arg,
+            payload_size_x_arg,
+            payload_size_y_arg,
+            payload_size_z_arg,
             gazebo,
             robot_state_publisher,
             spawn_robot,

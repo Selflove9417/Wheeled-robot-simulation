@@ -2697,4 +2697,66 @@
     </visual>
   </gazebo>
 
+  <!-- ==================== Payload Options ==================== -->
+  <xacro:arg name="payload_mass" default="0.0" />
+  <xacro:arg name="payload_x" default="0.200" />
+  <xacro:arg name="payload_y_offset" default="0.0" />
+  <xacro:arg name="payload_z" default="0.170" />
+  <xacro:arg name="payload_size_x" default="0.12" />
+  <xacro:arg name="payload_size_y" default="0.08" />
+  <xacro:arg name="payload_size_z" default="0.02" />
+
+  <xacro:property name="p_mass" value="${float('$(arg payload_mass)')}" />
+  <xacro:property name="p_x" value="${float('$(arg payload_x)')}" />
+  <xacro:property name="p_y_off" value="${float('$(arg payload_y_offset)')}" />
+  <xacro:property name="p_z" value="${float('$(arg payload_z)')}" />
+  <xacro:property name="p_lx" value="${float('$(arg payload_size_x)')}" />
+  <xacro:property name="p_ly" value="${float('$(arg payload_size_y)')}" />
+  <xacro:property name="p_lz" value="${float('$(arg payload_size_z)')}" />
+
+  <xacro:if value="${p_mass > 1e-4}">
+    <link name="payload_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="${p_mass}" />
+        <inertia ixx="${p_mass * (p_ly * p_ly + p_lz * p_lz) / 12.0}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${p_mass * (p_lx * p_lx + p_lz * p_lz) / 12.0}"
+                 iyz="0.0"
+                 izz="${p_mass * (p_lx * p_lx + p_ly * p_ly) / 12.0}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="${p_lx} ${p_ly} ${p_lz}" />
+        </geometry>
+        <material name="payload_orange">
+          <color rgba="0.92 0.45 0.10 1.0" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="${p_lx} ${p_ly} ${p_lz}" />
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="payload_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="payload_link" />
+      <origin xyz="${p_x} ${0.125 + p_y_off} ${p_z}" rpy="0 0 0" />
+    </joint>
+
+    <gazebo reference="payload_link">
+      <visual>
+        <material>
+          <ambient>0.92 0.45 0.10 1.0</ambient>
+          <diffuse>0.92 0.45 0.10 1.0</diffuse>
+          <specular>0.5 0.5 0.5 1.0</specular>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:if>
+
 </robot>

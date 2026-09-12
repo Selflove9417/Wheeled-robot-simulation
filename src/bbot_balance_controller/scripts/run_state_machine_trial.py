@@ -71,10 +71,12 @@ def cleanup_lingering_processes():
     time.sleep(2.0)
 
 
-def run_state_machine_trial(output_path, bias=0.001, apply_rate=0.0010, two_stage=True, hold_record_sec=25.0, max_sim_time=120.0):
+def run_state_machine_trial(output_path, bias=0.0, apply_rate=0.0010, two_stage=True, hold_record_sec=25.0, max_sim_time=120.0, mode="adaptive", payload_mass=0.0, payload_y_offset=0.0, payload_z=0.170):
     print("=======================================================")
-    print(f"  Adaptive GS-LQR State Machine Trial (bias={bias*1000:+.2f}mm, rate={apply_rate*1000:.2f}mm/s, two_stage={two_stage})")
+    print(f"  Adaptive GS-LQR State Machine Trial (mode={mode}, payload={payload_mass:.2f}kg @ y_off={payload_y_offset*1000:+.1f}mm, bias={bias*1000:+.2f}mm, rate={apply_rate*1000:.2f}mm/s, two_stage={two_stage})")
     print(f"  Target CSV: {output_path}")
+    print(f"  Mode: {mode}")
+    print(f"  Physical Payload: {payload_mass:.2f} kg, offset={payload_y_offset*1000:+.1f} mm, z={payload_z:.3f} m")
     print(f"  Injected Bias: {bias*1000:+.3f} mm")
     print(f"  Apply Rate Max: {apply_rate*1000:.3f} mm/s ({apply_rate:.5f} m/s)")
     print(f"  Two-Stage Enabled: {two_stage}")
@@ -89,12 +91,15 @@ def run_state_machine_trial(output_path, bias=0.001, apply_rate=0.0010, two_stag
         f"source /home/admin/bbot_ws_new/install/setup.bash && "
         f"ros2 launch bbot_bringup bbot_gazebo.launch.py "
         f"controller_type:=adaptive_lqr "
-        f"adaptive_experiment_mode:=adaptive "
+        f"adaptive_experiment_mode:={mode} "
         f"adaptive_com_y_bias:={bias} "
         f"adaptive_apply_rate_max:={apply_rate} "
         f"adaptive_two_stage_enabled:={str(two_stage).lower()} "
         f"adaptive_target_height:=0.50 "
         f"adaptive_startup_height:=0.36 "
+        f"payload_mass:={payload_mass} "
+        f"payload_y_offset:={payload_y_offset} "
+        f"payload_z:={payload_z} "
         f"adaptive_log_path:={output_path}"
     )
 
@@ -186,6 +191,11 @@ def run_state_machine_trial(output_path, bias=0.001, apply_rate=0.0010, two_stag
                 # Termination check: entered HOLD and recorded enough
                 if t_hold_entered is not None and (t_sim >= t_hold_entered + hold_record_sec):
                     print(f"\n[Runner] Successfully recorded {hold_record_sec}s in HOLD (t_sim = {t_sim:.2f}s). Terminating.")
+                    break
+
+                # Termination check for nominal mode (run until max_sim_time)
+                if mode == "nominal" and t_sim >= max_sim_time:
+                    print(f"\n[Runner] Nominal mode reached full duration of {max_sim_time:.1f}s. Terminating.")
                     break
 
                 if t_sim >= max_sim_time:
@@ -299,9 +309,13 @@ def analyze_and_plot(csv_path):
 
     # Extreme metrics during the active adaptation phase (between t0 and t_hold)
     mask_adapt = (t >= t0) & (t <= (t_hold if t_hold is not None else t_end))
-    max_pitch_dev = np.max(np.abs(pitch_err[mask_adapt]))
-    max_u = np.max(np.abs(u_model[mask_adapt]))
-    max_x_err_mag = np.max(np.abs(x_err[mask_adapt]))
+    theta_err_deg = np.rad2deg(data["theta_error"][mask_adapt])
+    max_theta_err = np.max(np.abs(theta_err_deg)) if len(theta_err_deg) > 0 else 0.0
+    pitch_rel_nom = np.rad2deg(data["pitch"][mask_adapt] - data["theta_eq_nominal"][mask_adapt])
+    max_pitch_rel_nom = np.max(np.abs(pitch_rel_nom)) if len(pitch_rel_nom) > 0 else 0.0
+    max_pitch_dev = max_theta_err
+    max_u = np.max(np.abs(u_model[mask_adapt])) if np.sum(mask_adapt) > 0 else 0.0
+    max_x_err_mag = np.max(np.abs(x_err[mask_adapt])) if np.sum(mask_adapt) > 0 else 0.0
 
     # Approximate max apply rate from CSV
     apply_rate_est = np.max(np.abs(data["delta_y_apply_rate"][mask_adapt])) * 1000.0  # mm/s
@@ -422,11 +436,12 @@ def analyze_and_plot(csv_path):
     plt.close()
     print(f"Saved diagnostic plot to {out_plot}")
 
-    # Copy to artifacts directory
-    artifact_dir = "/home/admin/.gemini/antigravity/brain/281a16b2-d35b-4459-b32e-8cb3701236e0"
-    dest = os.path.join(artifact_dir, os.path.basename(out_plot))
-    shutil.copy(out_plot, dest)
-    print(f"Copied plot to artifact dir: {dest}")
+    # Copy to artifacts directory if exists
+    artifact_dir = os.environ.get("ANTIGRAVITY_ARTIFACT_DIR", "/home/admin/.gemini/antigravity/brain/afffd935-6e87-4bce-b7c1-7a2c9a70b720")
+    if os.path.exists(artifact_dir):
+        dest = os.path.join(artifact_dir, os.path.basename(out_plot))
+        shutil.copy(out_plot, dest)
+        print(f"Copied plot to artifact dir: {dest}")
 
     return {
         "t0": t0,
@@ -440,6 +455,8 @@ def analyze_and_plot(csv_path):
         "ss_x_err_mean": ss_x_err_mean,
         "ss_x_err_std": ss_x_err_std,
         "max_pitch_dev": max_pitch_dev,
+        "max_theta_err": max_theta_err,
+        "max_pitch_rel_nom": max_pitch_rel_nom,
         "max_u": max_u,
         "max_x_err_mag": max_x_err_mag,
         "n_reverify": n_reverify,
@@ -450,12 +467,27 @@ def analyze_and_plot(csv_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/adaptive_twostage_pos100.csv")
-    parser.add_argument("--bias", type=float, default=0.010)
+    parser.add_argument("--mode", default="adaptive", choices=["nominal", "oracle", "adaptive"])
+    parser.add_argument("--bias", type=float, default=0.0)
     parser.add_argument("--apply-rate", type=float, default=0.0010)
     parser.add_argument("--hold-sec", type=float, default=25.0)
     parser.add_argument("--max-time", type=float, default=160.0)
     parser.add_argument("--no-two-stage", action="store_true", help="Disable two-stage adaptation")
+    parser.add_argument("--payload-mass", type=float, default=0.0, help="Physical payload mass in kg")
+    parser.add_argument("--payload-y-offset", type=float, default=0.0, help="Physical payload y-offset in m")
+    parser.add_argument("--payload-z", type=float, default=0.170, help="Physical payload z in m")
     args = parser.parse_args()
 
-    run_state_machine_trial(args.output, args.bias, args.apply_rate, not args.no_two_stage, args.hold_sec, args.max_time)
+    run_state_machine_trial(
+        output_path=args.output,
+        bias=args.bias,
+        apply_rate=args.apply_rate,
+        two_stage=not args.no_two_stage,
+        hold_record_sec=args.hold_sec,
+        max_sim_time=args.max_time,
+        mode=args.mode,
+        payload_mass=args.payload_mass,
+        payload_y_offset=args.payload_y_offset,
+        payload_z=args.payload_z,
+    )
     analyze_and_plot(args.output)
