@@ -81,28 +81,29 @@ public:
         speed_ramp_time_ = 1.0;
         target_speed_smoothed_ = 0.0;
 
-        // ── 腿部参数  ──
-        L_MIN_ = 0.30; // 最低质心高度 (蹲下)
-        L_MAX_ = 0.50; // 最高质心高度 (站立)
+        // ── 腿部参数（与实车及自适应 LQR 统一定义：轮轴中心到髋关节的垂直高度）──
+        L_MIN_ = 0.30;              // 最低髋部-轮轴高度 (蹲下) [m]
+        L_MAX_ = 0.50;              // 最高髋部-轮轴高度 (站立) [m]
+        base_to_hip_height_ = 0.07; // 髋关节轴心至 base_link 原点垂直偏置 [m]
 
         // 起立 PID
         speed_pid_stand_ = {0.55f, 0.005f, 0.025f, 0.0f, 0.50f};
-        angle_pid_stand_ = {6.0f, 0.0f, 0.12f, 0.0f, 2.5f};
-        gyro_pid_stand_ = {2.2f, 0.0f, 0.012f, 10.0f, 5.0f};
+        angle_pid_stand_ = {7.0f, 0.0f, 0.12f, 0.0f, 2.5f};
+        gyro_pid_stand_ = {4.7f, 0.0f, 0.012f, 10.0f, 5.0f};
 
         // 蹲下 PID
         speed_pid_squat_ = {0.45f, 0.004f, 0.020f, 0.0f, 0.45f};
-        angle_pid_squat_ = {5.0f, 0.0f, 0.10f, 0.0f, 2.2f};
-        gyro_pid_squat_ = {1.8f, 0.0f, 0.010f, 10.0f, 4.5f};
+        angle_pid_squat_ = {6.0f, 0.0f, 0.10f, 0.0f, 2.2f};
+        gyro_pid_squat_ = {4.3f, 0.0f, 0.010f, 10.0f, 4.5f};
 
-        // 初始高度设置为站立高度
-        target_height_ = L_MAX_;                         // 初始目标
-        current_height_ = target_height_;                        // 初始高度
-  
+        // 初始高度设置为站立高度 (0.50 m)
+        target_height_ = L_MAX_;          // 初始目标
+        current_height_ = target_height_; // 初始高度
+
         leg_transition_speed_ = (L_MAX_ - L_MIN_) / 4.0; // 4秒完成全程过渡
 
         // ── 数据日志 ──
-        const char * home_dir = getenv("HOME");
+        const char *home_dir = getenv("HOME");
         data_path_ = std::string(home_dir ? home_dir : "/home/admin") + "/bbot_ws_new/src/bbot_balance_controller/src/data_logs/";
         open_log_files();
 
@@ -117,7 +118,8 @@ public:
 
         cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel", 10,
-            [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
+            [this](const geometry_msgs::msg::Twist::SharedPtr msg)
+            {
                 target_speed_const_ = clamp_value(msg->linear.x, -max_target_speed_, max_target_speed_);
                 target_yaw_rate_ = msg->angular.z;
                 if (std::abs(msg->linear.x) < 0.001 && std::abs(msg->angular.z) < 0.001)
@@ -129,13 +131,15 @@ public:
 
         target_height_sub_ = this->create_subscription<std_msgs::msg::Float64>(
             "/target_height", 10,
-            [this](const std_msgs::msg::Float64::SharedPtr msg) {
+            [this](const std_msgs::msg::Float64::SharedPtr msg)
+            {
                 target_height_ = clamp_value(msg->data, L_MIN_, L_MAX_);
             });
 
         mode_sub_ = this->create_subscription<std_msgs::msg::String>(
             "/robot_mode", 10,
-            [this](const std_msgs::msg::String::SharedPtr msg) {
+            [this](const std_msgs::msg::String::SharedPtr msg)
+            {
                 if (msg->data == "standup" || msg->data == "r" || msg->data == "R")
                 {
                     control_mode_ = MODE_STANDUP;
@@ -301,8 +305,8 @@ private:
         RCLCPP_INFO(this->get_logger(), "  D     — 右转 (%.2f rad/s)", turn_speed_);
         RCLCPP_INFO(this->get_logger(), "  Space — 停止移动保持平衡");
         RCLCPP_INFO(this->get_logger(), "  R     — 触发倒地自恢复起立");
-        RCLCPP_INFO(this->get_logger(), "  Q     — 升高身体 (+1cm,  %.2f~%.2fm)", L_MIN_, L_MAX_);
-        RCLCPP_INFO(this->get_logger(), "  E     — 降低身体 (-1cm,  %.2f~%.2fm)", L_MIN_, L_MAX_);
+        RCLCPP_INFO(this->get_logger(), "  Q     — 增大髋部-轮轴高度 (+1cm,  %.2f~%.2fm)", L_MIN_, L_MAX_);
+        RCLCPP_INFO(this->get_logger(), "  E     — 减小髋部-轮轴高度 (-1cm,  %.2f~%.2fm)", L_MIN_, L_MAX_);
         RCLCPP_INFO(this->get_logger(), "  X     — 紧急停机 (停止+复位PID)");
         RCLCPP_INFO(this->get_logger(), "============================================");
     }
@@ -346,16 +350,18 @@ private:
             target_yaw_rate_ = 0.0;
             RCLCPP_INFO(this->get_logger(), "[键盘] 停止移动");
         }
-        // ── 高度控制（增量式，每次按 Q/E 调整 1cm）──
+        // ── 高度控制（增量式，每次按 Q/E 调整 1cm 髋部-轮轴高度）──
         else if (seq == "q" || seq == "Q")
         {
             target_height_ = clamp_value(target_height_ + 0.01, L_MIN_, L_MAX_);
-            RCLCPP_INFO(this->get_logger(), "[键盘] 升高  目标高度 → %.3f m", target_height_);
+            RCLCPP_INFO(this->get_logger(), "[键盘] 升高  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
+                        target_height_, target_height_ + base_link_height_offset());
         }
         else if (seq == "e" || seq == "E")
         {
             target_height_ = clamp_value(target_height_ - 0.01, L_MIN_, L_MAX_);
-            RCLCPP_INFO(this->get_logger(), "[键盘] 降低  目标高度 → %.3f m", target_height_);
+            RCLCPP_INFO(this->get_logger(), "[键盘] 降低  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
+                        target_height_, target_height_ + base_link_height_offset());
         }
         else if (seq == "r" || seq == "R")
         {
@@ -432,7 +438,7 @@ private:
                 }
                 else if (pitch_err > 0.15)
                 {
-                    standup_vel = -2.5;  // 向前倒：车轮前冲产生后倾力矩
+                    standup_vel = -2.5; // 向前倒：车轮前冲产生后倾力矩
                 }
                 publish_cmd(standup_vel, 0.0);
                 return;
@@ -496,9 +502,8 @@ private:
 
         RCLCPP_INFO_THROTTLE(
             this->get_logger(), *this->get_clock(), 100,
-            "x=%.3f x_dot=%.3f spd=%.3f pitch=%.3f yaw=%.2f cmd=%.3f gyro_err=%.4f cmd_raw=%.4f h=%.3f",
-            x_, x_dot_, target_speed, pitch_, cmd_yaw, cmd_x, gyro_error, cmd_raw, current_height_);
-            
+            "x=%.3f x_dot=%.3f spd=%.3f pitch=%.3f yaw=%.2f cmd=%.3f gyro_err=%.4f cmd_raw=%.4f h_hip=%.3f h_base=%.3f",
+            x_, x_dot_, target_speed, pitch_, cmd_yaw, cmd_x, gyro_error, cmd_raw, current_height_, base_link_height());
     }
 
     // 发布函数
@@ -515,7 +520,9 @@ private:
 
     void publish_leg_pose()
     {
-        bbot_kinematics::IKSolution ik = kinematics_.inverse_kinematics(current_height_, 0.0);
+        // 仿真 IK 期望 base_link 离地高度：base_link_height() = current_height_ + base_to_hip_height_ + wheel_radius_ (0.14m)
+        // 内部 dZ_down = base_link_height - 0.14 = current_height_ (髋轴垂直高度)
+        bbot_kinematics::IKSolution ik = kinematics_.inverse_kinematics(base_link_height(), 0.0);
         double hip = ik.theta_hip;
         double knee = ik.theta_knee;
 
@@ -733,11 +740,23 @@ private:
 
     double target_x_ = 0.0;
 
-    double current_height_ = 0.5490; // 当前质心高度 [m]
-    double target_height_ = 0.5490;  // 目标质心高度 [m]
-    double leg_transition_speed_;    // 高度变化速率 [m/s]
-    double L_MIN_;                   // 最低高度 [m]
-    double L_MAX_;                   // 最高高度 [m]
+    // 腿高定义与实车及自适应 LQR 统一：轮轴中心到髋关节的垂直距离 H_hip_axle in [0.30, 0.50] m
+    double current_height_ = 0.50;     // 当前髋部-轮轴高度 [m]
+    double target_height_ = 0.50;      // 目标髋部-轮轴高度 [m]
+    double leg_transition_speed_;      // 高度变化速率 [m/s]
+    double L_MIN_ = 0.30;              // 最低髋部-轮轴高度 [m]
+    double L_MAX_ = 0.50;              // 最高髋部-轮轴高度 [m]
+    double base_to_hip_height_ = 0.07; // 髋关节轴心至 base_link 原点垂直偏置 [m]
+
+    double base_link_height_offset() const
+    {
+        return base_to_hip_height_ + wheel_radius_;
+    }
+
+    double base_link_height() const
+    {
+        return current_height_ + base_link_height_offset();
+    }
 
     bbot_kinematics::Kinematics kinematics_; // 运动学求解器
 

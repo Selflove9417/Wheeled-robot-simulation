@@ -1,0 +1,62 @@
+[
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "constant_0.3_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "constant_0.4_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "constant_0.5_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "lift_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.3_f+20_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.3_f-20_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.4_f+20_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.4_f-20_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.5_f+20_1"
+  },
+  {
+    "attempt": 1,
+    "fail_reason": null,
+    "protocol_valid": true,
+    "tag": "push_0.5_f-20_1"
+  }
+]

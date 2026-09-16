@@ -28,6 +28,13 @@
       filename="ignition-gazebo-imu-system"
       name="ignition::gazebo::systems::Imu">
     </plugin>
+    <!-- 外力脉冲插件（4.2.3 推扰实验）：世界级 ApplyLinkWrench，
+         通过 /world/balance_test_world/wrench 话题接收 EntityWrench 消息，
+         对指定 link 施加力/力矩。不发布时对仿真行为无任何影响。 -->
+    <plugin
+      filename="ignition-gazebo-apply-link-wrench-system"
+      name="ignition::gazebo::systems::ApplyLinkWrench">
+    </plugin>
 
     <!-- 环境光照 -->
     <light type="directional" name="sun">

@@ -99,6 +99,70 @@ namespace
     return "invalid";
   }
 
+  enum class GainMode
+  {
+    Scheduled = 0,
+    FixedMidpoint = 1
+  };
+
+  GainMode parse_gain_mode(const std::string &mode)
+  {
+    if (mode == "scheduled")
+    {
+      return GainMode::Scheduled;
+    }
+    if (mode == "fixed_midpoint")
+    {
+      return GainMode::FixedMidpoint;
+    }
+    throw std::invalid_argument(
+        "gain.mode must be scheduled or fixed_midpoint");
+  }
+
+  const char *gain_mode_name(GainMode mode)
+  {
+    switch (mode)
+    {
+    case GainMode::Scheduled:
+      return "scheduled";
+    case GainMode::FixedMidpoint:
+      return "fixed_midpoint";
+    }
+    return "invalid";
+  }
+
+  enum class GainProfile
+  {
+    LegacySafe = 0,
+    OptimizedV2 = 1
+  };
+
+  GainProfile parse_gain_profile(const std::string &profile)
+  {
+    if (profile == "legacy_safe")
+    {
+      return GainProfile::LegacySafe;
+    }
+    if (profile == "optimized_v2")
+    {
+      return GainProfile::OptimizedV2;
+    }
+    throw std::invalid_argument(
+        "gain.profile must be legacy_safe or optimized_v2");
+  }
+
+  const char *gain_profile_name(GainProfile profile)
+  {
+    switch (profile)
+    {
+    case GainProfile::LegacySafe:
+      return "legacy_safe";
+    case GainProfile::OptimizedV2:
+      return "optimized_v2";
+    }
+    return "invalid";
+  }
+
 } // namespace
 
 class AdaptiveLQRBalanceController : public rclcpp::Node
@@ -144,9 +208,15 @@ public:
     }
     leg_transition_speed_ = declare_parameter<double>("leg_transition_speed", 0.05);
     max_pitch_error_ = declare_parameter<double>("max_pitch_error", 0.50);
+    position_reference_latch_once_ = declare_parameter<bool>(
+        "position_reference_latch_once", false);
     adaptation_enabled_ = declare_parameter<bool>("adaptation_enabled", true);
     experiment_mode_ = parse_experiment_mode(
         declare_parameter<std::string>("experiment.mode", "adaptive"));
+    gain_mode_ = parse_gain_mode(
+        declare_parameter<std::string>("gain.mode", "scheduled"));
+    gain_profile_ = parse_gain_profile(
+        declare_parameter<std::string>("gain.profile", "legacy_safe"));
     injected_com_y_bias_ = declare_parameter<double>("experiment.com_y_bias", 0.0);
     if (!std::isfinite(injected_com_y_bias_) || std::abs(injected_com_y_bias_) > 0.010)
     {
@@ -203,10 +273,12 @@ public:
 
     RCLCPP_INFO(
         get_logger(),
-        "Adaptive GS-LQR started: mode=%s, injected COM-y bias=%+.3f mm, "
+        "Adaptive GS-LQR started: mode=%s, gain=%s, profile=%s, injected COM-y bias=%+.3f mm, "
         "hip-axle range=[%.3f, %.3f] m, startup=%.3f m, target=%.3f m, "
         "startup hold=%.1f s, base_link offset=%.3f m, inner loop 200 Hz.",
-        experiment_mode_name(experiment_mode_), 1000.0 * injected_com_y_bias_,
+        experiment_mode_name(experiment_mode_), gain_mode_name(gain_mode_),
+        gain_profile_name(gain_profile_),
+        1000.0 * injected_com_y_bias_,
         height_min_, height_max_, startup_height_, target_height_, startup_hold_time_,
         base_link_height_offset());
   }
@@ -221,18 +293,28 @@ public:
   }
 
 private:
-  static constexpr std::array<GainPoint, 5> gain_table_{{// height is H_hip-axle.  The corresponding base_link heights used by the
-                                                         // URDF/MATLAB model are 0.44, 0.49, 0.54, 0.59 and 0.64 m.
-                                                         {0.3000, -6.029616, -45.875982, -191.586929, -46.547541,
-                                                          -0.0276264, 0.3592154},
-                                                         {0.3500, -6.137382, -46.758575, -203.235631, -50.605491,
-                                                          -0.0258066, 0.4016316},
-                                                         {0.4000, -6.230876, -47.540094, -214.496292, -54.771166,
-                                                          -0.0234056, 0.4443432},
-                                                         {0.4500, -6.311959, -48.232783, -225.386480, -59.027574,
-                                                          -0.0203401, 0.4872441},
-                                                         {0.5000, -6.382279, -48.847665, -235.922994, -63.359510,
-                                                          -0.0164269, 0.5302655}}};
+  // Single data source for LQR gain schedules.
+  // legacy_safe: The conservative deployed design (matches lqr_gain_scheduled_controller.cpp).
+  // optimized_v2: PLACEHOLDER / NOT VALIDATED (currently identical to legacy_safe; pending Milestone C optimization).
+  // y_c/z_c remain the exact URDF suspended-body geometry across both profiles.
+  static constexpr std::array<GainPoint, 5> legacy_safe_table_{{
+      {0.3000, -5.622712, -42.666506, -156.508986, -35.846746, -0.0276264, 0.3592154},
+      {0.3500, -5.791278, -43.976682, -169.544125, -39.563240, -0.0258066, 0.4016316},
+      {0.4000, -5.931603, -45.087129, -181.972969, -43.390225, -0.0234056, 0.4443432},
+      {0.4500, -6.052411, -46.061241, -193.948669, -47.349665, -0.0203401, 0.4872441},
+      {0.5000, -6.157159, -46.922551, -205.518217, -51.430573, -0.0164269, 0.5302655}}};
+
+  static constexpr std::array<GainPoint, 5> optimized_v2_table_{{
+      {0.3000, -5.622712, -42.666506, -156.508986, -35.846746, -0.0276264, 0.3592154},
+      {0.3500, -5.791278, -43.976682, -169.544125, -39.563240, -0.0258066, 0.4016316},
+      {0.4000, -5.931603, -45.087129, -181.972969, -43.390225, -0.0234056, 0.4443432},
+      {0.4500, -6.052411, -46.061241, -193.948669, -47.349665, -0.0203401, 0.4872441},
+      {0.5000, -6.157159, -46.922551, -205.518217, -51.430573, -0.0164269, 0.5302655}}};
+
+  const std::array<GainPoint, 5> &active_table() const
+  {
+    return (gain_profile_ == GainProfile::OptimizedV2) ? optimized_v2_table_ : legacy_safe_table_;
+  }
 
   bbot_balance_controller::AdaptiveEquilibriumConfig read_estimator_config()
   {
@@ -311,7 +393,16 @@ private:
   {
     if (msg->data == "reset_position")
     {
+      if (position_reference_latch_once_ && position_reference_latched_)
+      {
+        RCLCPP_INFO(
+            get_logger(),
+            "Repeated reset_position ignored; fixed historical target remains %.6f m",
+            target_x_);
+        return;
+      }
       target_x_ = x_;
+      position_reference_latched_ = true;
       reset_adaptation("position reference changed");
     }
     else if (msg->data == "toggle_adaptation")
@@ -405,6 +496,9 @@ private:
     {
       pitch_rate_ = low_pass_filter(raw_pitch_rate, pitch_rate_, 0.10);
     }
+    last_imu_time_ = (msg->header.stamp.sec != 0 || msg->header.stamp.nanosec != 0)
+                         ? rclcpp::Time(msg->header.stamp)
+                         : now();
     imu_received_ = true;
   }
 
@@ -444,6 +538,9 @@ private:
     {
       return;
     }
+    last_joint_time_ = (msg->header.stamp.sec != 0 || msg->header.stamp.nanosec != 0)
+                           ? rclcpp::Time(msg->header.stamp)
+                           : now();
     if (!wheel_origin_set_)
     {
       wheel_004_origin_ = wheel_004_position_;
@@ -473,23 +570,24 @@ private:
       double height, LQRGain &gain, double &nominal_pitch,
       double &nominal_com_y, double &nominal_com_z) const
   {
-    if (height <= gain_table_.front().height)
+    const auto &table = active_table();
+    if (height <= table.front().height)
     {
       assign_gain(
-          gain_table_.front(), gain, nominal_pitch, nominal_com_y, nominal_com_z);
+          table.front(), gain, nominal_pitch, nominal_com_y, nominal_com_z);
       return;
     }
-    if (height >= gain_table_.back().height)
+    if (height >= table.back().height)
     {
       assign_gain(
-          gain_table_.back(), gain, nominal_pitch, nominal_com_y, nominal_com_z);
+          table.back(), gain, nominal_pitch, nominal_com_y, nominal_com_z);
       return;
     }
 
-    for (std::size_t index = 0; index + 1 < gain_table_.size(); ++index)
+    for (std::size_t index = 0; index + 1 < table.size(); ++index)
     {
-      const auto &low = gain_table_[index];
-      const auto &high = gain_table_[index + 1];
+      const auto &low = table[index];
+      const auto &high = table[index + 1];
       if (height < low.height || height > high.height)
       {
         continue;
@@ -567,12 +665,40 @@ private:
   void control_loop()
   {
     const rclcpp::Time current_time = now();
-    double dt = (current_time - last_time_).seconds();
-    last_time_ = current_time;
-    if (dt <= 0.0001 || dt > 0.05)
+    if (last_control_sim_time_.nanoseconds() != 0)
     {
-      dt = 0.005;
+      const double sim_elapsed = (current_time - last_control_sim_time_).seconds();
+      if (sim_elapsed < 0.0)
+      {
+        // /clock rollback detected: reset time baselines and safely return
+        RCLCPP_WARN(
+            get_logger(),
+            "Simulation clock rollback detected (sim_elapsed=%.4f s). Resetting time baselines.",
+            sim_elapsed);
+        last_control_sim_time_ = current_time;
+        last_time_ = current_time;
+        return;
+      }
+      if (sim_elapsed < 0.0045)
+      {
+        // Less than 4.5 ms elapsed in simulation time: skip until next 5 ms period
+        return;
+      }
     }
+
+    raw_dt_ = last_time_.nanoseconds() != 0 ? (current_time - last_time_).seconds() : 0.005;
+    last_time_ = current_time;
+    last_control_sim_time_ = current_time;
+
+    used_dt_ = raw_dt_;
+    if (used_dt_ <= 0.0001 || used_dt_ > 0.05)
+    {
+      used_dt_ = 0.005;
+    }
+    const double dt = used_dt_;
+
+    imu_sample_age_ = last_imu_time_.nanoseconds() != 0 ? (current_time - last_imu_time_).seconds() : -1.0;
+    joint_sample_age_ = last_joint_time_.nanoseconds() != 0 ? (current_time - last_joint_time_).seconds() : -1.0;
 
     if (!imu_received_ || !wheel_origin_set_ || !control_enabled_)
     {
@@ -591,6 +717,17 @@ private:
     interpolate_schedule(
         current_height_, current_gain_, theta_eq_true_,
         true_com_y_, nominal_com_z_);
+    if (gain_mode_ == GainMode::FixedMidpoint)
+    {
+      // Ablation baseline for the gain-scheduling study: freeze only the
+      // feedback gains at the H = 0.40 m design point of the selected profile.
+      // The nominal COM geometry and the scheduled equilibrium angle keep
+      // tracking the current height, so any performance difference is
+      // attributable to gain scheduling alone.
+      const auto &midpoint = active_table()[2];
+      current_gain_ = {midpoint.k_x, midpoint.k_x_dot,
+                       midpoint.k_theta, midpoint.k_theta_dot};
+    }
     used_com_y_ = true_com_y_ + injected_com_y_bias_;
     theta_eq_nominal_ = -std::atan2(used_com_y_, nominal_com_z_);
     const double true_equivalent_offset = -injected_com_y_bias_;
@@ -656,12 +793,13 @@ private:
 
     RCLCPP_INFO_THROTTLE(
         get_logger(), *get_clock(), 500,
-        "[ADAPT-LQR] mode=%s bias=%+.3fmm Lhip=%.3f Hbase=%.3f xerr=%+.3f "
+        "[ADAPT-LQR] mode=%s gain=%s bias=%+.3fmm Lhip=%.3f Hbase=%.3f xerr=%+.3f "
         "pitch=%+.4f eq_nom=%+.4f "
         "eq_adapt=%+.4f dy_obs=%+.3fmm dy_hat=%+.3fmm enabled=%d paused=%d gate=%d "
         "state=%d target=%+.3fmm capture=%.0f%% obs_range=%.3fmm "
         "accel=%+.4fm/s2 apply_rate=%+.3fmm/s u=%+.2f Nm",
-        experiment_mode_name(experiment_mode_), 1000.0 * injected_com_y_bias_,
+        experiment_mode_name(experiment_mode_), gain_mode_name(gain_mode_),
+        1000.0 * injected_com_y_bias_,
         current_height_, base_link_height(), x_error, pitch_, theta_eq_nominal_,
         theta_eq_adaptive_,
         1000.0 * estimator_.state().observed_com_offset,
@@ -702,7 +840,7 @@ private:
                  "adapt_update_paused,window_progress,window_position_range,cooldown_remaining,"
                  "adapt_state,delta_y_target,delta_y_apply_rate,filtered_x_accel,"
                  "observation_window_range,capture_progress,verify_progress,target_updated,"
-                 "u_raw,u_model,tau_each\n";
+                 "u_raw,u_model,tau_each,raw_dt,used_dt,imu_sample_age,joint_sample_age\n";
   }
 
   void log_data(
@@ -715,7 +853,7 @@ private:
     }
     const double elapsed = (now() - start_time_).seconds();
     const auto &adaptive = estimator_.state();
-    log_file_ << elapsed << ',' << current_height_ << ',' << base_link_height() << ',' << height_rate << ',' << x_ << ',' << target_x_ << ',' << x_error << ',' << x_dot_ << ',' << pitch_ << ',' << pitch_rate_ << ',' << theta_eq_nominal_ << ',' << theta_eq_adaptive_ << ',' << theta_error << ',' << static_cast<int>(experiment_mode_) << ',' << injected_com_y_bias_ << ',' << theta_eq_true_ << ',' << true_com_y_ << ',' << used_com_y_ << ',' << nominal_com_z_ << ',' << -injected_com_y_bias_ << ',' << applied_com_y_offset_ << ',' << adaptive.observed_com_offset << ',' << adaptive.filtered_observed_com_offset << ',' << adaptive.equivalent_com_offset << ',' << adaptive.offset_step << ',' << adaptive.filtered_x_error << ',' << adaptive.filtered_x_dot << ',' << adaptive.correction_error << ',' << (adaptive.observation_valid ? 1 : 0) << ',' << (adaptive.gate_open ? 1 : 0) << ',' << (adaptive_compensation_active() ? 1 : 0) << ',' << (adaptation_updates_paused_ ? 1 : 0) << ',' << adaptive.window_progress << ',' << adaptive.window_position_range << ',' << adaptive.cooldown_remaining << ',' << static_cast<int>(adaptive.phase) << ',' << adaptive.target_com_offset << ',' << adaptive.apply_rate << ',' << adaptive.filtered_x_accel << ',' << adaptive.observation_window_range << ',' << adaptive.window_progress << ',' << adaptive.verify_progress << ',' << (adaptive.target_updated ? 1 : 0) << ',' << u_raw << ',' << u_model << ',' << torque_each << '\n';
+    log_file_ << elapsed << ',' << current_height_ << ',' << base_link_height() << ',' << height_rate << ',' << x_ << ',' << target_x_ << ',' << x_error << ',' << x_dot_ << ',' << pitch_ << ',' << pitch_rate_ << ',' << theta_eq_nominal_ << ',' << theta_eq_adaptive_ << ',' << theta_error << ',' << static_cast<int>(experiment_mode_) << ',' << injected_com_y_bias_ << ',' << theta_eq_true_ << ',' << true_com_y_ << ',' << used_com_y_ << ',' << nominal_com_z_ << ',' << -injected_com_y_bias_ << ',' << applied_com_y_offset_ << ',' << adaptive.observed_com_offset << ',' << adaptive.filtered_observed_com_offset << ',' << adaptive.equivalent_com_offset << ',' << adaptive.offset_step << ',' << adaptive.filtered_x_error << ',' << adaptive.filtered_x_dot << ',' << adaptive.correction_error << ',' << (adaptive.observation_valid ? 1 : 0) << ',' << (adaptive.gate_open ? 1 : 0) << ',' << (adaptive_compensation_active() ? 1 : 0) << ',' << (adaptation_updates_paused_ ? 1 : 0) << ',' << adaptive.window_progress << ',' << adaptive.window_position_range << ',' << adaptive.cooldown_remaining << ',' << static_cast<int>(adaptive.phase) << ',' << adaptive.target_com_offset << ',' << adaptive.apply_rate << ',' << adaptive.filtered_x_accel << ',' << adaptive.observation_window_range << ',' << adaptive.window_progress << ',' << adaptive.verify_progress << ',' << (adaptive.target_updated ? 1 : 0) << ',' << u_raw << ',' << u_model << ',' << torque_each << ',' << raw_dt_ << ',' << used_dt_ << ',' << imu_sample_age_ << ',' << joint_sample_age_ << '\n';
   }
 
   double base_link_height_offset() const
@@ -745,6 +883,13 @@ private:
 
   rclcpp::Time last_time_;
   rclcpp::Time start_time_;
+  rclcpp::Time last_control_sim_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time last_imu_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time last_joint_time_{0, 0, RCL_ROS_TIME};
+  double raw_dt_{0.005};
+  double used_dt_{0.005};
+  double imu_sample_age_{-1.0};
+  double joint_sample_age_{-1.0};
   std::ofstream log_file_;
   LQRGain current_gain_;
 
@@ -757,6 +902,8 @@ private:
   bool pitch_rate_filter_initialized_{false};
   bool x_dot_filter_initialized_{false};
   ExperimentMode experiment_mode_{ExperimentMode::Adaptive};
+  GainMode gain_mode_{GainMode::Scheduled};
+  GainProfile gain_profile_{GainProfile::LegacySafe};
 
   double pitch_{0.0};
   double pitch_rate_{0.0};
@@ -783,6 +930,8 @@ private:
   double wheel_torque_max_{10.0};
   double total_torque_max_{20.0};
   double max_pitch_error_{0.50};
+  bool position_reference_latch_once_{false};
+  bool position_reference_latched_{false};
   double injected_com_y_bias_{0.0};
   double theta_eq_nominal_{0.0};
   double theta_eq_adaptive_{0.0};
@@ -794,7 +943,8 @@ private:
   double last_u_model_{0.0};
 };
 
-constexpr std::array<GainPoint, 5> AdaptiveLQRBalanceController::gain_table_;
+constexpr std::array<GainPoint, 5> AdaptiveLQRBalanceController::legacy_safe_table_;
+constexpr std::array<GainPoint, 5> AdaptiveLQRBalanceController::optimized_v2_table_;
 
 int main(int argc, char **argv)
 {

@@ -1,0 +1,32 @@
+# Effective parameter file for the three-loop cascade PID runtime.
+# Values are a checked-in commissioning baseline until a complete measured
+# run of tune_torque_cascade_pid.py replaces this file.
+# Architecture: Velocity -> Attitude -> Angular rate -> wheel torque.
+# Position is observation-only; k_x is forced to zero by the controller.
+
+torque_cascade_pid_controller:
+  ros__parameters:
+    pid:
+      k_x: 0.0
+      delta_theta_limit: 0.055
+      rate_limit_u: 0.0  # disabled; same normal slew constraint as GS-LQR
+      total_torque_max: 20.0
+      wheel_torque_max: 10.0
+
+      low:
+        kp_rate: 20.0
+        kd_rate: 0.02
+        kp_theta: 5.5
+        kd_theta: 0.10
+        kp_v: 0.08
+        ki_v: 0.008
+        kd_v: 0.001
+
+      high:
+        kp_rate: 22.0
+        kd_rate: 0.025
+        kp_theta: 6.0
+        kd_theta: 0.12
+        kp_v: 0.09
+        ki_v: 0.008
+        kd_v: 0.001

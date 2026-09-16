@@ -1,0 +1,2 @@
+attempt,fail_reason,final_position_error_mm,pitch_peak_deg,position_integral_peak,position_peak_mm,position_ref_saturation_ratio,position_rms_mm,protocol_valid,reset_event_count,steady_pitch_rms_deg,steady_velocity_rms_mps,target_constant,target_lock_count,torque_peak_nm,torque_rms_nm,torque_saturation_ratio,trial_tag,velocity_peak_mps
+1,,0.322,0.12479020777949328,0.291552,47.802,0.0,16.96336710802475,True,5,0.0005922312151282666,0.00043769138996753296,True,1,0.196847,0.020134936866604468,0.0,constant_0.3_1,0.045401

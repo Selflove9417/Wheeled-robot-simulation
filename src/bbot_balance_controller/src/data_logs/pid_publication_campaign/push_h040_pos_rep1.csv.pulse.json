@@ -1,0 +1,12 @@
+{
+  "actual_duration": null,
+  "bridge_ready": true,
+  "clear_complete": false,
+  "clear_publish_count": 5,
+  "completed": false,
+  "invalid_reason": null,
+  "pre_clear_complete": true,
+  "pulse_end_sim_time": null,
+  "pulse_start_sim_time": null,
+  "wrench_publish_count": 0
+}

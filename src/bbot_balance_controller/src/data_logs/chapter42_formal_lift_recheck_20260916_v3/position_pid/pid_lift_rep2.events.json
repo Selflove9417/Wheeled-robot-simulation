@@ -1,0 +1,23 @@
+{
+  "actual_low_return_sim_time": 37.189,
+  "actual_rise_start_sim_time": 19.276,
+  "completed": true,
+  "failure_reason": null,
+  "high_reached_sim_time": 23.168,
+  "lift_command_down_sim_time": 33.245,
+  "lift_command_up_sim_time": 19.061,
+  "observation_end_sim_time": 47.189,
+  "static_gate": {
+    "height_target_m": 0.3,
+    "height_tolerance_m": 0.005,
+    "hold_s": 5.0,
+    "passed": true,
+    "passed_sim_time": 19.061,
+    "pitch_rate_tolerance_rad_s": 0.02,
+    "pitch_tolerance_deg": 0.2,
+    "position_span_m": 0.0014350000000000196,
+    "position_span_tolerance_m": 0.005,
+    "velocity_tolerance_m_s": 0.01
+  },
+  "target_lock_time_sim": 6.986
+}

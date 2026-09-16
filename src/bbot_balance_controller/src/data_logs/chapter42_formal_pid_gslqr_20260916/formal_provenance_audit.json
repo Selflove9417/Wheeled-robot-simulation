@@ -1,0 +1,20 @@
+{
+  "formal_manifest": "formal_manifest.json",
+  "run_data_status": "60 controller runs completed; 30 position_pid and 30 gs_lqr; no retryable protocol errors",
+  "build_verification": {
+    "command": "python3 -m py_compile src/bbot_balance_controller/scripts/run_formal_pid_gslqr_campaign.py src/bbot_balance_controller/scripts/analyze_formal_pid_gslqr.py && colcon build --packages-select bbot_balance_controller bbot_bringup --symlink-install",
+    "result": "passed",
+    "verified_utc": "2026-09-15T17:40:00Z"
+  },
+  "git_head_at_audit": "339ab4b2157ff0ee2b8818ac73b4a71ff03e31ae",
+  "sha256": {
+    "src/bbot_balance_controller/src/position_torque_cascade_pid_controller.cpp": "4f8427c8601d5c8fb8ecd070924128900187f2925584c65af715a569ddeff7ec",
+    "src/bbot_balance_controller/src/adaptive_lqr_balance_controller.cpp": "9a9d0dffa8f18e6d7c0a888c10383dfb9415e4bdfa980666b7b37e8693a50216",
+    "src/bbot_bringup/launch/bbot_gazebo.launch.py": "cd0b6a5a5bb2511a0e66ce9a3657a832e116181d78b3f1768e212ebbae2b1609",
+    "src/bbot_balance_controller/config/gs_lqr_historical_experiment.yaml": "a5a42565681b5c09a38075fcae326e78fa9617669a3f260f8477d6d8a1599251",
+    "src/bbot_balance_controller/src/data_logs/position_torque_pid_tuning_v3/position_torque_cascade_pid_gains_frozen.yaml": "785b832e11be059790a7dec5a94f0ca5dddbdf88b0723765a6e9e34f585a2f91",
+    "src/bbot_balance_controller/scripts/run_formal_pid_gslqr_campaign.py": "1661acfb2d20ec8bdf49fbe002af224eb6d790a3ca378456e4d7c77e41675882",
+    "src/bbot_balance_controller/scripts/analyze_formal_pid_gslqr.py": "9c3c5db0214c3ecd907d3756843b54e6f0ae8a7a64e6e3ab4d09709c9db789c0",
+    "src/bbot_balance_controller/CMakeLists.txt": "6af742837711cd2bbf0252a4e66bf1b362cacb79061f07106a2284d6087d874b"
+  }
+}

@@ -211,13 +211,13 @@ public:
     BBotVelocityJumpController()
         : Node("bbot_velocity_jump_controller")
     {
-        gain_low_ = {-6.1624, -45.8436, -179.6985, -42.8109};
-        gain_high_ = {-6.3650, -49.5719, -233.4004, -62.6391};
+        gain_low_ = {-5.622712, -42.666506, -156.508986, -35.846746};
+        gain_high_ = {-6.157159, -46.922551, -205.518217, -51.430573};
         current_gain_ = gain_high_;
 
         balance_offset_ = 0.038;
         cmd_scale_ = 0.043;
-        wheel_radius_ = 0.07;
+        wheel_radius_ = kinematics_.get_params().wheel_radius;
         max_cmd_x_ = 10.0;
 
         walk_speed_ = 0.50;
@@ -333,13 +333,39 @@ public:
         jump_pitch_ref_ = balance_offset_ + jump_pitch_offset_;
         active_jump_pitch_ref_ = balance_offset_;
 
-        L_MIN_ = 0.30;
-        L_MAX_ = 0.50;
-        L_STAND_ = 0.50;
+        // 腿高定义与实车及自适应 LQR 统一：轮轴中心到髋关节的垂直距离 H_hip_axle in [0.30, 0.50] m
+        // 仿真 IK 期望 base_link 离地高度，内部转换关系：base_link_height = hip_axle_height + base_link_height_offset()
+        L_MIN_ = this->declare_parameter<double>("height.hip_axle_min", 0.30);
+        L_MAX_ = this->declare_parameter<double>("height.hip_axle_max", 0.50);
+        base_to_hip_height_ = this->declare_parameter<double>("height.base_to_hip", 0.07);
+        if (!std::isfinite(L_MIN_) || !std::isfinite(L_MAX_) ||
+            !std::isfinite(base_to_hip_height_) || L_MIN_ >= L_MAX_ ||
+            base_to_hip_height_ < 0.0)
+        {
+            throw std::invalid_argument("invalid hip-axle height mapping parameters");
+        }
+        L_STAND_ = L_MAX_;
 
-        target_height_ = L_STAND_;
-        current_height_ = target_height_;
-        leg_transition_speed_ = (L_MAX_ - L_MIN_) / 4.0; // 0.05 m/s
+        target_height_ = this->declare_parameter<double>("target_height", L_STAND_);
+        target_height_ = bbot_jump::clamp_value(target_height_, L_MIN_, L_MAX_);
+
+        startup_height_ = this->declare_parameter<double>("height.startup_hip_axle", 0.36);
+        if (!std::isfinite(startup_height_))
+        {
+            throw std::invalid_argument("height.startup_hip_axle must be finite");
+        }
+        startup_height_ = bbot_jump::clamp_value(startup_height_, L_MIN_, L_MAX_);
+        current_height_ = startup_height_;
+
+        startup_hold_time_ = this->declare_parameter<double>("height.startup_hold_time", 2.0);
+        if (!std::isfinite(startup_hold_time_) || startup_hold_time_ < 0.0)
+        {
+            throw std::invalid_argument("height.startup_hold_time must be non-negative");
+        }
+
+        leg_transition_speed_ = this->declare_parameter<double>(
+            "leg_transition_speed", (L_MAX_ - L_MIN_) / 4.0); // 0.05 m/s
+        interpolate_lqr_gain();
 
         // ── 跳跃核心参数 ──
         // 不做过深、过快的下蹲：位置控制器切到 Effort 的短暂过渡期间，
@@ -466,6 +492,9 @@ public:
         // 才能在负俯仰/负角速度时给出负轮速进行回正。
         air_wheel_sign_ = this->declare_parameter<double>("air_wheel_sign", 1.0);
 
+        RCLCPP_INFO(this->get_logger(),
+                    "[height-config] L_MIN=%.3fm L_MAX=%.3fm base_to_hip=%.3fm startup_h=%.3fm target_h=%.3fm hold_time=%.2fs",
+                    L_MIN_, L_MAX_, base_to_hip_height_, startup_height_, target_height_, startup_hold_time_);
         RCLCPP_INFO(this->get_logger(),
                     "[protective-landing-progress-v6.16] PROTECTIVE_DEPLOY 姿态退出稳定区后：连续减速 + 最大可行 landing progress（COM-relative 评价）");
         RCLCPP_INFO(this->get_logger(),
@@ -597,6 +626,9 @@ public:
                 if (current_state_ == bbot_jump::STATE_BALANCE)
                 {
                     target_height_ = bbot_jump::clamp_value(msg->data, L_MIN_, L_MAX_);
+                    RCLCPP_INFO(this->get_logger(),
+                                "设定髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
+                                target_height_, base_link_height(target_height_));
                 }
             });
 
@@ -705,16 +737,16 @@ private:
     double hip_pos_cmd_right_ = 0.0, knee_pos_cmd_right_ = 0.0;
 
     // 垂直方向状态估计 (正运动学)
-    double current_z_ = 0.40;
+    double current_z_ = 0.50;
     double current_z_dot_ = 0.0;
     double current_z_dot_raw_ = 0.0;
-    double prev_z_ = 0.40;
+    double prev_z_ = 0.50;
     rclcpp::Time prev_z_time_;
     bool z_dot_filter_init_ = false;
     double prev_q_hip_des_ = 0.0;
     double prev_q_knee_des_ = 0.0;
-    double state_start_z_ = 0.30;
-    double flight_start_z_ = 0.40;
+    double state_start_z_ = 0.50;
+    double flight_start_z_ = 0.50;
     bool thrust_trajectory_initialized_ = false;
     double thrust_force_per_leg_ = 0.0;
     double thrust_force_command_per_leg_ = 0.0;
@@ -769,7 +801,7 @@ private:
     int attitude_arrest_stable_count_ = 0;
     double tuck_start_time_ = 0.0;
     double extend_start_time_ = 0.0;
-    double tuck_start_z_ = 0.40;
+    double tuck_start_z_ = 0.50;
     bbot_jump::QuinticTrajectory tuck_traj_;
     bbot_jump::QuinticTrajectory extend_traj_;
     bbot_jump::QuinticTrajectory protective_deploy_traj_;
@@ -969,12 +1001,32 @@ private:
     double landing_wheel_ground_blend_ = 0.0;
     double air_wheel_baseline_ = 0.0;
 
-    double current_height_ = 0.40;
-    double target_height_ = 0.40;
-    double leg_transition_speed_;
-    double L_MIN_;
-    double L_MAX_;
-    double L_STAND_;
+    // 腿高定义与实车及自适应 LQR 统一：轮轴中心到髋关节的垂直距离 H_hip_axle in [0.30, 0.50] m
+    double current_height_ = 0.36;
+    double target_height_ = 0.50;
+    double startup_height_ = 0.36;
+    double startup_hold_time_ = 2.0;
+    double balance_ready_elapsed_ = 0.0;
+    double leg_transition_speed_ = 0.05;
+    double L_MIN_ = 0.30;
+    double L_MAX_ = 0.50;
+    double L_STAND_ = 0.50;
+    double base_to_hip_height_ = 0.07;
+
+    double base_link_height_offset() const
+    {
+        return base_to_hip_height_ + wheel_radius_;
+    }
+
+    double base_link_height() const
+    {
+        return current_height_ + base_link_height_offset();
+    }
+
+    double base_link_height(double hip_axle_height) const
+    {
+        return hip_axle_height + base_link_height_offset();
+    }
 
     // 跳跃规划参数
     double L_SQUAT_;
@@ -1026,7 +1078,7 @@ private:
     double thrust_knee_pd_left_ = 0.0;
     bool thrust_knee_position_yield_ = false;
     double thrust_timeout_ = 0.48;
-    double thrust_start_z_ = 0.40;
+    double thrust_start_z_ = 0.50;
     bool velocity_takeoff_reached_ = false;
     double actual_takeoff_velocity_ = 0.0;
     double max_z_during_jump_ = 0.0;
@@ -1045,7 +1097,7 @@ private:
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     bbot_jump::WorldPoseVelocity world_pose_velocity_;
     double odom_twist_z_diag_ = 0.0;
-    double gazebo_world_z_ = 0.40;
+    double gazebo_world_z_ = 0.64;
     double gazebo_world_z_dot_ = 0.0;
     double gazebo_world_x_dot_ = 0.0;
     double gazebo_world_y_dot_ = 0.0;
@@ -1369,7 +1421,8 @@ private:
             if (current_state_ == bbot_jump::STATE_BALANCE)
             {
                 target_height_ = bbot_jump::clamp_value(target_height_ + 0.01, L_MIN_, L_MAX_);
-                RCLCPP_INFO(this->get_logger(), "[键盘] 升高  目标高度 → %.3f m", target_height_);
+                RCLCPP_INFO(this->get_logger(), "[键盘] 升高  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
+                            target_height_, base_link_height(target_height_));
             }
         }
         else if (seq == "e" || seq == "E")
@@ -1377,7 +1430,8 @@ private:
             if (current_state_ == bbot_jump::STATE_BALANCE)
             {
                 target_height_ = bbot_jump::clamp_value(target_height_ - 0.01, L_MIN_, L_MAX_);
-                RCLCPP_INFO(this->get_logger(), "[键盘] 降低  目标高度 → %.3f m", target_height_);
+                RCLCPP_INFO(this->get_logger(), "[键盘] 降低  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
+                            target_height_, base_link_height(target_height_));
             }
         }
         else if (seq == "r" || seq == "R")
@@ -1559,14 +1613,16 @@ private:
         }
 
         // 计算当前腿长与竖直速度：综合左右双腿平均高度，消除单腿盲区与不对称塌软
+        // calculate_com_height 返回 base_link 离地高度，需扣除 base_to_hip_height_ 和 wheel_radius_ 转换为髋轴高度
         double z_left = kinematics_.calculate_com_height(pitch_, hip_pos_left_, knee_pos_left_);
         double z_right = kinematics_.calculate_com_height(pitch_, hip_pos_right_, knee_pos_right_);
         double z_calc = 0.5 * (z_left + z_right);
+        double current_hip_z = z_calc - base_link_height_offset();
         rclcpp::Time now_t = sample_time > 0.0 ? rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) : this->now();
         double dt_z = (now_t - prev_z_time_).seconds();
         if (dt_z > 0.001)
         {
-            current_z_dot_raw_ = (z_calc - prev_z_) / dt_z;
+            current_z_dot_raw_ = (current_hip_z - prev_z_) / dt_z;
             current_z_dot_raw_ = bbot_jump::clamp_value(current_z_dot_raw_, -3.0, 3.0);
             if (!z_dot_filter_init_)
             {
@@ -1578,10 +1634,10 @@ private:
                 current_z_dot_ = bbot_jump::low_pass_filter(
                     current_z_dot_raw_, current_z_dot_, 0.22);
             }
-            prev_z_ = z_calc;
+            prev_z_ = current_hip_z;
             prev_z_time_ = now_t;
         }
-        current_z_ = z_calc;
+        current_z_ = current_hip_z;
     }
 
     // ── 主控制循环 (200Hz) ──
@@ -1678,8 +1734,12 @@ private:
     // ── 阶段 0：变高度 LQR 自平衡 ──
     void run_state_balance(double dt)
     {
-        // 1. 平滑过渡高度
-        update_leg_height_by_dt(dt);
+        // 1. 平滑过渡高度：先在安全初始高度稳定保持，自平衡建立后再平滑过渡到 target_height
+        balance_ready_elapsed_ += dt;
+        if (balance_ready_elapsed_ >= startup_hold_time_)
+        {
+            update_leg_height_by_dt(dt);
+        }
 
         // 2. 动态插值 LQR 增益
         interpolate_lqr_gain();
@@ -1819,7 +1879,7 @@ private:
 
         // 腿部逆运动学与重力矩计算
         bbot_kinematics::IKSolution ik_bal =
-            kinematics_.inverse_kinematics(current_height_, 0.0);
+            kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
         bbot_kinematics::JointTorques g_torques =
             kinematics_.compute_gravity_torques(
                 0.0, ik_bal.theta_hip, ik_bal.theta_knee);
@@ -1860,7 +1920,7 @@ private:
         current_height_ = pre_jump_hold_height_;
 
         // 腿保持触发瞬间高度，PRE_JUMP 只建立水平速度与机身工作姿态。
-        const auto ik_hold = kinematics_.inverse_kinematics(pre_jump_hold_height_, 0.0);
+        const auto ik_hold = kinematics_.inverse_kinematics(base_link_height(pre_jump_hold_height_), 0.0);
         const auto g_torques = kinematics_.compute_gravity_torques(
             0.0, ik_hold.theta_hip, ik_hold.theta_knee);
         if (effort_mode_active_)
@@ -2004,7 +2064,7 @@ private:
         current_height_ = des_z;
 
         // 下蹲重力补偿力矩 + 高刚度轨迹跟踪 (Kp=350, Kd=14)
-        bbot_kinematics::IKSolution ik_sq = kinematics_.inverse_kinematics(des_z, 0.0);
+        bbot_kinematics::IKSolution ik_sq = kinematics_.inverse_kinematics(base_link_height(des_z), 0.0);
         bbot_kinematics::JointTorques g_torques = kinematics_.compute_gravity_torques(0.0, ik_sq.theta_hip, ik_sq.theta_knee);
         double support_force_total = TOTAL_MASS_ * 9.81;
         if (effort_mode_active_)
@@ -2130,7 +2190,7 @@ private:
             // 控制器异步切换期间不能把刚建立的前倾角速度耗掉。
             // 腿仍保持下蹲位置，但轮控继续追踪“前倾角 + 正俯仰角速度”，并开始向离地前向速度加速。
             request_effort_controller();
-            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(L_SQUAT_, 0.0);
+            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(base_link_height(L_SQUAT_), 0.0);
             publish_position_leg_control(ik_hold.theta_hip, ik_hold.theta_knee);
 
             interpolate_lqr_gain();
@@ -2469,7 +2529,7 @@ private:
         const double target_ik_z = bbot_jump::clamp_value(
             des_z, L_SQUAT_, H_TAKEOFF_);
         current_height_ = target_ik_z;
-        const auto ik = kinematics_.inverse_kinematics(target_ik_z, 0.0);
+        const auto ik = kinematics_.inverse_kinematics(base_link_height(target_ik_z), 0.0);
         // 名义推地轨迹已经走完却仍未离地时，不能再用固定 H_TAKEOFF
         // 的 IK 把已伸开的腿强行拉回去。上一轮中 current_z 已到 0.67 m，
         // 规划却停在 0.475 m，位置 PD 会撤掉尚未形成离地所需的最后冲量。
@@ -2887,14 +2947,13 @@ private:
         double target_z, double body_pitch, double target_x) const
     {
         const auto &p = kinematics_.get_params();
-        constexpr double kHipBodyVerticalOffset = 0.07;
         constexpr double kCadWheelToHipLongitudinal = -0.01137221;
         const double phi1_0 = std::atan2(-0.29348091, 0.06220095);
         const double phi2_0 = std::atan2(0.28210870, 0.19553796);
 
         // 与 bbot_kinematics::inverse_kinematics() 完全相同的 target_z 定义：
         // target_z 为机身离地高度，先扣除髋->机身竖直偏置和轮半径。
-        double dZ_down = target_z - (kHipBodyVerticalOffset + p.wheel_radius);
+        double dZ_down = target_z - base_link_height_offset();
         dZ_down = bbot_jump::clamp_value(dZ_down, 0.10, 0.60);
 
         // 正 target_x 代表 wheel behind body，因此 wheel 相对 hip 的纵向坐标更负。
@@ -3065,7 +3124,7 @@ private:
         landing_capture_planned_ = true;
 
         const auto landing_ik = inverse_kinematics_with_target_x(
-            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
+            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
         const auto &p = kinematics_.get_params();
         landing_target_shank_abs_ = landing_ik.theta_shank;
         landing_target_knee_axis_clearance_ =
@@ -3111,9 +3170,9 @@ private:
             hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
         const std::array<double, 4> a{};
         const double tuck_comp = bbot_jump::clamp_value(pitch_ - balance_offset_, -0.24, 0.24);
-        const auto tuck = inverse_kinematics_with_target_x(L_RETRACT_, tuck_comp, 0.0);
+        const auto tuck = inverse_kinematics_with_target_x(base_link_height(L_RETRACT_), tuck_comp, 0.0);
         const auto land = inverse_kinematics_with_target_x(
-            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_, preview_landing_target_x(now_sec));
+            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, preview_landing_target_x(now_sec));
         const std::array<double, 4> mid{
             tuck.theta_hip, tuck.theta_knee, tuck.theta_hip, tuck.theta_knee};
         const std::array<double, 4> end{
@@ -3136,7 +3195,7 @@ private:
             if (!std::isfinite(actual[i]) || std::abs(q[i] - actual[i]) > 0.12)
                 return false;
         const auto land = inverse_kinematics_with_target_x(
-            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
+            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
         return bbot_jump::flight_segment_admissible(q, v, a,
                                                     {land.theta_hip, land.theta_knee, land.theta_hip, land.theta_knee},
                                                     flight_round_trip_plan_.extend_duration);
@@ -3176,7 +3235,7 @@ private:
         if (flight_trajectory_initialized_)
             sample_flight_joints(now_sec, q, v, a);
         const auto ik = inverse_kinematics_with_target_x(
-            height, bbot_jump::clamp_value(body_pitch_ref, -0.30, 0.30),
+            base_link_height(height), bbot_jump::clamp_value(body_pitch_ref, -0.30, 0.30),
             target_x);
         const std::array<double, 4> end{ik.theta_hip, ik.theta_knee, ik.theta_hip, ik.theta_knee};
         std::array<bbot_jump::QuinticTrajectory *, 4> dest{
@@ -3279,7 +3338,7 @@ private:
             const double tuck_comp = bbot_jump::clamp_value(
                 pitch_ - balance_offset_, -0.24, 0.24);
             const auto tuck_ik = inverse_kinematics_with_target_x(
-                L_RETRACT_, tuck_comp, 0.0);
+                base_link_height(L_RETRACT_), tuck_comp, 0.0);
 
             const std::array<double, 4> q0{
                 hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
@@ -3404,7 +3463,7 @@ private:
             const double landing_pitch_ref =
                 balance_offset_ + flight_landing_pitch_bias_;
             const auto landing_ik = inverse_kinematics_with_target_x(
-                L_TOUCH_, landing_pitch_ref, landing_target_x_);
+                base_link_height(L_TOUCH_), landing_pitch_ref, landing_target_x_);
             const std::array<double, 4> landing_end{
                 landing_ik.theta_hip, landing_ik.theta_knee,
                 landing_ik.theta_hip, landing_ik.theta_knee};
@@ -4290,7 +4349,7 @@ private:
         if (!effort_mode_active_)
         {
             request_effort_controller();
-            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(L_TOUCH_, 0.0);
+            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(base_link_height(L_TOUCH_), 0.0);
             publish_position_leg_control(ik_hold.theta_hip, ik_hold.theta_knee);
             return;
         }
@@ -4360,7 +4419,7 @@ private:
         const double buffer_pitch_comp = bbot_jump::clamp_value(
             pitch_err, -0.30, 0.30);
         bbot_kinematics::IKSolution ik_buf =
-            kinematics_.inverse_kinematics(ik_z_buf, buffer_pitch_comp);
+            kinematics_.inverse_kinematics(base_link_height(ik_z_buf), buffer_pitch_comp);
         // 触地瞬间保持空中末帧构型，随后再把 IK 参考平滑交接给缓冲控制。
         // 位置目标和速度目标都连续，避免髋关节为追赶新的 IK 反向猛甩。
         const double handoff_elapsed = std::max(
@@ -4750,7 +4809,7 @@ private:
             recovery_descent_started_ = true;
 
             const auto ik_safe = kinematics_.inverse_kinematics(
-                recovery_hold_height_, 0.0);
+                base_link_height(recovery_hold_height_), 0.0);
             recovery_hip_reference_ = ik_safe.theta_hip;
             RCLCPP_INFO(
                 this->get_logger(),
@@ -4784,7 +4843,7 @@ private:
         height_force_initialized_ = true;
         recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_STABILIZE;
         recovery_follow_height_ik_ = false;
-        recovery_hip_reference_ = kinematics_.inverse_kinematics(L_STAND_, 0.0).theta_hip;
+        recovery_hip_reference_ = kinematics_.inverse_kinematics(base_link_height(L_STAND_), 0.0).theta_hip;
         recovery_stable_timer_ = 0.0;
         position_handoff_suppressed_for_jump_ = true;
         controller_mode_str_ = "EFFORT";
@@ -4855,7 +4914,7 @@ private:
             // 失败缩腿必须让髋、膝一起跟随完整 IK。旧 RECOVERY 会固定 hip target，
             // 那正是“腿看起来一直顶得很长”的一个附加原因。
             recovery_follow_height_ik_ = true;
-            const auto ik_fail = kinematics_.inverse_kinematics(des_z, 0.0);
+            const auto ik_fail = kinematics_.inverse_kinematics(base_link_height(des_z), 0.0);
             recovery_hip_reference_ = ik_fail.theta_hip;
             support_force_total = publish_effort_height_control(
                 des_z, des_v,
@@ -4873,7 +4932,7 @@ private:
                 recovery_hold_height_ = failed_thrust_crouch_height_;
                 current_height_ = failed_thrust_crouch_height_;
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         failed_thrust_crouch_height_, 0.0)
+                                                         base_link_height(failed_thrust_crouch_height_), 0.0)
                                               .theta_hip;
                 RCLCPP_INFO(this->get_logger(),
                             ">>> [FAIL_RECOVERY] 已缩腿到 %.3fm，先在低位稳定姿态再重新站起 <<<",
@@ -4892,7 +4951,7 @@ private:
             current_height_ = failed_thrust_crouch_height_;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     failed_thrust_crouch_height_, 0.0)
+                                                     base_link_height(failed_thrust_crouch_height_), 0.0)
                                           .theta_hip;
             support_force_total = publish_effort_height_control(
                 failed_thrust_crouch_height_, 0.0,
@@ -4946,7 +5005,7 @@ private:
             if (recovery_follow_height_ik_)
             {
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         des_z, 0.0)
+                                                         base_link_height(des_z), 0.0)
                                               .theta_hip;
             }
 
@@ -4962,7 +5021,7 @@ private:
                             ">>> [RECOVERY] EFFORT_RAISE 完成，进入 EFFORT_STABILIZE 稳态检测 <<<");
                 recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_STABILIZE;
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         L_STAND_, 0.0)
+                                                         base_link_height(L_STAND_), 0.0)
                                               .theta_hip;
                 recovery_follow_height_ik_ = false;
                 recovery_stable_timer_ = 0.0;
@@ -5136,7 +5195,7 @@ private:
             position_hold_timer_ += dt;
             if (position_hold_timer_ >= 0.25)
             {
-                auto ik_stand = kinematics_.inverse_kinematics(L_STAND_, 0.0);
+                auto ik_stand = kinematics_.inverse_kinematics(base_link_height(L_STAND_), 0.0);
                 traj_return_hip_l_.init(now_sec, 0.80, latched_pos_hip_left_, 0.0, 0.0, ik_stand.theta_hip, 0.0, 0.0);
                 traj_return_knee_l_.init(now_sec, 0.80, latched_pos_knee_left_, 0.0, 0.0, ik_stand.theta_knee, 0.0, 0.0);
                 traj_return_hip_r_.init(now_sec, 0.80, latched_pos_hip_right_, 0.0, 0.0, ik_stand.theta_hip, 0.0, 0.0);
@@ -5223,7 +5282,7 @@ private:
             current_z_, current_z_dot_, pitch_, pitch_err, pitch_rate_,
             x_dot_, pos_error, cmd_x, controller_mode_str_.c_str());
 
-        auto ik_log = kinematics_.inverse_kinematics(current_height_, 0.0);
+        auto ik_log = kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
         bbot_kinematics::JointTorques g_torques = kinematics_.compute_gravity_torques(
             0.0, ik_log.theta_hip, ik_log.theta_knee);
         log_data(cmd_x, g_torques.hip_torque * 0.5, g_torques.knee_torque * 0.5,
@@ -5234,7 +5293,7 @@ private:
     void run_state_standup()
     {
         bbot_kinematics::IKSolution ik_stand =
-            kinematics_.inverse_kinematics(L_MIN_, 0.0);
+            kinematics_.inverse_kinematics(base_link_height(L_MIN_), 0.0);
         if (effort_mode_active_)
         {
             publish_effort_leg_control(ik_stand.theta_hip, ik_stand.theta_knee, 0.0, 0.0,
@@ -5294,7 +5353,7 @@ private:
             // v6.0：轮子仍接地时，长腿是最差的失败恢复构型。先缩到约0.38m，
             // 降低质心并增加膝盖弯曲，再等待姿态变缓；之后才重新站回0.50m。
             const double safe_start_height = bbot_jump::clamp_value(
-                current_z_, L_SQUAT_, 0.70);
+                current_z_, L_SQUAT_, L_STAND_);
             // 失败恢复不允许目标轨迹继续向上伸长；若当前仍在上升，
             // 从 0 期望速度开始平滑缩腿，若已经下降则保留有限负速度连续性。
             const double safe_start_v = bbot_jump::clamp_value(
@@ -5303,7 +5362,7 @@ private:
             current_height_ = safe_start_height;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     safe_start_height, 0.0)
+                                                     base_link_height(safe_start_height), 0.0)
                                           .theta_hip;
             recovery_subphase_ = bbot_jump::RECOVERY_FAIL_CROUCH;
             quintic_traj_.init(
@@ -5325,7 +5384,7 @@ private:
             current_height_ = safe_start_height;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     safe_start_height, 0.0)
+                                                     base_link_height(safe_start_height), 0.0)
                                           .theta_hip;
             recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_RAISE;
             quintic_traj_.init(now_sec, 0.45, safe_start_height, 0.0, 0.0,
@@ -5486,7 +5545,7 @@ private:
             tau_hip_r += tau_body_per_hip;
         }
 
-        const auto ik = kinematics_.inverse_kinematics(z_des, 0.0);
+        const auto ik = kinematics_.inverse_kinematics(base_link_height(z_des), 0.0);
         const double hip_position_target =
             (current_state_ == bbot_jump::STATE_RECOVERY && !recovery_follow_height_ik_) ? recovery_hip_reference_ : ik.theta_hip;
         publish_effort_leg_control_lr(hip_position_target, ik.theta_knee, 0.0, 0.0,
@@ -5529,7 +5588,7 @@ private:
         double tau_hip_r = force_per_leg * jh_right;
         double tau_knee_r = force_per_leg * jk_right;
 
-        const auto ik = kinematics_.inverse_kinematics(z_des, 0.0);
+        const auto ik = kinematics_.inverse_kinematics(base_link_height(z_des), 0.0);
 
         // 零空间构型保持 (Jz * n = 0)
         constexpr double kNullspaceKp = 10.0;
@@ -5937,7 +5996,7 @@ private:
         }
         else
         {
-            bbot_kinematics::IKSolution ik_stand = kinematics_.inverse_kinematics(current_height_, 0.0);
+            bbot_kinematics::IKSolution ik_stand = kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
             publish_position_leg_control(ik_stand.theta_hip, ik_stand.theta_knee);
         }
 

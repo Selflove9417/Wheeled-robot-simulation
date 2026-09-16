@@ -136,23 +136,24 @@ def draw_figure4(output_dir: Path) -> None:
     ax.axvline(0.0, color=GRAY, linewidth=0.85, zorder=1)
 
     fit_x = np.linspace(-0.58, 1.08, 200)
+    theory_slope = -69.71  # - (k_theta / k_s) / z_c = -36.9653 / 0.5302655
     ax.plot(
         fit_x,
-        slope * fit_x,
+        theory_slope * fit_x,
         color=BLUE,
-        linestyle="--",
+        linestyle="-",
         linewidth=1.5,
-        label=rf"Origin-constrained fit: $\Delta e_{{s,ss}}={slope:.2f}b_y$, $R^2={r2:.4f}$",
+        label=rf"Analytical theoretical prediction: $\Delta e_{{s,ss}} = {theory_slope:.2f} b_y$",
         zorder=2,
     )
     ax.scatter(
         x,
         y,
-        s=40,
+        s=48,
         facecolor="white",
         edgecolor=RED,
-        linewidth=1.7,
-        label="Steady-state simulation data",
+        linewidth=1.8,
+        label=rf"Simulation data (fit slope ${slope:.2f}\,\mathrm{{mm/mm}}$, $R^2 > 0.9999$)",
         zorder=3,
     )
 
@@ -188,7 +189,7 @@ def draw_figure4(output_dir: Path) -> None:
 
 
 def draw_figure5(output_dir: Path) -> None:
-    single = load_csv("adaptive_online_state_machine_pos100.csv")
+    single = load_csv("adaptive_online_state_machine_pos100_rate10.csv")
     two_stage = load_csv("adaptive_twostage_pos100.csv")
     t_single, m_single = reset_relative(single)
     t_two, m_two = reset_relative(two_stage)

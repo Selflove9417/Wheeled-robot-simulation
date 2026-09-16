@@ -7,6 +7,7 @@ from launch.actions import (
     DeclareLaunchArgument,
 )
 from launch.conditions import IfCondition
+from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     Command,
@@ -23,7 +24,7 @@ def generate_launch_description():
     controller_type_arg = DeclareLaunchArgument(
         "controller_type",
         default_value="jump",
-        description="Type of balance controller to run: jump, jump_velocity, lqr, gs_lqr, adaptive_lqr, pid, or none",
+        description="Type of balance controller to run: jump, jump_velocity, lqr, gs_lqr, adaptive_lqr, gs_lqr_historical, pid, torque_cascade_pid, position_torque_cascade_pid, or none",
     )
     controller_type = LaunchConfiguration("controller_type")
 
@@ -33,6 +34,41 @@ def generate_launch_description():
         description="World file to load in Gazebo (e.g. balance_test_world.sdf, empty.sdf)",
     )
     world = LaunchConfiguration("world")
+
+    gazebo_world_name_arg = DeclareLaunchArgument(
+        "gazebo_world_name",
+        default_value="balance_test_world",
+        description="Gazebo world entity name used by the world control service",
+    )
+    gazebo_world_name = LaunchConfiguration("gazebo_world_name")
+
+    gazebo_start_paused_arg = DeclareLaunchArgument(
+        "gazebo_start_paused",
+        default_value="false",
+        description="Start Gazebo with physics paused until the runner explicitly unpauses it",
+    )
+    gazebo_start_paused = LaunchConfiguration("gazebo_start_paused")
+
+    headless_arg = DeclareLaunchArgument(
+        "headless",
+        default_value="false",
+        description="Run Gazebo in headless mode without GUI (server-only)",
+    )
+    headless = LaunchConfiguration("headless")
+
+    gui_arg = DeclareLaunchArgument(
+        "gui",
+        default_value="true",
+        description="Whether to display the Gazebo 3D simulation GUI window",
+    )
+    gui = LaunchConfiguration("gui")
+
+    gazebo_record_path_arg = DeclareLaunchArgument(
+        "gazebo_record_path",
+        default_value="",
+        description="Optional writable Gazebo record path; empty disables recording",
+    )
+    gazebo_record_path = LaunchConfiguration("gazebo_record_path")
 
     jump_height_arg = DeclareLaunchArgument("jump_height", default_value="0.20")
     takeoff_velocity_arg = DeclareLaunchArgument(
@@ -67,6 +103,16 @@ def generate_launch_description():
         default_value="adaptive",
         description="Adaptive LQR experiment mode: nominal, oracle, or adaptive",
     )
+    adaptive_gain_mode_arg = DeclareLaunchArgument(
+        "adaptive_gain_mode",
+        default_value="scheduled",
+        description="Gain selection: scheduled (5-node interpolation) or fixed_midpoint (H=0.40 m ablation)",
+    )
+    adaptive_gain_profile_arg = DeclareLaunchArgument(
+        "adaptive_gain_profile",
+        default_value="legacy_safe",
+        description="Gain profile: legacy_safe (default) or optimized_v2",
+    )
     adaptive_com_y_bias_arg = DeclareLaunchArgument(
         "adaptive_com_y_bias",
         default_value="0.0",
@@ -97,6 +143,11 @@ def generate_launch_description():
         default_value="true",
         description="Enable two-stage adaptive state machine (WAIT_COARSE -> APPLY_COARSE -> WAIT_FINE -> APPLY_FINE -> VERIFY -> HOLD)",
     )
+    historical_gs_lqr_config_file_arg = DeclareLaunchArgument(
+        "historical_gs_lqr_config_file",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/config/gs_lqr_historical_experiment.yaml",
+        description="Independent nominal legacy-safe GS-LQR formal-comparison configuration",
+    )
     enable_position_handoff_arg = DeclareLaunchArgument(
         "enable_position_handoff", default_value="true"
     )
@@ -121,6 +172,89 @@ def generate_launch_description():
     payload_size_z_arg = DeclareLaunchArgument(
         "payload_size_z", default_value="0.02", description="Payload Z dimension in m"
     )
+
+    # Torque Cascade PID arguments
+    torque_pid_gains_file_arg = DeclareLaunchArgument(
+        "torque_pid_gains_file",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/config/torque_cascade_pid_gains.yaml",
+        description="Path to YAML file with torque cascade PID gains",
+    )
+    torque_pid_log_path_arg = DeclareLaunchArgument(
+        "torque_pid_log_path",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/torque_pid_log.csv",
+    )
+    torque_pid_stage_mode_arg = DeclareLaunchArgument(
+        "torque_pid_stage_mode", default_value="normal"
+    )
+    torque_pid_target_height_arg = DeclareLaunchArgument(
+        "torque_pid_target_height", default_value="0.50"
+    )
+    torque_pid_startup_height_arg = DeclareLaunchArgument(
+        "torque_pid_startup_height", default_value="0.36"
+    )
+    torque_pid_initial_roll_arg = DeclareLaunchArgument(
+        "torque_pid_initial_roll", default_value="0.0",
+        description="Initial Gazebo roll used only by controlled tuning disturbances",
+    )
+    torque_pid_k_x_arg = DeclareLaunchArgument(
+        "torque_pid_k_x", default_value="0.0",
+        description="Legacy compatibility parameter; position feedback is forced off for the PID baseline",
+    )
+    torque_pid_rate_limit_u_arg = DeclareLaunchArgument(
+        "torque_pid_rate_limit_u", default_value="0.0",
+        description="Effective total torque slew-rate limit in N m/s; <=0 disables it",
+    )
+    torque_pid_total_torque_max_arg = DeclareLaunchArgument(
+        "torque_pid_total_torque_max", default_value="20.0",
+    )
+    torque_pid_wheel_torque_max_arg = DeclareLaunchArgument(
+        "torque_pid_wheel_torque_max", default_value="10.0",
+    )
+    torque_pid_low_kp_rate_arg = DeclareLaunchArgument("torque_pid_low_kp_rate", default_value="20.0")
+    torque_pid_low_kd_rate_arg = DeclareLaunchArgument("torque_pid_low_kd_rate", default_value="0.02")
+    torque_pid_low_kp_theta_arg = DeclareLaunchArgument("torque_pid_low_kp_theta", default_value="5.5")
+    torque_pid_low_kd_theta_arg = DeclareLaunchArgument("torque_pid_low_kd_theta", default_value="0.10")
+    torque_pid_low_kp_v_arg = DeclareLaunchArgument("torque_pid_low_kp_v", default_value="0.08")
+    torque_pid_low_ki_v_arg = DeclareLaunchArgument("torque_pid_low_ki_v", default_value="0.008")
+    torque_pid_low_kd_v_arg = DeclareLaunchArgument("torque_pid_low_kd_v", default_value="0.001")
+    torque_pid_high_kp_rate_arg = DeclareLaunchArgument("torque_pid_high_kp_rate", default_value="22.0")
+    torque_pid_high_kd_rate_arg = DeclareLaunchArgument("torque_pid_high_kd_rate", default_value="0.025")
+    torque_pid_high_kp_theta_arg = DeclareLaunchArgument("torque_pid_high_kp_theta", default_value="6.0")
+    torque_pid_high_kd_theta_arg = DeclareLaunchArgument("torque_pid_high_kd_theta", default_value="0.12")
+    torque_pid_high_kp_v_arg = DeclareLaunchArgument("torque_pid_high_kp_v", default_value="0.09")
+    torque_pid_high_ki_v_arg = DeclareLaunchArgument("torque_pid_high_ki_v", default_value="0.008")
+    torque_pid_high_kd_v_arg = DeclareLaunchArgument("torque_pid_high_kd_v", default_value="0.001")
+    torque_pid_attitude_disturbance_step_arg = DeclareLaunchArgument("torque_pid_attitude_disturbance_step", default_value="0.0")
+    torque_pid_rate_disturbance_step_arg = DeclareLaunchArgument("torque_pid_rate_disturbance_step", default_value="0.0")
+    torque_pid_velocity_disturbance_step_arg = DeclareLaunchArgument("torque_pid_velocity_disturbance_step", default_value="0.0")
+    torque_pid_disturbance_start_time_arg = DeclareLaunchArgument("torque_pid_disturbance_start_time", default_value="2.0")
+    torque_pid_rate_disturbance_start_time_arg = DeclareLaunchArgument("torque_pid_rate_disturbance_start_time", default_value="0.6")
+    torque_pid_velocity_disturbance_start_time_arg = DeclareLaunchArgument("torque_pid_velocity_disturbance_start_time", default_value="2.5")
+    torque_pid_startup_hold_time_arg = DeclareLaunchArgument("torque_pid_startup_hold_time", default_value="1.0")
+    torque_pid_leg_transition_speed_arg = DeclareLaunchArgument("torque_pid_leg_transition_speed", default_value="0.10")
+
+    # Independent four-loop position -> velocity -> attitude -> rate PID
+    position_pid_gains_file_arg = DeclareLaunchArgument(
+        "position_pid_gains_file",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/config/position_torque_cascade_pid_gains.yaml",
+        description="Parameter file for the independent four-loop exploratory PID",
+    )
+    position_pid_log_path_arg = DeclareLaunchArgument(
+        "position_pid_log_path",
+        default_value="/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/position_torque_pid_exploration/position_pid_log.csv",
+    )
+    position_pid_target_height_arg = DeclareLaunchArgument("position_pid_target_height", default_value="0.50")
+    position_pid_startup_height_arg = DeclareLaunchArgument("position_pid_startup_height", default_value="0.36")
+    position_pid_startup_hold_time_arg = DeclareLaunchArgument("position_pid_startup_hold_time", default_value="1.0")
+    position_pid_leg_transition_speed_arg = DeclareLaunchArgument("position_pid_leg_transition_speed", default_value="0.05")
+    position_pid_kp_arg = DeclareLaunchArgument("position_pid_kp", default_value="0.50")
+    position_pid_ki_arg = DeclareLaunchArgument("position_pid_ki", default_value="0.010")
+    position_pid_kd_arg = DeclareLaunchArgument("position_pid_kd", default_value="0.30")
+    position_pid_v_ref_limit_arg = DeclareLaunchArgument("position_pid_v_ref_limit", default_value="0.40")
+    position_pid_integral_limit_arg = DeclareLaunchArgument("position_pid_integral_limit", default_value="2.0")
+    position_pid_rate_limit_u_arg = DeclareLaunchArgument("position_pid_rate_limit_u", default_value="0.0")
+    position_pid_total_torque_max_arg = DeclareLaunchArgument("position_pid_total_torque_max", default_value="20.0")
+    position_pid_wheel_torque_max_arg = DeclareLaunchArgument("position_pid_wheel_torque_max", default_value="10.0")
 
     ws_dir = "/home/admin/bbot_ws_new"
     opt_ros_dir = os.path.join(ws_dir, "opt_ros/opt/ros/iron")
@@ -185,13 +319,37 @@ def generate_launch_description():
     )
 
     # 1. 启动 Gazebo
+    # - 默认启动带 3D 渲染画面的图形界面 GUI (headless=false, gui=true)
+    # - 当 headless:=true 或 gui:=false 时以无图形服务器模式运行 (-s)
+    # - 当 gazebo_start_paused:=false 时直接运行仿真 (-r)
+    is_headless = PythonExpression([
+        "('true' if '", headless, "'.lower() in ['true', '1'] or '", gui, "'.lower() in ['false', '0'] else 'false')"
+    ])
+    gz_args_expr = PythonExpression([
+        "('-s ' if '", is_headless, "' == 'true' else '') + "
+        "('' if '", gazebo_start_paused, "'.lower() in ['true', '1'] else '-r ') + "
+        "'", world, "' + "
+        "((' --record-path ' + '", gazebo_record_path, "') if '",
+        gazebo_record_path, "' else '')"
+    ])
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_ros_gz_sim, "launch", "gz_sim.launch.py"])
         ),
-        launch_arguments={
-            "gz_args": PythonExpression(["'-r ' + '", world, "'"])
-        }.items(),
+        launch_arguments={"gz_args": gz_args_expr}.items(),
+    )
+
+    world_control_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            PythonExpression([
+                '"/world/" + "', gazebo_world_name,
+                '" + "/control@ros_gz_interfaces/srv/ControlWorld"',
+            ])
+        ],
+        output="screen",
     )
 
     # 2. 发布 robot_description
@@ -217,6 +375,8 @@ def generate_launch_description():
             "0",
             "-z",
             "0.403",
+            "-R",
+            LaunchConfiguration("torque_pid_initial_roll"),
         ],
         output="screen",
     )
@@ -260,7 +420,7 @@ def generate_launch_description():
                 [
                     "'",
                     controller_type,
-                    "'.lower() not in ['gs_lqr', 'adaptive_lqr']",
+                    "'.lower() not in ['gs_lqr', 'adaptive_lqr', 'gs_lqr_historical', 'torque_cascade_pid', 'torque_pid', 'position_torque_cascade_pid']",
                 ]
             )
         ),
@@ -322,7 +482,7 @@ def generate_launch_description():
                 [
                     "'",
                     controller_type,
-                    "'.lower() in ['gs_lqr', 'adaptive_lqr']",
+                    "'.lower() in ['gs_lqr', 'adaptive_lqr', 'gs_lqr_historical', 'torque_cascade_pid', 'torque_pid', 'position_torque_cascade_pid']",
                 ]
             )
         ),
@@ -399,6 +559,12 @@ def generate_launch_description():
                         "experiment.mode": LaunchConfiguration(
                             "adaptive_experiment_mode"
                         ),
+                        "gain.mode": LaunchConfiguration(
+                            "adaptive_gain_mode"
+                        ),
+                        "gain.profile": LaunchConfiguration(
+                            "adaptive_gain_profile"
+                        ),
                         "experiment.com_y_bias": ParameterValue(
                             LaunchConfiguration("adaptive_com_y_bias"),
                             value_type=float,
@@ -421,6 +587,40 @@ def generate_launch_description():
                         ),
                         "log_path": LaunchConfiguration("adaptive_log_path"),
                     }
+                ],
+            )
+        ],
+    )
+
+    # Historical GS-LQR used only by the formal Sec. 4.2 comparison.  It is a
+    # separate launch type so the normal adaptive_lqr entry point is unchanged.
+    start_historical_gs_lqr_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression(["'", controller_type, "'.lower() == 'gs_lqr_historical'"])
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="adaptive_lqr_balance_controller",
+                output="screen",
+                parameters=[
+                    LaunchConfiguration("historical_gs_lqr_config_file"),
+                    {
+                        "use_sim_time": True,
+                        "experiment.mode": "nominal",
+                        "gain.mode": "scheduled",
+                        "gain.profile": "legacy_safe",
+                        "experiment.com_y_bias": 0.0,
+                        "target_height": ParameterValue(
+                            LaunchConfiguration("adaptive_target_height"), value_type=float),
+                        "height.startup_hip_axle": ParameterValue(
+                            LaunchConfiguration("adaptive_startup_height"), value_type=float),
+                        "adaptation.apply_rate_max": ParameterValue(
+                            LaunchConfiguration("adaptive_apply_rate_max"), value_type=float),
+                        "adaptation.two_stage_enabled": False,
+                        "log_path": LaunchConfiguration("adaptive_log_path"),
+                    },
                 ],
             )
         ],
@@ -473,7 +673,159 @@ def generate_launch_description():
                         "enable_position_handoff": LaunchConfiguration(
                             "enable_position_handoff"
                         ),
+                        "target_height": ParameterValue(
+                            LaunchConfiguration("adaptive_target_height"),
+                            value_type=float,
+                        ),
+                        "height.startup_hip_axle": ParameterValue(
+                            LaunchConfiguration("adaptive_startup_height"),
+                            value_type=float,
+                        ),
                     }
+                ],
+            )
+        ],
+    )
+
+    start_torque_cascade_pid_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression(
+                [
+                    "'",
+                    controller_type,
+                    "'.lower() in ['torque_cascade_pid', 'torque_pid']",
+                ]
+            )
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="torque_cascade_pid_controller",
+                output="screen",
+                parameters=[
+                    # Load the checked-in/effective file first.  Explicit
+                    # launch arguments below are candidate overrides during
+                    # tuning and therefore must win over the file.
+                    LaunchConfiguration("torque_pid_gains_file"),
+                    {
+                        "use_sim_time": True,
+                        "log_path": LaunchConfiguration("torque_pid_log_path"),
+                        "stage_mode": LaunchConfiguration("torque_pid_stage_mode"),
+                        "target_height": ParameterValue(
+                            LaunchConfiguration("torque_pid_target_height"),
+                            value_type=float,
+                        ),
+                        "height.startup_hip_axle": ParameterValue(
+                            LaunchConfiguration("torque_pid_startup_height"),
+                            value_type=float,
+                        ),
+                        "height.startup_hold_time": ParameterValue(
+                            LaunchConfiguration("torque_pid_startup_hold_time"),
+                            value_type=float,
+                        ),
+                        "leg_transition_speed": ParameterValue(
+                            LaunchConfiguration("torque_pid_leg_transition_speed"),
+                            value_type=float,
+                        ),
+                        "pid.k_x": ParameterValue(
+                            LaunchConfiguration("torque_pid_k_x"), value_type=float
+                        ),
+                        "pid.rate_limit_u": ParameterValue(
+                            LaunchConfiguration("torque_pid_rate_limit_u"), value_type=float
+                        ),
+                        "pid.total_torque_max": ParameterValue(
+                            LaunchConfiguration("torque_pid_total_torque_max"), value_type=float
+                        ),
+                        "pid.wheel_torque_max": ParameterValue(
+                            LaunchConfiguration("torque_pid_wheel_torque_max"), value_type=float
+                        ),
+                        "pid.attitude_disturbance_step": ParameterValue(
+                            LaunchConfiguration("torque_pid_attitude_disturbance_step"), value_type=float
+                        ),
+                        "pid.rate_disturbance_step": ParameterValue(
+                            LaunchConfiguration("torque_pid_rate_disturbance_step"),
+                            value_type=float,
+                        ),
+                        "pid.velocity_disturbance_step": ParameterValue(
+                            LaunchConfiguration("torque_pid_velocity_disturbance_step"),
+                            value_type=float,
+                        ),
+                        "pid.disturbance_step_start_time": ParameterValue(
+                            LaunchConfiguration("torque_pid_disturbance_start_time"),
+                            value_type=float,
+                        ),
+                        "pid.rate_disturbance_start_time": ParameterValue(
+                            LaunchConfiguration("torque_pid_rate_disturbance_start_time"),
+                            value_type=float,
+                        ),
+                        "pid.velocity_disturbance_start_time": ParameterValue(
+                            LaunchConfiguration("torque_pid_velocity_disturbance_start_time"),
+                            value_type=float,
+                        ),
+                        "pid.low.kp_rate": ParameterValue(LaunchConfiguration("torque_pid_low_kp_rate"), value_type=float),
+                        "pid.low.kd_rate": ParameterValue(LaunchConfiguration("torque_pid_low_kd_rate"), value_type=float),
+                        "pid.low.kp_theta": ParameterValue(LaunchConfiguration("torque_pid_low_kp_theta"), value_type=float),
+                        "pid.low.kd_theta": ParameterValue(LaunchConfiguration("torque_pid_low_kd_theta"), value_type=float),
+                        "pid.low.kp_v": ParameterValue(LaunchConfiguration("torque_pid_low_kp_v"), value_type=float),
+                        "pid.low.ki_v": ParameterValue(LaunchConfiguration("torque_pid_low_ki_v"), value_type=float),
+                        "pid.low.kd_v": ParameterValue(LaunchConfiguration("torque_pid_low_kd_v"), value_type=float),
+                        "pid.high.kp_rate": ParameterValue(LaunchConfiguration("torque_pid_high_kp_rate"), value_type=float),
+                        "pid.high.kd_rate": ParameterValue(LaunchConfiguration("torque_pid_high_kd_rate"), value_type=float),
+                        "pid.high.kp_theta": ParameterValue(LaunchConfiguration("torque_pid_high_kp_theta"), value_type=float),
+                        "pid.high.kd_theta": ParameterValue(LaunchConfiguration("torque_pid_high_kd_theta"), value_type=float),
+                        "pid.high.kp_v": ParameterValue(LaunchConfiguration("torque_pid_high_kp_v"), value_type=float),
+                        "pid.high.ki_v": ParameterValue(LaunchConfiguration("torque_pid_high_ki_v"), value_type=float),
+                        "pid.high.kd_v": ParameterValue(LaunchConfiguration("torque_pid_high_kd_v"), value_type=float),
+                    },
+                ],
+            )
+        ],
+    )
+
+    start_position_torque_cascade_pid_controller = TimerAction(
+        period=2.0,
+        condition=IfCondition(
+            PythonExpression([
+                "'", controller_type,
+                "'.lower() == 'position_torque_cascade_pid'",
+            ])
+        ),
+        actions=[
+            Node(
+                package="bbot_balance_controller",
+                executable="position_torque_cascade_pid_controller",
+                output="screen",
+                parameters=[
+                    LaunchConfiguration("position_pid_gains_file"),
+                    {
+                        "use_sim_time": True,
+                        "log_path": LaunchConfiguration("position_pid_log_path"),
+                        "target_height": ParameterValue(
+                            LaunchConfiguration("position_pid_target_height"), value_type=float),
+                        "height.startup_hip_axle": ParameterValue(
+                            LaunchConfiguration("position_pid_startup_height"), value_type=float),
+                        "height.startup_hold_time": ParameterValue(
+                            LaunchConfiguration("position_pid_startup_hold_time"), value_type=float),
+                        "leg_transition_speed": ParameterValue(
+                            LaunchConfiguration("position_pid_leg_transition_speed"), value_type=float),
+                        "pid.position.kp": ParameterValue(
+                            LaunchConfiguration("position_pid_kp"), value_type=float),
+                        "pid.position.ki": ParameterValue(
+                            LaunchConfiguration("position_pid_ki"), value_type=float),
+                        "pid.position.kd": ParameterValue(
+                            LaunchConfiguration("position_pid_kd"), value_type=float),
+                        "pid.position.v_ref_limit": ParameterValue(
+                            LaunchConfiguration("position_pid_v_ref_limit"), value_type=float),
+                        "pid.position.integral_limit": ParameterValue(
+                            LaunchConfiguration("position_pid_integral_limit"), value_type=float),
+                        "pid.rate_limit_u": ParameterValue(
+                            LaunchConfiguration("position_pid_rate_limit_u"), value_type=float),
+                        "pid.total_torque_max": ParameterValue(
+                            LaunchConfiguration("position_pid_total_torque_max"), value_type=float),
+                        "pid.wheel_torque_max": ParameterValue(
+                            LaunchConfiguration("position_pid_wheel_torque_max"), value_type=float),
+                    },
                 ],
             )
         ],
@@ -483,6 +835,11 @@ def generate_launch_description():
         [
             controller_type_arg,
             world_arg,
+            gazebo_world_name_arg,
+            gazebo_start_paused_arg,
+            headless_arg,
+            gui_arg,
+            gazebo_record_path_arg,
             jump_height_arg,
             takeoff_velocity_arg,
             thrust_duration_arg,
@@ -496,12 +853,15 @@ def generate_launch_description():
             position_proportional_gain_arg,
             body_mass_arg,
             adaptive_experiment_mode_arg,
+            adaptive_gain_mode_arg,
+            adaptive_gain_profile_arg,
             adaptive_com_y_bias_arg,
             adaptive_log_path_arg,
             adaptive_target_height_arg,
             adaptive_startup_height_arg,
             adaptive_apply_rate_max_arg,
             adaptive_two_stage_enabled_arg,
+            historical_gs_lqr_config_file_arg,
             enable_position_handoff_arg,
             payload_mass_arg,
             payload_x_arg,
@@ -510,7 +870,54 @@ def generate_launch_description():
             payload_size_x_arg,
             payload_size_y_arg,
             payload_size_z_arg,
+            torque_pid_gains_file_arg,
+            torque_pid_log_path_arg,
+            torque_pid_stage_mode_arg,
+            torque_pid_target_height_arg,
+            torque_pid_startup_height_arg,
+            torque_pid_initial_roll_arg,
+            torque_pid_k_x_arg,
+            torque_pid_rate_limit_u_arg,
+            torque_pid_total_torque_max_arg,
+            torque_pid_wheel_torque_max_arg,
+            torque_pid_low_kp_rate_arg,
+            torque_pid_low_kd_rate_arg,
+            torque_pid_low_kp_theta_arg,
+            torque_pid_low_kd_theta_arg,
+            torque_pid_low_kp_v_arg,
+            torque_pid_low_ki_v_arg,
+            torque_pid_low_kd_v_arg,
+            torque_pid_high_kp_rate_arg,
+            torque_pid_high_kd_rate_arg,
+            torque_pid_high_kp_theta_arg,
+            torque_pid_high_kd_theta_arg,
+            torque_pid_high_kp_v_arg,
+            torque_pid_high_ki_v_arg,
+            torque_pid_high_kd_v_arg,
+            torque_pid_attitude_disturbance_step_arg,
+            torque_pid_rate_disturbance_step_arg,
+            torque_pid_velocity_disturbance_step_arg,
+            torque_pid_disturbance_start_time_arg,
+            torque_pid_rate_disturbance_start_time_arg,
+            torque_pid_velocity_disturbance_start_time_arg,
+            torque_pid_startup_hold_time_arg,
+            torque_pid_leg_transition_speed_arg,
+            position_pid_gains_file_arg,
+            position_pid_log_path_arg,
+            position_pid_target_height_arg,
+            position_pid_startup_height_arg,
+            position_pid_startup_hold_time_arg,
+            position_pid_leg_transition_speed_arg,
+            position_pid_kp_arg,
+            position_pid_ki_arg,
+            position_pid_kd_arg,
+            position_pid_v_ref_limit_arg,
+            position_pid_integral_limit_arg,
+            position_pid_rate_limit_u_arg,
+            position_pid_total_torque_max_arg,
+            position_pid_wheel_torque_max_arg,
             gazebo,
+            world_control_bridge,
             robot_state_publisher,
             spawn_robot,
             imu_clock_bridge,
@@ -522,8 +929,11 @@ def generate_launch_description():
             start_lqr_controller,
             start_gs_lqr_controller,
             start_adaptive_lqr_controller,
+            start_historical_gs_lqr_controller,
             start_jump_controller,
             start_velocity_jump_controller,
+            start_torque_cascade_pid_controller,
+            start_position_torque_cascade_pid_controller,
             load_wheel_effort_controller,
         ]
     )

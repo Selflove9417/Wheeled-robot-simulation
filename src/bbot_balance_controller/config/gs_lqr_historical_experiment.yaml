@@ -1,0 +1,11 @@
+# Independent formal-comparison configuration.
+# This file is used only with controller_type:=gs_lqr_historical.
+# It selects the five-node legacy-safe gain table without changing the
+# adaptive_lqr default launch entry point.
+adaptive_lqr_balance_controller:
+  ros__parameters:
+    experiment.mode: nominal
+    gain.mode: scheduled
+    gain.profile: legacy_safe
+    adaptation.two_stage_enabled: false
+    position_reference_latch_once: true

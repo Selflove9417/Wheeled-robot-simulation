@@ -111,11 +111,16 @@ $$
 
 | $H_{\mathrm{hip-axle}}$（m） | $H_{\mathrm{base}}$（m） | $k_x$ | $k_{\dot{x}}$ | $k_\theta$ | $k_{\dot{\theta}}$ | 名义平衡角（rad） |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.3000 | 0.4400 | -6.029616 | -45.875982 | -191.586929 | -46.547541 | 0.076757 |
-| 0.3500 | 0.4900 | -6.137382 | -46.758575 | -203.235631 | -50.605491 | 0.064166 |
-| 0.4000 | 0.5400 | -6.230876 | -47.540094 | -214.496292 | -54.771166 | 0.052626 |
-| 0.4500 | 0.5900 | -6.311959 | -48.232783 | -225.386480 | -59.027574 | 0.041721 |
-| 0.5000 | 0.6400 | -6.382279 | -48.847665 | -235.922994 | -63.359510 | 0.030969 |
+| 0.3000 | 0.4400 | -5.622712 | -42.666506 | -156.508986 | -35.846746 | 0.076757 |
+| 0.3500 | 0.4900 | -5.791278 | -43.976682 | -169.544125 | -39.563240 | 0.064166 |
+| 0.4000 | 0.5400 | -5.931603 | -45.087129 | -181.972969 | -43.390225 | 0.052626 |
+| 0.4500 | 0.5900 | -6.052411 | -46.061241 | -193.948669 | -47.349665 | 0.041721 |
+| 0.5000 | 0.6400 | -6.157159 | -46.922551 | -205.518217 | -51.430573 | 0.030969 |
+
+> 增益取原始保守设计（与 `lqr_gain_scheduled_controller.cpp` 同表）。实测表明，俯仰通道增益提高
+> 15%～30% 的另一套表在 $H\le 0.35\ \mathrm{m}$ 会与 200 Hz 零阶保持及状态低通的相位滞后共同激发
+> 约 8 Hz 的俯仰极限环（轮端力矩在 $\pm 20\ \mathrm{N\,m}$ 间抖振），故反馈增益保留保守设计，
+> $y_c(H)$、$z_c(H)$ 与名义平衡角仍采用当前 URDF 悬挂体几何。
 
 当实际高度位于 $H_i$ 和 $H_{i+1}$ 之间时，定义
 
@@ -407,6 +412,7 @@ $$
 | `adaptation.pitch_error_threshold` | 0.12 | 门控姿态误差阈值（rad） |
 | `experiment.mode` | `adaptive` | `nominal`、`oracle` 或 `adaptive` |
 | `experiment.com_y_bias` | 0.0 | 注入控制器标称模型的质心 Y 偏差（m） |
+| `gain.mode` | `scheduled` | `scheduled`（五节点插值）或 `fixed_midpoint`（固定 H=0.40 m 增益消融；平衡角/质心几何仍随高度插值） |
 | `adaptation_enabled` | `true` | 启动时是否启用自适应 |
 | `target_height` | 0.50 | 启动髋部—轮轴目标高度（m） |
 | `height.hip_axle_min` | 0.30 | 实车口径的最小髋部—轮轴高度（m） |
@@ -546,7 +552,37 @@ ros2 launch bbot_bringup bbot_gazebo.launch.py \
 
 `nominal` 和 `oracle` 模式忽略键盘 `T/H`，防止实验过程中改变对照方法。负向实验只需将偏差改成 `-0.0005` 并更换日志文件名。
 
-### 4. 启动键盘终端
+### 4. 增益调度变高度与推扰实验（论文 4.2）
+
+`gain.mode` 参数提供两种增益来源，用于固定增益消融对照：
+
+- `scheduled`（默认）：五节点线性插值增益；
+- `fixed_midpoint`：反馈增益始终取 `gain_table_` 中 H=0.40 m 节点，而平衡角、质心几何与腿部逆运动学仍随当前高度调度，只检验"增益调度"这一因素的作用。
+
+两种模式均建议配合 `adaptive_experiment_mode:=nominal` 与 `adaptive_two_stage_enabled:=false` 使用，例如：
+
+```bash
+ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=adaptive_lqr   adaptive_experiment_mode:=nominal adaptive_gain_mode:=fixed_midpoint   adaptive_target_height:=0.30 adaptive_log_path:=.../const_030_fixed.csv
+```
+
+批量实验（五高度定高、0.30→0.50→0.30 m 升降、三高度推扰，各 N=3）由 `scripts/run_height_campaign.py` 自动执行：
+
+```bash
+python3 scripts/run_height_campaign.py --ws-root /home/admin/bbot_ws_new --job all --repeats 3
+python3 scripts/run_height_campaign.py --job push --force 20 --force-duration 0.2
+```
+
+推扰通过 `balance_test_world.sdf` 中的 `ignition-gazebo-apply-link-wrench-system` 插件实现：脚本启动 `ros_gz_bridge` 桥接 `/world/balance_test_world/wrench` 话题，并以 50 Hz 持续发布 `EntityWrench`（默认 ±20 N、0.2 s），脉冲结束后写入零力矩覆盖。首次运行请核对受力方向与机器人前进方向一致（必要时调整 `--force-axis` 或力的符号），并从 CSV 的速度响应核对实际冲量。
+
+谱半径扫描（论文图4 数据）由 MATLAB 脚本 `bbot_ws/动力学建模/sweep_spectral_radius.m` 完成：先对 5 个设计节点复现 C++ 增益表的 y/z/K（PASS/FAIL 自检），再以 1 mm 网格计算 scheduled 与 fixed_midpoint 两条 rho(A_d-B_d K) 曲线并导出 `rho_sweep.csv`。
+
+出图与表3/表4 数值草稿由 `scripts/plot_height_campaign.py` 汇总：
+
+```bash
+python3 scripts/plot_height_campaign.py   --campaign-dir .../data_logs/height_campaign   --rho-csv .../rho_sweep.csv
+```
+
+### 5. 启动键盘终端
 
 终端 2：
 

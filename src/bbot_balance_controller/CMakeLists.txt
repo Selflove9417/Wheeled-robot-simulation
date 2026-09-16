@@ -85,6 +85,36 @@ ament_target_dependencies(adaptive_lqr_balance_controller
   bbot_kinematics
 )
 
+# 力矩级三环串级 PID 控制器 (高度增益调度对照)
+add_executable(torque_cascade_pid_controller
+  src/torque_cascade_pid_controller.cpp
+)
+ament_target_dependencies(torque_cascade_pid_controller
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  bbot_kinematics
+)
+
+# Independent four-loop position -> velocity -> attitude -> rate PID
+add_executable(position_torque_cascade_pid_controller
+  src/position_torque_cascade_pid_controller.cpp
+)
+ament_target_dependencies(position_torque_cascade_pid_controller
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  bbot_kinematics
+)
+
 # C++ 键盘控制终端 (无 Python / Conda 冲突)
 add_executable(teleop_keyboard
   src/teleop_keyboard.cpp
@@ -136,6 +166,8 @@ install(TARGETS
   lqr_balance_controller_yaokong
   lqr_gain_scheduled_controller
   adaptive_lqr_balance_controller
+  torque_cascade_pid_controller
+  position_torque_cascade_pid_controller
   bbot_jump_controller
   bbot_velocity_jump_controller
   teleop_keyboard
@@ -147,9 +179,21 @@ install(
   DESTINATION include/
 )
 
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 install(PROGRAMS
   scripts/teleop_keyboard.py
   scripts/optimize_velocity_jump.py
+  scripts/run_position_pid_exploration.py
+  scripts/tune_position_torque_pid.py
+  scripts/plot_position_pid_exploration.py
+  scripts/run_height_campaign.py
+  scripts/run_formal_pid_gslqr_campaign.py
+  scripts/analyze_formal_pid_gslqr.py
+  scripts/analyze_chapter42_height_recheck.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
