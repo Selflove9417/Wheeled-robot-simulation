@@ -89,7 +89,7 @@ int main() {
     ThrustRelease release;
     release.update(10.633,1,1.15,1.98,185.5);
     require(!release.active(),"low momentum still releases thrust");
-    release.update(10.7,1,1.95,1.98,185.5);
-    require(release.active(),"real target COM speed cannot release thrust");
+    release.update(10.7,1,1.71,1.98,185.5);
+    require(release.active(),"real COM momentum cannot start predictive unloading");
     std::cout<<"PASS: COM geometry, joint/pitch derivatives, aligned momentum and landing direction\n";
 }

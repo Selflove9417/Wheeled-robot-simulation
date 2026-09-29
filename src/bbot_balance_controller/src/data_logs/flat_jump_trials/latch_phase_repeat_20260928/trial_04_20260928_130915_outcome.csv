@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+4,False,wheel controller activation is not exclusive: ros2 control list_controllers timed out,False

@@ -119,7 +119,80 @@ int main() {
             worst_rate=std::max(worst_rate,result.final_rate);++cases;
         }
     }
+    // Test touchdown_torso_pitch_torque asymmetric damping:
+    // 1. Logged failure case: pitch_err = -0.292 rad, pitch_rate = +1.13 rad/s
+    // Without asymmetric damping, D term (+16.95 Nm) cancels P term (-16.06 Nm), giving negative torque.
+    // With asymmetric damping, D is limited to 45% of P (7.227 Nm), preserving forward restoring torque.
+    const double tau_logged = touchdown_torso_pitch_torque(-0.292, 1.13, 55.0, 15.0, 20.0);
+    require(tau_logged > 4.40 && tau_logged < 4.43,
+            "logged recovering point must deliver positive restoring torque");
+
+    // 2. Near-neutral zone (|pitch_err| <= 0.10): full damping preserved to prevent forward overshoot
+    const double tau_neutral = touchdown_torso_pitch_torque(-0.05, 1.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_neutral - (-6.125)) < 1e-12,
+            "near-neutral zone must retain full damping to brake forward overshoot");
+
+    // 3. Diverging motion: pitch_err = -0.25 rad, pitch_rate = -1.0 rad/s
+    const double tau_diverging = touchdown_torso_pitch_torque(-0.25, -1.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_diverging - 14.375) < 1e-12,
+            "diverging motion must receive full reinforcing torque");
+
+    // 4. Clamping at limits
+    require(touchdown_torso_pitch_torque(-1.0, -5.0, 55.0, 15.0, 20.0) == 20.0,
+            "must clamp to positive limit");
+    require(touchdown_torso_pitch_torque(1.0, 5.0, 55.0, 15.0, 20.0) == -20.0,
+            "must clamp to negative limit");
+
+    // 5. Continuous smooth transition across 0.10 rad boundary in [0.06, 0.25]
+    double prev_tau = touchdown_torso_pitch_torque(-0.04, 3.0, 55.0, 15.0, 20.0);
+    for (double err = 0.041; err <= 0.28; err += 0.001) {
+        const double curr_tau = touchdown_torso_pitch_torque(-err, 3.0, 55.0, 15.0, 20.0);
+        const double step = std::abs(curr_tau - prev_tau);
+        require(step < 0.25, "pitch torque must be continuous and smooth across transition zone");
+        prev_tau = curr_tau;
+    }
+    const double tau_0099 = touchdown_torso_pitch_torque(-0.0999, 4.0, 55.0, 15.0, 20.0);
+    const double tau_0101 = touchdown_torso_pitch_torque(-0.1001, 4.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_0101 - tau_0099) < 0.02,
+            "0.10 rad boundary must not have any discrete jump");
+
+    // 6. Test touchdown_hip_soft_limit_guard
+    // Test Case A: q=1.57, q_dot=0, req=+10.0 (pinned against mechanical stop at zero velocity)
+    const double tau_pinned = touchdown_hip_soft_limit_guard(1.57, 0.0, 10.0, 20.0);
+    require(tau_pinned <= -19.0,
+            "q=1.57, q_dot=0, req=+10.0 must output full negative restoring spring torque");
+
+    // Test Case B: q=1.45, q_dot < 0, req=-10.0 (clearly receding from limit with negative request)
+    const double tau_receding_neg = touchdown_hip_soft_limit_guard(1.45, -0.5, -10.0, 20.0);
+    require(tau_receding_neg == -10.0,
+            "q=1.45, q_dot<0, req=-10.0 must be passed through unchanged");
+
+    // Test Case C: q=1.25, q_dot=0, req=+5.0 (inside warning zone [1.20, 1.45], positive torque prohibited)
+    const double tau_warning_zero = touchdown_hip_soft_limit_guard(1.25, 0.0, 5.0, 20.0);
+    require(tau_warning_zero <= -3.5 && tau_warning_zero < 0.0,
+            "q=1.25, q_dot=0 must prohibit positive torque and apply active restoring spring");
+
+    // Test Case D: q=1.10, q_dot=0, req=+15.0 (in safe zone below 1.20 rad)
+    const double tau_safe = touchdown_hip_soft_limit_guard(1.10, 0.0, 15.0, 20.0);
+    require(tau_safe == 15.0,
+            "safe configuration below 1.20 rad must pass through requested torque");
+
+    // Test Case E: High-speed approaching sample q=1.39, q_dot=19.0
+    const double tau_brake = touchdown_hip_soft_limit_guard(1.39, 19.0, 5.0, 20.0);
+    require(tau_brake <= -18.0,
+            "sample q=1.39, q_dot=19 must trigger strong negative soft limit braking");
+
+    // Test Case F: Asymmetric left/right hip states protected independently
+    const double tau_left = touchdown_hip_soft_limit_guard(1.05, 0.0, 8.0, 20.0);
+    const double tau_right = touchdown_hip_soft_limit_guard(1.57, 0.0, 8.0, 20.0);
+    require(tau_left == 8.0,
+            "left hip in safe zone must remain at requested +8.0 Nm");
+    require(tau_right <= -19.0,
+            "right hip at limit must be forced to negative restoring torque");
+    require(tau_left != tau_right,
+            "left and right hips must be protected independently without shared common clamp");
+
     std::cout<<"PASS: uncancelled torso torque, retained leg damping; "<<cases
              <<" moving-hip/IMU/delay cases, final error/rate="<<worst_error<<"/"<<worst_rate
-             <<" (not Gazebo validation)\n";
+             <<", continuous asymmetric damping & independent hip soft limit guard verified\n";
 }

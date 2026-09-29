@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+1,False,"COM apex height delta 0.067m out of [0.17, 0.23]m; Takeoff COM vz 1.245m/s out of [1.83, 2.13]m/s; Recovery to stable Effort BALANCE not completed; Controller reported exit code: FAIL_已离地但未达到目标速度",

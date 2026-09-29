@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <array>
+#include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
@@ -41,24 +42,6 @@ using namespace std::chrono_literals;
 
 namespace bbot_jump
 {
-
-    // 工具函数
-    inline double clamp_value(double value, double min_value, double max_value)
-    {
-        if (value > max_value)
-            return max_value;
-        if (value < min_value)
-            return min_value;
-        return value;
-    }
-
-    inline double deadband(double value, double threshold)
-    {
-        if (std::abs(value) < threshold)
-            return 0.0;
-        return (value > 0.0) ? (value - threshold) : (value + threshold);
-    }
-
     inline double low_pass_filter(double new_value, double old_value, double alpha)
     {
         return alpha * new_value + (1.0 - alpha) * old_value;
@@ -77,9 +60,10 @@ namespace bbot_jump
     {
         if (std::abs(v) < 1.0)
             return 1.0;
-        const double remaining = v > 0.0 ? 1.45 - q : q + 1.45;
-        constexpr double preview_time = 0.030;
-        constexpr double ramp_margin = 0.10;
+        constexpr double kSoftLimit = 1.56; // 离物理硬限位 1.5708 rad 保留软裕量
+        const double remaining = v > 0.0 ? kSoftLimit - q : q + kSoftLimit;
+        constexpr double preview_time = 0.002; // 微小前瞻，允许利用完整行程爆发
+        constexpr double ramp_margin = 0.02;
         return clamp_value((remaining - preview_time * std::abs(v)) / ramp_margin, 0.0, 1.0);
     }
 
@@ -211,13 +195,13 @@ public:
     BBotVelocityJumpController()
         : Node("bbot_velocity_jump_controller")
     {
-        gain_low_ = {-5.622712, -42.666506, -156.508986, -35.846746};
-        gain_high_ = {-6.157159, -46.922551, -205.518217, -51.430573};
+        gain_low_ = {-6.1624, -45.8436, -179.6985, -42.8109};
+        gain_high_ = {-6.3650, -49.5719, -233.4004, -62.6391};
         current_gain_ = gain_high_;
 
-        balance_offset_ = 0.038;
+        balance_offset_ = 0.030;
         cmd_scale_ = 0.043;
-        wheel_radius_ = kinematics_.get_params().wheel_radius;
+        wheel_radius_ = 0.07;
         max_cmd_x_ = 10.0;
 
         walk_speed_ = 0.50;
@@ -231,17 +215,24 @@ public:
         jump_forward_speed_ = bbot_jump::clamp_value(jump_forward_speed_, 0.0, 0.70);
         jump_takeoff_forward_speed_ = this->declare_parameter<double>("jump_takeoff_forward_speed", 0.45);
         jump_takeoff_forward_speed_ = bbot_jump::clamp_value(
-            jump_takeoff_forward_speed_, jump_forward_speed_, 0.85);
+            jump_takeoff_forward_speed_, 0.20, 0.85);
+        jump_log_path_ = this->declare_parameter<std::string>("jump_log_path", "");
+        jump_summary_path_ = this->declare_parameter<std::string>("jump_summary_path", "");
+        auto_return_balance_ = this->declare_parameter<bool>("auto_return_balance", true);
         thrust_forward_velocity_kp_ = this->declare_parameter<double>(
             "thrust_forward_velocity_kp", 0.80);
         thrust_forward_velocity_kp_ = bbot_jump::clamp_value(
             thrust_forward_velocity_kp_, 0.0, 2.0);
+        thrust_wheel_max_decel_ = this->declare_parameter<double>(
+            "thrust_wheel_max_decel", 8.0);
+        thrust_wheel_max_decel_ = bbot_jump::clamp_value(
+            thrust_wheel_max_decel_, 4.0, 50.0);
 
-        // 机身前倾角仍作为几何工作点；真正的“斜前方”离地由下面的正 pitch_rate 目标建立。
-        jump_pitch_offset_ = this->declare_parameter<double>("jump_pitch_offset", 0.075);
+        // 机身前倾角微偏置；避免大前倾推力产生过度水平分量导致前向速度过冲。
+        jump_pitch_offset_ = this->declare_parameter<double>("jump_pitch_offset", 0.020);
         jump_pitch_offset_ = bbot_jump::clamp_value(jump_pitch_offset_, 0.0, 0.16);
         jump_takeoff_pitch_rate_ = this->declare_parameter<double>(
-            "jump_takeoff_pitch_rate", 0.45);
+            "jump_takeoff_pitch_rate", 0.05);
         jump_takeoff_pitch_rate_ = bbot_jump::clamp_value(
             jump_takeoff_pitch_rate_, 0.0, 0.80);
         jump_takeoff_pitch_rate_tolerance_ = this->declare_parameter<double>(
@@ -259,15 +250,17 @@ public:
         // 不再使用“等效腿长 + 只减髋角”的近似，也不修改 bbot_kinematics API。
         // target_x>0 表示机身位于轮子前方，等价于轮子相对机身向后布置。
         landing_wheel_back_bias_ = this->declare_parameter<double>(
-            "landing_wheel_back_bias", 0.085);
+            "landing_wheel_back_bias", 0.020);
         landing_wheel_back_bias_ = bbot_jump::clamp_value(
             landing_wheel_back_bias_, 0.0, 0.12);
-        // 水平速度越大，允许轮子适度向前以承担一部分 capture；但该项只做修正，
-        // 默认仍保持轮子在机身后方，触地后的主动轮控继续完成剩余捕获。
+        // 水平速度越大，轮子按捕获点方向前置。平地低跳的离地长腿已接近
+        // wheel-first 构型；把轮位限制在 -0.03 m 会迫使髋在约 0.20 s 内
+        // 额外反摆 0.4 rad。允许到 CAD/小腿安全锥内的 -0.12 m，既缩短
+        // 关节行程，也让支撑点落在前向 COM 速度的捕获方向。
         landing_capture_gain_ = this->declare_parameter<double>(
-            "landing_capture_gain", 0.08);
+            "landing_capture_gain", 1.60);
         landing_capture_gain_ = bbot_jump::clamp_value(
-            landing_capture_gain_, 0.0, 0.60);
+            landing_capture_gain_, 0.0, 2.00);
         landing_target_x_max_ = this->declare_parameter<double>(
             "landing_target_x_max", 0.10);
         landing_target_x_max_ = bbot_jump::clamp_value(
@@ -333,39 +326,13 @@ public:
         jump_pitch_ref_ = balance_offset_ + jump_pitch_offset_;
         active_jump_pitch_ref_ = balance_offset_;
 
-        // 腿高定义与实车及自适应 LQR 统一：轮轴中心到髋关节的垂直距离 H_hip_axle in [0.30, 0.50] m
-        // 仿真 IK 期望 base_link 离地高度，内部转换关系：base_link_height = hip_axle_height + base_link_height_offset()
-        L_MIN_ = this->declare_parameter<double>("height.hip_axle_min", 0.30);
-        L_MAX_ = this->declare_parameter<double>("height.hip_axle_max", 0.50);
-        base_to_hip_height_ = this->declare_parameter<double>("height.base_to_hip", 0.07);
-        if (!std::isfinite(L_MIN_) || !std::isfinite(L_MAX_) ||
-            !std::isfinite(base_to_hip_height_) || L_MIN_ >= L_MAX_ ||
-            base_to_hip_height_ < 0.0)
-        {
-            throw std::invalid_argument("invalid hip-axle height mapping parameters");
-        }
-        L_STAND_ = L_MAX_;
+        L_MIN_ = 0.30;
+        L_MAX_ = 0.50;
+        L_STAND_ = 0.50;
 
-        target_height_ = this->declare_parameter<double>("target_height", L_STAND_);
-        target_height_ = bbot_jump::clamp_value(target_height_, L_MIN_, L_MAX_);
-
-        startup_height_ = this->declare_parameter<double>("height.startup_hip_axle", 0.36);
-        if (!std::isfinite(startup_height_))
-        {
-            throw std::invalid_argument("height.startup_hip_axle must be finite");
-        }
-        startup_height_ = bbot_jump::clamp_value(startup_height_, L_MIN_, L_MAX_);
-        current_height_ = startup_height_;
-
-        startup_hold_time_ = this->declare_parameter<double>("height.startup_hold_time", 2.0);
-        if (!std::isfinite(startup_hold_time_) || startup_hold_time_ < 0.0)
-        {
-            throw std::invalid_argument("height.startup_hold_time must be non-negative");
-        }
-
-        leg_transition_speed_ = this->declare_parameter<double>(
-            "leg_transition_speed", (L_MAX_ - L_MIN_) / 4.0); // 0.05 m/s
-        interpolate_lqr_gain();
+        target_height_ = L_STAND_;
+        current_height_ = 0.40;                          // 从仿真自然落地构型 (0.40m) 平滑渐变至 L_STAND_ (0.50m)
+        leg_transition_speed_ = (L_MAX_ - L_MIN_) / 4.0; // 0.05 m/s
 
         // ── 跳跃核心参数 ──
         // 不做过深、过快的下蹲：位置控制器切到 Effort 的短暂过渡期间，
@@ -386,31 +353,52 @@ public:
         // 这里依据推地期望膝速度提前给髋关节少量反作用补偿，不能替代
         // 后仰门控，也不能继续增大到让髋关节主导腿部构型。
         K_LEG_REACTION_FF_THRUST_ = this->declare_parameter<double>(
-            "thrust_leg_reaction_ff_gain", 0.8);
+            "thrust_leg_reaction_ff_gain", 0.15);
         K_LEG_REACTION_FF_THRUST_ = bbot_jump::clamp_value(
             K_LEG_REACTION_FF_THRUST_, 0.0, 3.0);
         TAU_LEG_REACTION_FF_MAX_ = this->declare_parameter<double>(
-            "thrust_leg_reaction_ff_max", 8.0);
+            "thrust_leg_reaction_ff_max", 2.0);
         TAU_LEG_REACTION_FF_MAX_ = bbot_jump::clamp_value(
             TAU_LEG_REACTION_FF_MAX_, 0.0, 12.0);
         K_BODY_P_BUFFER_ = 55.0; // 缓冲阶段姿态刚度 [Nm/rad]
         K_BODY_D_BUFFER_ = 15.0; // 缓冲阶段姿态阻尼 [Nm*s/rad]
 
-        L_RETRACT_ = 0.30; // 收腿目标；仅在完整收展腿轨迹预算允许时执行
-        L_TOUCH_ = 0.50;   // 腾空展腿着陆高度 [m]
+        // 轮式机器人应以较长腿让轮子先接地，再在接触后压缩吸能。
+        // 旧 0.47 -> 0.50 m 空中构型会把接近完全伸直的离地腿收成深蹲，
+        // 实测需要约 0.9~1.2 rad 的关节重构并把箱体推到 -1 rad 以上。
+        // 0.66 -> 0.69 m 保留明确的 0.03 m 收展动作，同时显著降低空中
+        // 内部角动量。0.72 m 着陆时实测膝关节直接撞到 -1.5708 rad
+        // 硬限位，冲击后无膝部压缩行程；0.69 m 的着陆膝目标约为
+        // -1.28 rad，保留约 0.29 rad 机械缓冲余量。
+        L_RETRACT_ = 0.66;
+        L_TOUCH_ = 0.69;   // 腾空 wheel-first 着陆高度 [m]
+        flight_hip_speed_limit_ = this->declare_parameter<double>(
+            "flight_hip_speed_limit", 11.0);
+        flight_knee_speed_limit_ = this->declare_parameter<double>(
+            "flight_knee_speed_limit", 13.0);
+        flight_hip_acc_limit_ = this->declare_parameter<double>(
+            "flight_hip_acc_limit", 450.0);
+        flight_knee_acc_limit_ = this->declare_parameter<double>(
+            "flight_knee_acc_limit", 500.0);
+        flight_hip_pos_limit_ = this->declare_parameter<double>(
+            "flight_hip_pos_limit", 1.52);
+        flight_knee_pos_limit_ = this->declare_parameter<double>(
+            "flight_knee_pos_limit", 1.5708);
         L_BUFFER_SETTLE_ = this->declare_parameter<double>("landing_buffer_height", 0.34);
         L_BUFFER_SETTLE_ = bbot_jump::clamp_value(
             L_BUFFER_SETTLE_, L_SQUAT_ + 0.01, L_TOUCH_ - 0.02);
-        // 试验值：触地时先保持空中末帧的实际关节构型，再平滑交给缓冲 IK。
-        // 这避免保护展腿尚未结束时，缓冲控制器又给髋关节一个位置阶跃。
+        // 触地时先保持空中末帧的实际关节构型，再平滑交给缓冲 IK。
+        // 实际交接时长还会按长腿落地的缓冲行程自动放大。
         landing_joint_handoff_duration_ = this->declare_parameter<double>(
             "landing_joint_handoff_duration", 0.16);
         landing_joint_handoff_duration_ = bbot_jump::clamp_value(
-            landing_joint_handoff_duration_, 0.08, 0.30);
+            landing_joint_handoff_duration_, 0.08, 0.70);
         // 放慢收腿，避免腿部反作用角动量把箱体继续推向后仰。
-        T_FLIGHT_TUCK_ = 0.10;       // 名义收腿时间；v6.14增加轨迹预算准入 [s]
+        T_FLIGHT_TUCK_ = bbot_jump::clamp_value(
+            this->declare_parameter<double>("flight_tuck_nominal_duration", 0.06),
+            0.06, 0.12); // 实际时长仍由 round-trip 可行性规划器决定
         T_FLIGHT_APEX_ = 0.30;       // 高跳时仍可在顶点附近开始展腿；低跳由剩余时间提前触发
-        T_FLIGHT_EXTEND_ = 0.090;    // 名义最短展腿时间；按轨迹预算自动延长 [s]
+        T_FLIGHT_EXTEND_ = 0.090;    // v6.2：给收腿腾出时间，同时保留wheel-first展腿 [s]
         T_PROTECTIVE_DEPLOY_ = 0.24; // 超标离地后，从离地初速度连续过渡到着陆构型
         T_FLIGHT_TIMEOUT_ = 0.60;    // 腾空超时保护阈值 [s]
         PITCH_FLIGHT_GUARD_ = 0.45;  // 腾空姿态保护阈值 [rad]
@@ -468,10 +456,15 @@ public:
         thrust_shape_early_ = this->declare_parameter<double>("thrust_shape_early", 0.95);
         thrust_shape_late_ = this->declare_parameter<double>("thrust_shape_late", 0.75);
         thrust_velocity_kp_ = this->declare_parameter<double>("thrust_velocity_kp", 8.0);
-        // Current URDF leg joints specify velocity=30 rad/s. The old 6 rad/s
-        // trajectory cap cannot represent the requested 1.98 m/s COM velocity.
+        // URDF 腿关节 velocity=30 rad/s；旧的 6 rad/s 轨迹上限无法表达
+        // 1.98 m/s 的 COM 离地速度所需膝速。
+        // 试验/调参值：30 实测膝速到 -11.6 rad/s，离地 z_dot 2.84 但
+        // pitch_rate -0.96 → protective_takeoff → 落地后翻倒。
+        // 8 实测离地 knee_v -9.9~-10.3、hip_v 4.66，同时打断
+        // flight_leg_motion_ready()(knee≤8) 与 tuck_joint_speed_safe()(hip≤2.8,
+        // knee≤4.5)，导致 v6.14 的正常 TUCK/EXTEND 路径一次都进不去。
         thrust_knee_velocity_limit_ = bbot_jump::clamp_value(
-            this->declare_parameter<double>("thrust_knee_velocity_limit", 30.0), 1.0, 30.0);
+            this->declare_parameter<double>("thrust_knee_velocity_limit", 15.0), 1.0, 30.0);
         thrust_torque_margin_ = this->declare_parameter<double>("thrust_torque_margin", 0.95);
         // 仅 Gazebo 启动文件默认开启；离开 THRUST 或关闭仿真时钟后恢复75/60。
         sim_relax_thrust_limits_ = this->declare_parameter<bool>("sim_relax_thrust_limits", false);
@@ -488,15 +481,28 @@ public:
         thrust_shape_late_ = bbot_jump::clamp_value(thrust_shape_late_, 0.05, 2.0);
         thrust_velocity_kp_ = bbot_jump::clamp_value(thrust_velocity_kp_, 0.0, 30.0);
         thrust_torque_margin_ = bbot_jump::clamp_value(thrust_torque_margin_, 0.80, 1.0);
-        // 实测正轮速会把机体带向后方；腾空姿态反馈必须使用同向符号，
-        // 才能在负俯仰/负角速度时给出负轮速进行回正。
-        air_wheel_sign_ = this->declare_parameter<double>("air_wheel_sign", 1.0);
+        // 轮子前进为负轮速，机身后仰(pitch<0, gyro<0)需轮子向后加速(正轮加速度)产生前倾反作用力矩。
+        // 因此 air_wheel_sign 默认为 -1.0。
+        air_wheel_sign_ = this->declare_parameter<double>("air_wheel_sign", -1.0);
+        // URDF 连续轮关节的物理速度上限为 30 rad/s。以 0.07 m 轮半径
+        // 换算，2.0 m/s 对应 28.6 rad/s，保留少量执行器裕量。旧的 1.4 m/s
+        // 在收腿中约 80 ms 就饱和到 20 rad/s，剩余空中姿态误差无法继续吸收。
+        air_wheel_linear_speed_limit_ = bbot_jump::clamp_value(
+            this->declare_parameter<double>("air_wheel_linear_speed_limit", 2.0),
+            0.70, 2.0);
+        air_wheel_extend_kd_ = bbot_jump::clamp_value(
+            this->declare_parameter<double>("air_wheel_extend_kd", 0.45),
+            0.20, 2.50);
+        air_wheel_tuck_kd_ = bbot_jump::clamp_value(
+            this->declare_parameter<double>("air_wheel_tuck_kd", 0.45),
+            0.20, 2.50);
+        flight_arrest_freewheel_duration_ = bbot_jump::clamp_value(
+            this->declare_parameter<double>("flight_arrest_freewheel_duration", 0.0), 0.0, 0.020);
+        thrust_terminal_hip_floor_ =
+            this->declare_parameter<bool>("thrust_terminal_hip_floor", false);
 
         RCLCPP_INFO(this->get_logger(),
-                    "[height-config] L_MIN=%.3fm L_MAX=%.3fm base_to_hip=%.3fm startup_h=%.3fm target_h=%.3fm hold_time=%.2fs",
-                    L_MIN_, L_MAX_, base_to_hip_height_, startup_height_, target_height_, startup_hold_time_);
-        RCLCPP_INFO(this->get_logger(),
-                    "[protective-landing-progress-v6.16] PROTECTIVE_DEPLOY 姿态退出稳定区后：连续减速 + 最大可行 landing progress（COM-relative 评价）");
+                    "[jump-thrust-v6.2] 强制实际状态TUCK / 去除round-trip误拦截 / 低跳立即再展腿");
         RCLCPP_INFO(this->get_logger(),
                     "[rolling-jump-config] approach_v=%.3f takeoff_v=%.3f m/s pitch_ref=%.3f rad "
                     "takeoff_pitch_rate=%.3f rad/s prepare_timeout=%.2fs",
@@ -507,11 +513,11 @@ public:
                     landing_wheel_back_bias_, landing_capture_gain_, landing_target_x_max_,
                     landing_capture_height_, landing_capture_speed_deadband_);
         RCLCPP_INFO(this->get_logger(),
-                    "[flight-landing-attitude] pitch_ref=balance+%.3f rad, transition=%.2fs, rate_limit=%.2f rad/s; 当前状态与完整轨迹预算均通过才TUCK",
+                    "[flight-landing-attitude] pitch_ref=balance+%.3f rad, transition=%.2fs, rate_limit=%.2f rad/s; 当前关节安全时25ms后可直接TUCK",
                     flight_landing_pitch_bias_, flight_pitch_transition_duration_,
                     flight_landing_pitch_rate_max_);
         RCLCPP_INFO(this->get_logger(),
-                    "[flight-tuck-config] retract=%.3fm nominal_tuck=%.3fs nominal_extend=%.3fs apex=%.3fs",
+                    "[flight-tuck-config] retract=%.3fm tuck=%.3fs extend=%.3fs apex=%.3fs",
                     L_RETRACT_, T_FLIGHT_TUCK_, T_FLIGHT_EXTEND_, T_FLIGHT_APEX_);
         RCLCPP_INFO(this->get_logger(),
                     "[v6-recovery-config] failed_crouch=%.3fm / %.2fs settle=%.2fs hard_block_timeout=%.2fs",
@@ -533,7 +539,14 @@ public:
                     (sim_relax_thrust_limits_ && this->get_parameter("use_sim_time").as_bool()) ? 1 : 0);
 
         RCLCPP_INFO(this->get_logger(),
-                    "[flight-plan-v6.14] 收展腿轨迹预算准入 / 保留COM推地与地面捕获");
+                    "[com-hold-v6.11 +thrust-vref-v6.13 +flight-plan-v6.14 +fall-guard-v6.27 "
+                    "+support-exit-v6.28 +capture-anchor-b-v6.31 +terrain-free-exit-v6.32] "
+                    "捕获停车恢复共用COM轮控 / "
+                    "静稳后保持Effort RECOVERY / THRUST 用COM速度反解膝参考 / "
+                    "FLIGHT 收展腿按整程轨迹预算准入 / 缓冲段不可恢复俯仰即停轮退出 / "
+                    "FLIGHT 用躯干IMU比力判支撑即退出 / "
+                    "地面静稳期限幅积分学掉速度不动点、保留 ωr 姿态反馈 / "
+                    "缓冲交权改用与支撑面无关的捕获静稳判据");
 
         // 日志路径初始化
         const char *home_dir = getenv("HOME");
@@ -626,9 +639,6 @@ public:
                 if (current_state_ == bbot_jump::STATE_BALANCE)
                 {
                     target_height_ = bbot_jump::clamp_value(msg->data, L_MIN_, L_MAX_);
-                    RCLCPP_INFO(this->get_logger(),
-                                "设定髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
-                                target_height_, base_link_height(target_height_));
                 }
             });
 
@@ -645,6 +655,7 @@ public:
             {
                 if (msg->data == "jump" || msg->data == "J" || msg->data == "j")
                 {
+                    jump_cmd_rx_stamp_ = this->now().seconds();
                     trigger_jump();
                 }
             });
@@ -678,6 +689,13 @@ public:
 
     ~BBotVelocityJumpController()
     {
+        if (jump_attempted_ && !jump_summary_written_)
+        {
+            if (current_state_ == bbot_jump::STATE_BALANCE && balance_return_time_ > 0.0)
+                write_jump_summary(true, "");
+            else
+                write_jump_summary(false, jump_failure_reason_.empty() ? "进程退出或中断未完成全流程" : jump_failure_reason_);
+        }
         close_log_files();
     }
 
@@ -686,6 +704,8 @@ private:
     // ── 状态机相关 ──
     bbot_jump::JumpState current_state_ = bbot_jump::STATE_BALANCE;
     double state_start_time_ = 0.0;
+    double jump_cmd_rx_stamp_ = -1.0;
+    double jump_cmd_accept_stamp_ = -1.0;
     bbot_jump::QuinticTrajectory quintic_traj_;
 
     // ── 传感器与里程计数据 ──
@@ -735,18 +755,23 @@ private:
     // 位置控制器目标缓存
     double hip_pos_cmd_left_ = 0.0, knee_pos_cmd_left_ = 0.0;
     double hip_pos_cmd_right_ = 0.0, knee_pos_cmd_right_ = 0.0;
+    bool balance_started_ = false;
+    double balance_start_time_ = 0.0;
+    bool pos_cmd_init_ = false;
+    double last_q_hip_cmd_left_ = 0.0, last_q_knee_cmd_left_ = 0.0;
+    double last_q_hip_cmd_right_ = 0.0, last_q_knee_cmd_right_ = 0.0;
 
     // 垂直方向状态估计 (正运动学)
-    double current_z_ = 0.50;
+    double current_z_ = 0.40;
     double current_z_dot_ = 0.0;
     double current_z_dot_raw_ = 0.0;
-    double prev_z_ = 0.50;
+    double prev_z_ = 0.40;
     rclcpp::Time prev_z_time_;
     bool z_dot_filter_init_ = false;
     double prev_q_hip_des_ = 0.0;
     double prev_q_knee_des_ = 0.0;
-    double state_start_z_ = 0.50;
-    double flight_start_z_ = 0.50;
+    double state_start_z_ = 0.30;
+    double flight_start_z_ = 0.40;
     bool thrust_trajectory_initialized_ = false;
     double thrust_force_per_leg_ = 0.0;
     double thrust_force_command_per_leg_ = 0.0;
@@ -761,7 +786,7 @@ private:
     bool last_wheels_airborne_ = false;
     double flight_ff_force_start_ = 0.0;
     bool flight_trajectory_initialized_ = false;
-    // -1: not checked this flight, 0: rejected, 1: accepted.
+    // -1: 本次腾空尚未检查，0: 预算拒绝，1: 预算通过。
     int flight_tuck_plan_check_ = -1;
     int flight_extend_plan_check_ = -1;
     bbot_jump::FlightRoundTripPlan flight_round_trip_plan_;
@@ -791,6 +816,10 @@ private:
     bool thrust_attitude_blocked_ = false;
     bool thrust_gate_has_opened_ = false;
     int thrust_attitude_stable_count_ = 0;
+    double thrust_gate_pitch_err_diag_ = 0.0;
+    double thrust_gate_rate_err_diag_ = 0.0;
+    double thrust_gate_stable_elapsed_diag_ = 0.0;
+    double thrust_gate_open_stamp_ = -1.0;
     int thrust_block_recovery_count_ = 0;
     double thrust_block_elapsed_ = 0.0;
     double thrust_hard_block_timeout_ = 0.12;
@@ -801,7 +830,7 @@ private:
     int attitude_arrest_stable_count_ = 0;
     double tuck_start_time_ = 0.0;
     double extend_start_time_ = 0.0;
-    double tuck_start_z_ = 0.50;
+    double tuck_start_z_ = 0.40;
     bbot_jump::QuinticTrajectory tuck_traj_;
     bbot_jump::QuinticTrajectory extend_traj_;
     bbot_jump::QuinticTrajectory protective_deploy_traj_;
@@ -814,6 +843,7 @@ private:
     double ground_height_offset_ = 0.0;
     bbot_jump::JointPoseHistory takeoff_joint_history_;
     bbot_jump::TakeoffConfirmation takeoff_confirmation_;
+    bbot_jump::TakeoffSpeedLatch takeoff_speed_latch_;
     bbot_jump::TouchdownConfirmation touchdown_confirmation_;
     double takeoff_odom_stamp_ = -1.0;
     double takeoff_odom_pitch_ = 0.0;
@@ -825,11 +855,10 @@ private:
     double capture_com_velocity_ = 0.0;
     bool capture_world_valid_ = false;
     bool capture_world_active_ = false;
-    bool recovery_ready_ = false;
-    bool effort_jump_cycle_ = false;
-    double recovery_drive_ref_ = 0.0;
-    double recovery_yaw_ref_ = 0.0;
     double capture_world_target_ = 0.0;
+    bool capture_creep_anchor_latched_ = false;
+    bool capture_anchor_active_ = false;
+    double capture_v_ref_ = 0.0;
     bbot_jump::CentroidalBalanceState centroidal_balance_;
     bool centroidal_velocity_valid_ = false;
     double thrust_vertical_velocity_ = 0.0;
@@ -854,8 +883,17 @@ private:
     double protective_deploy_q_knee_left_ = 0.0;
     double protective_deploy_q_hip_right_ = 0.0;
     double protective_deploy_q_knee_right_ = 0.0;
-    double air_wheel_sign_ = 1.0;
+    double air_wheel_sign_ = -1.0;
+    double air_wheel_linear_speed_limit_ = 2.0;
+    double air_wheel_extend_kd_ = 0.45;
+    double air_wheel_tuck_kd_ = 0.45;
     double air_wheel_cmd_raw_ = 0.0;
+    double flight_arrest_freewheel_duration_ = 0.0;
+    bool flight_arrest_freewheel_active_ = false;
+    bool thrust_terminal_hip_floor_ = false;
+    double thrust_hip_requested_left_diag_ = 0.0;
+    double thrust_hip_requested_right_diag_ = 0.0;
+    bool thrust_hip_floor_applied_diag_ = false;
 
     double recovery_x_ref_ = 0.0;        // 落地恢复阶段位置参考
     double recovery_hold_height_ = 0.40; // 恢复初期承重保持高度
@@ -889,7 +927,11 @@ private:
     // ── 触地检测计数器 / 捕获状态 ──
     int touchdown_knee_effort_count_ = 0;
     int touchdown_stable_count_ = 0;
+    double landing_fall_start_time_ = -1.0;
+    double landing_support_start_time_ = -1.0;
     bool touchdown_catch_active_ = true;
+    bool touchdown_reverse_brake_active_ = false;
+    bool touchdown_reverse_brake_consumed_ = false;
     int touchdown_catch_stable_count_ = 0;
     double touchdown_settle_start_time_ = -1.0; // CATCH 释放后 PREPARE/BRAKE 阶段计时起点
     bool touchdown_brake_active_ = false;       // false: PREPARE_BRAKE, true: BRAKE
@@ -906,6 +948,26 @@ private:
     double touchdown_knee_left_start_ = 0.0;
     double touchdown_hip_right_start_ = 0.0;
     double touchdown_knee_right_start_ = 0.0;
+
+    // 落地后恢复与低速保持轮控分解在线诊断
+    double wheel_pitch_err_diag_ = 0.0;
+    double wheel_balance_rate_diag_ = 0.0;
+    double wheel_k_theta_diag_ = 0.0;
+    double wheel_k_theta_dot_diag_ = 0.0;
+    double wheel_control_height_diag_ = 0.0;
+    double wheel_p_term_diag_ = 0.0;
+    double wheel_d_term_diag_ = 0.0;
+    double wheel_attitude_cmd_diag_ = 0.0;
+    double wheel_vel_error_diag_ = 0.0;
+    double wheel_vel_term_diag_ = 0.0;
+    double wheel_raw_pos_err_diag_ = 0.0;
+    double wheel_pos_error_diag_ = 0.0;
+    double wheel_pos_term_diag_ = 0.0;
+    double wheel_cmd_raw_diag_ = 0.0;
+    double wheel_cmd_pre_clamp_diag_ = 0.0;
+    double wheel_min_fwd_cmd_diag_ = 0.0;
+    double wheel_max_bwd_cmd_diag_ = 0.0;
+    double wheel_cmd_target_diag_ = 0.0;
 
     // ── 控制参数 ──
     bbot_jump::LQRGain gain_low_;
@@ -931,18 +993,25 @@ private:
     double jump_forward_speed_ = 0.30;         // PRE_JUMP / SQUAT 接近速度 [m/s]
     double jump_takeoff_forward_speed_ = 0.45; // THRUST 离地前向速度目标 [m/s]
     double thrust_forward_velocity_kp_ = 0.80; // THRUST 前向速度误差补偿
-    double jump_pitch_offset_ = 0.075;
-    double jump_pitch_ref_ = 0.113;
+    double thrust_wheel_max_decel_ = 8.0;      // THRUST 轮速制动/减速斜率上限 [m/s^2]
+    double jump_pitch_offset_ = 0.020;
+    double jump_pitch_ref_ = 0.058;
     double active_jump_pitch_ref_ = 0.038;
-    double jump_takeoff_pitch_rate_ = 0.45; // 正值=继续向前旋转 [rad/s]
+    double jump_takeoff_pitch_rate_ = 0.05; // 正值=继续向前旋转 [rad/s]
     double jump_takeoff_pitch_rate_tolerance_ = 0.18;
     double thrust_pitch_rate_lead_time_ = 0.07;
     double active_jump_pitch_rate_ref_ = 0.0;
+    double thrust_fwd_term_diag_ = 0.0;
+    double thrust_att_term_diag_ = 0.0;
+    double thrust_wheel_target_diag_ = 0.0;
+    double thrust_cmd_x_diag_ = 0.0;
+    double thrust_com_sample_stamp_diag_ = 0.0;
+    int thrust_com_valid_diag_ = 0;
 
     // 空中落点规划。inverse_kinematics 的 target_x>0 表示“机身在轮子前方”，
     // 即轮子相对机身后移。速度 capture 项只会减少这部分后移量。
     double landing_wheel_back_bias_ = 0.085;
-    double landing_capture_gain_ = 0.08;
+    double landing_capture_gain_ = 1.60;
     double landing_target_x_max_ = 0.10;
     double landing_capture_height_ = 0.40;
     double landing_capture_speed_deadband_ = 0.08;
@@ -973,20 +1042,12 @@ private:
     double flight_air_pitch_rate_ref_diag_ = 0.0;
     bool protective_deploy_rate_limited_ = false;
     int protective_deploy_replan_count_ = 0; // v6.1：限幅保护展腿允许继续追剩余着陆构型
-    // v6.16：PROTECTIVE_DEPLOY 中一旦姿态从稳定区间退出，锁存“姿态优先”制动。
-    // 与 v6.15 不同，段末不再只停在 q_stop，而是在现有速度/加速度/位置预算内
-    // 尽可能继续接近已锁存的 landing IK；进度用整机 COM 相对轮轴的位置评价。
-    bool protective_attitude_seen_stable_ = false;
-    bool protective_attitude_brake_active_ = false;
-    double protective_attitude_brake_start_time_ = 0.0;
-    double protective_attitude_brake_duration_active_ = 0.0;
-    // -1: 本次飞行尚未触发；0: 无可行五次段，进入低增益随动回退；1: 规划成功。
-    int protective_attitude_brake_plan_check_ = -1;
-    double landing_com_forward_target_ = 0.0;
-    bool landing_com_forward_target_valid_ = false;
-    double protective_landing_progress_ = 0.0;
-    double protective_landing_joint_alpha_ = 0.0;
-    double protective_landing_com_end_ = 0.0;
+    double flight_hip_speed_limit_ = 16.0;
+    double flight_knee_speed_limit_ = 20.0;
+    double flight_hip_acc_limit_ = 450.0;
+    double flight_knee_acc_limit_ = 500.0;
+    double flight_hip_pos_limit_ = 1.52;
+    double flight_knee_pos_limit_ = 1.5708;
 
     double pre_jump_timeout_ = bbot_jump::kDefaultPreJumpTimeout;
     double pre_jump_stable_duration_ = 0.08;
@@ -1001,32 +1062,12 @@ private:
     double landing_wheel_ground_blend_ = 0.0;
     double air_wheel_baseline_ = 0.0;
 
-    // 腿高定义与实车及自适应 LQR 统一：轮轴中心到髋关节的垂直距离 H_hip_axle in [0.30, 0.50] m
-    double current_height_ = 0.36;
-    double target_height_ = 0.50;
-    double startup_height_ = 0.36;
-    double startup_hold_time_ = 2.0;
-    double balance_ready_elapsed_ = 0.0;
-    double leg_transition_speed_ = 0.05;
-    double L_MIN_ = 0.30;
-    double L_MAX_ = 0.50;
-    double L_STAND_ = 0.50;
-    double base_to_hip_height_ = 0.07;
-
-    double base_link_height_offset() const
-    {
-        return base_to_hip_height_ + wheel_radius_;
-    }
-
-    double base_link_height() const
-    {
-        return current_height_ + base_link_height_offset();
-    }
-
-    double base_link_height(double hip_axle_height) const
-    {
-        return hip_axle_height + base_link_height_offset();
-    }
+    double current_height_ = 0.40;
+    double target_height_ = 0.40;
+    double leg_transition_speed_;
+    double L_MIN_;
+    double L_MAX_;
+    double L_STAND_;
 
     // 跳跃规划参数
     double L_SQUAT_;
@@ -1076,9 +1117,9 @@ private:
     std::array<double, 4> ground_gravity_torque_{};
     double thrust_force_unlimited_request_ = 0.0;
     double thrust_knee_pd_left_ = 0.0;
-    bool thrust_knee_position_yield_ = false;
+    bool last_thrust_position_yield_ = false;
     double thrust_timeout_ = 0.48;
-    double thrust_start_z_ = 0.50;
+    double thrust_start_z_ = 0.40;
     bool velocity_takeoff_reached_ = false;
     double actual_takeoff_velocity_ = 0.0;
     double max_z_during_jump_ = 0.0;
@@ -1092,12 +1133,31 @@ private:
     std::string jump_failure_reason_;
     std::uint64_t jump_id_ = 0;
     std::ofstream jump_summary_file_;
+    std::string jump_log_path_;
+    std::string jump_summary_path_;
+    bool auto_return_balance_ = true;
+    bool jump_attempted_ = false;
+    double takeoff_com_z_ = 0.0;
+    double takeoff_com_vz_ = 0.0;
+    double takeoff_com_vx_ = 0.0;
+    double com_takeoff_latched_vz_ = 0.0;
+    double com_takeoff_confirmed_vz_ = 0.0;
+    double thrust_start_com_z_ = 0.0;
+    double max_com_z_during_jump_ = 0.0;
+    bool tuck_entered_ = false;
+    bool extend_entered_ = false;
+    std::string protective_reason_;
+    double touchdown_time_ = -1.0;
+    double recovery_time_ = -1.0;
+    double balance_return_time_ = -1.0;
+    std::string exit_code_ = "NOT_STARTED";
+    double post_jump_balance_stable_timer_ = 0.0;
 
     // ── 真实世界高度与落地点单参考 ──
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     bbot_jump::WorldPoseVelocity world_pose_velocity_;
     double odom_twist_z_diag_ = 0.0;
-    double gazebo_world_z_ = 0.64;
+    double gazebo_world_z_ = 0.40;
     double gazebo_world_z_dot_ = 0.0;
     double gazebo_world_x_dot_ = 0.0;
     double gazebo_world_y_dot_ = 0.0;
@@ -1108,6 +1168,9 @@ private:
     double max_world_z_during_jump_ = 0.0;
     double thrust_start_world_z_ = 0.40;
     double touchdown_x_ref_ = 0.0;
+    double touchdown_height_ = 0.0; // 触地瞬间实测机身高度，缓冲高度参考的起点
+    double touchdown_buffer_target_height_ = 0.34;
+    double touchdown_buffer_settle_duration_ = 0.18;
     bool touchdown_x_latched_ = false;
 
     // ── 离地构型锁存与动态诊断指标 ──
@@ -1167,30 +1230,33 @@ private:
     rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr switch_ctrl_client_;
     bool effort_mode_active_ = false;
     bool leg_mode_switch_pending_ = false;
+    double effort_switch_request_stamp_ = -1.0;
+    double effort_switch_ack_stamp_ = -1.0;
+    // -1: no request, 0: pending, 1: accepted, 2: rejected, 3: callback error.
+    int effort_switch_result_ = -1;
     rclcpp::TimerBase::SharedPtr timer_;
 
     KeyboardReader keyboard_;
     bbot_kinematics::Kinematics kinematics_;
     rclcpp::Time last_time_;
+    // Observation only: relate the 5 ms wall timer to accepted simulation-clock updates.
+    std::chrono::steady_clock::time_point last_control_wall_time_{};
+    bool control_wall_time_valid_ = false;
+    uint64_t timer_calls_since_control_ = 0;
+    uint64_t timer_calls_for_update_diag_ = 0;
+    double control_wall_dt_ms_diag_ = -1.0;
+    double control_sim_dt_ms_diag_ = 0.0;
     rclcpp::Time start_time_;
 
     std::string data_path_;
     std::ofstream jump_log_file_;
 
-    bool effort_jump_preparation() const
-    {
-        return effort_jump_cycle_ && effort_mode_active_ &&
-               (current_state_ == bbot_jump::STATE_PRE_JUMP || current_state_ == bbot_jump::STATE_SQUAT);
-    }
-
     // ── 模式与跳跃触发 ──
     void trigger_jump()
     {
-        const bool from_recovery = current_state_ == bbot_jump::STATE_RECOVERY &&
-                                   recovery_ready_ && effort_mode_active_ && capture_world_valid_;
-        if (current_state_ != bbot_jump::STATE_BALANCE && !from_recovery)
+        if (current_state_ != bbot_jump::STATE_BALANCE)
         {
-            RCLCPP_WARN(this->get_logger(), "[跳跃请求忽略] 需要 BALANCE 或已就绪的 Effort RECOVERY (当前: %s)",
+            RCLCPP_WARN(this->get_logger(), "[跳跃请求忽略] 当前不在 BALANCE 自平衡状态 (当前: %s)",
                         bbot_jump::state_to_string(current_state_));
             return;
         }
@@ -1201,26 +1267,32 @@ private:
             return;
         }
 
-        // PRE_JUMP 会主动建立前向速度与前倾工作点；触发瞬间只拒绝已经明显失稳的状态。
-        const bool takeoff_safe =
-            std::abs(pitch_ - balance_offset_) < 0.25 &&
-            std::abs(pitch_rate_) < 2.0 &&
-            std::abs(from_recovery ? capture_com_velocity_ : x_dot_) < 0.30 &&
-            (!from_recovery || (std::abs(ground_balance_angle()) < 0.06 &&
-                                std::abs(ground_balance_rate()) < 0.35));
-        if (!takeoff_safe)
+        double now_sec = this->now().seconds();
+        if (!centroidal_velocity_valid_ || !capture_world_valid_ ||
+            !centroidal_balance_.valid || (now_sec - centroidal_height_.stamp() > 0.080))
         {
-            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                 "[跳跃请求忽略] 请先空格停车并等待姿态稳定: pitch=%.3f gyro=%.3f v=%.3f",
-                                 pitch_, pitch_rate_, from_recovery ? capture_com_velocity_ : x_dot_);
+            RCLCPP_WARN(this->get_logger(),
+                        "[跳跃请求忽略] COM质心观测器未就绪或过期 "
+                        "(vertical=%d horizontal=%d balance=%d age=%.3f s)，禁止起跳",
+                        centroidal_velocity_valid_ ? 1 : 0,
+                        capture_world_valid_ ? 1 : 0,
+                        centroidal_balance_.valid ? 1 : 0,
+                        now_sec - centroidal_height_.stamp());
             return;
         }
 
-        double now_sec = this->now().seconds();
-        effort_jump_cycle_ = effort_mode_active_;
-        recovery_ready_ = false;
-        recovery_drive_ref_ = 0.0;
-        recovery_yaw_ref_ = 0.0;
+        // PRE_JUMP 会主动建立前向速度与前倾工作点；触发瞬间只拒绝已经明显失稳的状态。
+        const bool takeoff_safe =
+            std::abs(pitch_ - balance_offset_) < 0.25 &&
+            std::abs(pitch_rate_) < 2.0 && std::abs(x_dot_) < 0.30;
+        if (!takeoff_safe)
+        {
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                 "[跳跃请求忽略] 触发瞬间运动过大: pitch=%.3f gyro=%.3f xdot=%.3f",
+                                 pitch_, pitch_rate_, x_dot_);
+            return;
+        }
+
         jump_pitch_ref_ = balance_offset_ + jump_pitch_offset_;
         active_jump_pitch_ref_ = balance_offset_;
         active_jump_pitch_rate_ref_ = 0.0;
@@ -1240,8 +1312,6 @@ private:
         landing_forward_direction_sign_ = 1.0;
         landing_forward_axis_valid_ = false;
         landing_capture_planned_ = false;
-        landing_com_forward_target_ = 0.0;
-        landing_com_forward_target_valid_ = false;
         landing_target_shank_abs_ = 0.0;
         landing_target_knee_axis_clearance_ = 0.0;
         protective_deploy_duration_active_ = T_PROTECTIVE_DEPLOY_;
@@ -1250,20 +1320,32 @@ private:
         flight_air_pitch_rate_ref_diag_ = 0.0;
         protective_deploy_rate_limited_ = false;
         protective_deploy_replan_count_ = 0;
-        protective_attitude_seen_stable_ = false;
-        protective_attitude_brake_active_ = false;
-        protective_attitude_brake_start_time_ = 0.0;
-        protective_attitude_brake_duration_active_ = 0.0;
-        protective_attitude_brake_plan_check_ = -1;
-        protective_landing_progress_ = 0.0;
-        protective_landing_joint_alpha_ = 0.0;
-        protective_landing_com_end_ = 0.0;
+
+        jump_attempted_ = true;
+        jump_summary_written_ = false;
+        tuck_entered_ = false;
+        extend_entered_ = false;
+        protective_reason_.clear();
+        touchdown_time_ = -1.0;
+        recovery_time_ = -1.0;
+        balance_return_time_ = -1.0;
+        exit_code_ = "IN_PROGRESS";
+        com_takeoff_latched_vz_ = 0.0;
+        com_takeoff_confirmed_vz_ = 0.0;
+        takeoff_com_z_ = 0.0;
+        takeoff_com_vz_ = 0.0;
+        takeoff_com_vx_ = 0.0;
+        takeoff_speed_latch_.reset();
+        thrust_start_com_z_ = centroidal_height_.height();
+        max_com_z_during_jump_ = thrust_start_com_z_;
+        post_jump_balance_stable_timer_ = 0.0;
 
         RCLCPP_INFO(this->get_logger(),
                     ">>> 收到跳跃指令！PRE_JUMP 建立 vx=%.3f；SQUAT 末段建立 pitch_rate=%.3f；"
                     "THRUST 目标 vx=%.3f m/s，pitch 从 %.3f 推向 %.3f rad <<<",
                     jump_forward_speed_, jump_takeoff_pitch_rate_, jump_takeoff_forward_speed_,
                     balance_offset_, jump_pitch_ref_);
+        jump_cmd_accept_stamp_ = now_sec;
         current_state_ = bbot_jump::STATE_PRE_JUMP;
         state_start_time_ = now_sec;
         protective_landing_ = false;
@@ -1300,9 +1382,6 @@ private:
         max_abs_hip_torque_during_jump_ = 0.0;
         max_abs_knee_torque_during_jump_ = 0.0;
         thrust_mechanical_work_ = 0.0;
-        flight_tuck_plan_check_ = -1;
-        flight_extend_plan_check_ = -1;
-        flight_round_trip_plan_ = {};
         last_thrust_force_ = 0.0;
         last_thrust_force_request_ = 0.0;
         last_thrust_force_limit_ = 0.0;
@@ -1310,9 +1389,14 @@ private:
         last_thrust_reaction_ff_ = 0.0;
         last_wheels_airborne_ = false;
         landing_wheel_ground_blend_ = 0.0;
+        touchdown_reverse_brake_active_ = false;
+        touchdown_reverse_brake_consumed_ = false;
         touchdown_confirmation_.reset();
         flight_ff_force_start_ = 0.0;
         flight_trajectory_initialized_ = false;
+        flight_tuck_plan_check_ = -1;
+        flight_extend_plan_check_ = -1;
+        flight_round_trip_plan_ = {};
         effort_slew_initialized_ = false;
         airborne_confidence_count_ = 0;
         thrust_release_.reset();
@@ -1321,6 +1405,13 @@ private:
         thrust_attitude_blocked_ = false;
         thrust_gate_has_opened_ = false;
         thrust_attitude_stable_count_ = 0;
+        thrust_gate_pitch_err_diag_ = 0.0;
+        thrust_gate_rate_err_diag_ = 0.0;
+        thrust_gate_stable_elapsed_diag_ = 0.0;
+        thrust_gate_open_stamp_ = -1.0;
+        effort_switch_request_stamp_ = -1.0;
+        effort_switch_ack_stamp_ = -1.0;
+        effort_switch_result_ = -1;
         thrust_block_recovery_count_ = 0;
         thrust_block_elapsed_ = 0.0;
         fail_recovery_stable_timer_ = 0.0;
@@ -1421,8 +1512,7 @@ private:
             if (current_state_ == bbot_jump::STATE_BALANCE)
             {
                 target_height_ = bbot_jump::clamp_value(target_height_ + 0.01, L_MIN_, L_MAX_);
-                RCLCPP_INFO(this->get_logger(), "[键盘] 升高  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
-                            target_height_, base_link_height(target_height_));
+                RCLCPP_INFO(this->get_logger(), "[键盘] 升高  目标高度 → %.3f m", target_height_);
             }
         }
         else if (seq == "e" || seq == "E")
@@ -1430,8 +1520,7 @@ private:
             if (current_state_ == bbot_jump::STATE_BALANCE)
             {
                 target_height_ = bbot_jump::clamp_value(target_height_ - 0.01, L_MIN_, L_MAX_);
-                RCLCPP_INFO(this->get_logger(), "[键盘] 降低  髋部-轮轴目标高度 → %.3f m (base_link离地: %.3f m)",
-                            target_height_, base_link_height(target_height_));
+                RCLCPP_INFO(this->get_logger(), "[键盘] 降低  目标高度 → %.3f m", target_height_);
             }
         }
         else if (seq == "r" || seq == "R")
@@ -1613,16 +1702,14 @@ private:
         }
 
         // 计算当前腿长与竖直速度：综合左右双腿平均高度，消除单腿盲区与不对称塌软
-        // calculate_com_height 返回 base_link 离地高度，需扣除 base_to_hip_height_ 和 wheel_radius_ 转换为髋轴高度
         double z_left = kinematics_.calculate_com_height(pitch_, hip_pos_left_, knee_pos_left_);
         double z_right = kinematics_.calculate_com_height(pitch_, hip_pos_right_, knee_pos_right_);
         double z_calc = 0.5 * (z_left + z_right);
-        double current_hip_z = z_calc - base_link_height_offset();
         rclcpp::Time now_t = sample_time > 0.0 ? rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) : this->now();
         double dt_z = (now_t - prev_z_time_).seconds();
         if (dt_z > 0.001)
         {
-            current_z_dot_raw_ = (current_hip_z - prev_z_) / dt_z;
+            current_z_dot_raw_ = (z_calc - prev_z_) / dt_z;
             current_z_dot_raw_ = bbot_jump::clamp_value(current_z_dot_raw_, -3.0, 3.0);
             if (!z_dot_filter_init_)
             {
@@ -1634,10 +1721,10 @@ private:
                 current_z_dot_ = bbot_jump::low_pass_filter(
                     current_z_dot_raw_, current_z_dot_, 0.22);
             }
-            prev_z_ = current_hip_z;
+            prev_z_ = z_calc;
             prev_z_time_ = now_t;
         }
-        current_z_ = current_hip_z;
+        current_z_ = z_calc;
     }
 
     // ── 主控制循环 (200Hz) ──
@@ -1645,6 +1732,7 @@ private:
     {
         if (!imu_received_ || !wheel_origin_set_)
             return;
+        ++timer_calls_since_control_;
 
         process_keyboard();
 
@@ -1660,6 +1748,17 @@ private:
             return;
         }
         last_time_ = now;
+        const auto wall_now = std::chrono::steady_clock::now();
+        if (control_wall_time_valid_)
+        {
+            control_wall_dt_ms_diag_ =
+                std::chrono::duration<double, std::milli>(wall_now - last_control_wall_time_).count();
+        }
+        last_control_wall_time_ = wall_now;
+        control_wall_time_valid_ = true;
+        timer_calls_for_update_diag_ = timer_calls_since_control_;
+        timer_calls_since_control_ = 0;
+        control_sim_dt_ms_diag_ = dt * 1000.0;
 
         // v6.7：机身姿态与整机重心是不同状态。腿在落地压缩时会改变
         // 重心相对轮轴的位置和速度；所有落地轮控阶段共用这一状态。
@@ -1684,8 +1783,7 @@ private:
         if (capture_world_valid_)
             capture_com_velocity_ = centroidal_world_.forward_velocity(heading.normalized());
         capture_world_active_ = false;
-        thrust_knee_position_yield_ = false;
-        thrust_velocity_reference_ = {};
+        update_capture_velocity_reference(dt);
 
         // 执行当前状态机分支
         switch (current_state_)
@@ -1725,6 +1823,9 @@ private:
             {
                 publish_position_leg_control(hip_pos_left_, knee_pos_left_);
             }
+            // 该状态原本不进日志，落地止损(+fall-guard-v6.27)把这里当终止态用，
+            // 没有这几行就看不到"轮速清零之后机身是否真的停下来"。
+            log_data(0.0, 0.0, 0.0, 0.0);
             break;
         }
 
@@ -1734,12 +1835,8 @@ private:
     // ── 阶段 0：变高度 LQR 自平衡 ──
     void run_state_balance(double dt)
     {
-        // 1. 平滑过渡高度：先在安全初始高度稳定保持，自平衡建立后再平滑过渡到 target_height
-        balance_ready_elapsed_ += dt;
-        if (balance_ready_elapsed_ >= startup_hold_time_)
-        {
-            update_leg_height_by_dt(dt);
-        }
+        // 1. 平滑过渡高度
+        update_leg_height_by_dt(dt);
 
         // 2. 动态插值 LQR 增益
         interpolate_lqr_gain();
@@ -1783,23 +1880,54 @@ private:
             was_moving_ = true;
         }
 
+        // 开机启动平稳过渡与姿态优先仲裁
+        if (!balance_started_)
+        {
+            balance_start_time_ = this->now().seconds();
+            balance_started_ = true;
+            target_x_ = x_;
+        }
+        const double startup_elapsed = this->now().seconds() - balance_start_time_;
+
+        double dynamic_target_pitch = post_landing_gyro_reduced_ ? post_landing_pitch_ref_ : balance_offset_;
+
+        // 姿态未稳定或速度较大时，target_x_ 持续跟随当前位置 x_，
+        // 绝不允许位置环拉扯干扰倒立摆俯仰平衡
+        const bool balance_not_settled = (std::abs(pitch_ - dynamic_target_pitch) > 0.035) ||
+                                         (std::abs(pitch_rate_) > 0.15) ||
+                                         (std::abs(x_dot_) > 0.25) ||
+                                         (startup_elapsed < 1.5);
+        if (balance_not_settled)
+        {
+            target_x_ = x_;
+        }
+
+        // 位置环增益软启动淡入 (仅对位置误差 pos_error 生效，速度阻尼 k_x_dot 始终全额生效以抑制漂移)
+        double pos_gain_scale = 1.0;
+        if (startup_elapsed < 1.5)
+        {
+            pos_gain_scale = 0.0;
+        }
+        else if (startup_elapsed < 3.0)
+        {
+            pos_gain_scale = (startup_elapsed - 1.5) / 1.5;
+        }
+
         // 状态误差计算 (实际值 - 目标值)
         double pos_error = x_ - target_x_;
         double vel_error = x_dot_ - target_speed;
         double gyro_val = pitch_rate_;
-        double dynamic_target_pitch = post_landing_gyro_reduced_ ? post_landing_pitch_ref_ : balance_offset_;
         double theta_error = 0.0;
         double u_pitch = 0.0;
         double cmd_x = 0.0;
         const double gyro_gain_scale =
             post_landing_gyro_reduced_ ? 0.50 : 1.0;
-        const double translation_gain_scale = 1.0;
 
         if (target_speed_const_ == 0.0 && std::abs(target_speed) < 0.005)
         {
             theta_error = pitch_ - dynamic_target_pitch;
-            u_pitch = -(translation_gain_scale * current_gain_.k_x * pos_error +
-                        translation_gain_scale * current_gain_.k_x_dot * vel_error +
+            u_pitch = -(pos_gain_scale * current_gain_.k_x * pos_error +
+                        current_gain_.k_x_dot * vel_error +
                         current_gain_.k_theta * theta_error +
                         gyro_gain_scale * current_gain_.k_theta_dot * gyro_val);
             cmd_x = -u_pitch * cmd_scale_;
@@ -1823,7 +1951,26 @@ private:
             cmd_x = -u_pitch * cmd_scale_ - target_speed;
         }
 
-        cmd_x = bbot_jump::clamp_value(cmd_x, -max_cmd_x_, max_cmd_x_);
+        cmd_x = bbot_jump::clamp_value(cmd_x, -2.5, 2.5);
+
+        if (post_landing_effort_support_)
+        {
+            // RECOVERY and post-landing Effort BALANCE must use the same
+            // COM-aware wheel law. Switching to the pre-jump pitch-only LQR
+            // here caused an immediate command jump after a stable recovery.
+            double p_term = 0.0;
+            double d_term = 0.0;
+            double capture_state = 0.0;
+            double capture_guard = 0.0;
+            const double hold_target = compute_post_brake_hold_wheel_target(
+                p_term, d_term, capture_state, capture_guard);
+            const double max_accel = capture_world_active_ ? 8.0 :
+                (std::abs(x_dot_) < 0.20 && std::abs(capture_state) < 0.12) ? 4.0 : 7.5;
+            const double max_step = max_accel * std::max(dt, 0.001);
+            cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
+                hold_target - last_wheel_cmd_x_, -max_step, max_step);
+        }
+
         // 落地后平移速度与变化率限制
         if (post_landing_translation_feedback_)
         {
@@ -1857,8 +2004,8 @@ private:
         // 8Hz 遥测打印
         if (num_ % 25 == 0)
         {
-            const double term_x = translation_gain_scale * current_gain_.k_x * pos_error;
-            const double term_xdot = translation_gain_scale * current_gain_.k_x_dot * vel_error;
+            const double term_x = pos_gain_scale * current_gain_.k_x * pos_error;
+            const double term_xdot = current_gain_.k_x_dot * vel_error;
             const double term_theta = current_gain_.k_theta * theta_error;
             const double term_theta_dot = gyro_gain_scale * current_gain_.k_theta_dot * gyro_val;
             std::cout << "[BALANCE]"
@@ -1879,7 +2026,7 @@ private:
 
         // 腿部逆运动学与重力矩计算
         bbot_kinematics::IKSolution ik_bal =
-            kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
+            kinematics_.inverse_kinematics(current_height_, 0.0);
         bbot_kinematics::JointTorques g_torques =
             kinematics_.compute_gravity_torques(
                 0.0, ik_bal.theta_hip, ik_bal.theta_knee);
@@ -1911,6 +2058,34 @@ private:
                                    std::abs(pitch_rate_) < 1.5 && std::abs(x_dot_) < 0.25 &&
                                    std::abs(x_ - target_x_) < 0.25;
         balance_settle_count_ = balance_quiet ? std::min(balance_settle_count_ + 1, 1000) : 0;
+
+        if (post_landing_effort_support_)
+        {
+            // 验收判据：|pitch error|<0.04 rad, |pitch rate|<0.15 rad/s, |vx|<0.08 m/s, |vz|<0.03 m/s
+            const bool steady_pitch = std::abs(pitch_ - balance_offset_) < 0.04;
+            const bool steady_gyro = std::abs(pitch_rate_) < 0.15;
+            const bool steady_vx = std::abs(x_dot_) < 0.08;
+            const bool steady_vz = std::abs(current_z_dot_) < 0.03 ||
+                                   (centroidal_velocity_valid_ && std::abs(centroidal_height_.velocity()) < 0.03);
+
+            if (steady_pitch && steady_gyro && steady_vx && steady_vz)
+            {
+                post_jump_balance_stable_timer_ += dt;
+                if (post_jump_balance_stable_timer_ >= 1.0 && !jump_summary_written_)
+                {
+                    const double now_sec = this->now().seconds();
+                    balance_return_time_ = now_sec - balance_entry_time_;
+                    RCLCPP_INFO(this->get_logger(),
+                                ">>> [BALANCE] 落地后在 Effort BALANCE 连续稳定 1.0s (return_time=%.3fs)，跳跃全流程验收成功！<<<",
+                                balance_return_time_);
+                    write_jump_summary(true, "");
+                }
+            }
+            else
+            {
+                post_jump_balance_stable_timer_ = 0.0;
+            }
+        }
     }
 
     // ── jump-thrust-v5：滚动起跳准备 (PRE_JUMP) ──
@@ -1920,16 +2095,16 @@ private:
         current_height_ = pre_jump_hold_height_;
 
         // 腿保持触发瞬间高度，PRE_JUMP 只建立水平速度与机身工作姿态。
-        const auto ik_hold = kinematics_.inverse_kinematics(base_link_height(pre_jump_hold_height_), 0.0);
+        const auto ik_hold = kinematics_.inverse_kinematics(pre_jump_hold_height_, 0.0);
         const auto g_torques = kinematics_.compute_gravity_torques(
             0.0, ik_hold.theta_hip, ik_hold.theta_knee);
         if (effort_mode_active_)
         {
-            // Repeat jump stays on the same ground effort law as recovery.
+            // 正常起跳入口应是 Position；若上次控制器仍未交回，先保持安全高度而不进入下蹲。
             publish_effort_height_control(
                 pre_jump_hold_height_, 0.0,
-                K_Z_BUFFER_, D_Z_BUFFER_, F_Z_BUFFER_MAX_,
-                25.0, 3.5, 45.0, 6.0,
+                450.0, 75.0, 220.0,
+                25.0, 4.0, 45.0, 6.0,
                 true);
         }
         else
@@ -1969,8 +2144,6 @@ private:
                                  kp_v * vel_error_v + ki_v * vel_integral_;
         active_jump_pitch_ref_ = bbot_jump::clamp_value(
             active_jump_pitch_ref_, -0.2, 0.2);
-        if (effort_jump_preparation())
-            active_jump_pitch_ref_ = balance_offset_;
         // PRE_JUMP 仍要求近似零角速度，避免过早把机器人推入持续前倒。
         active_jump_pitch_rate_ref_ = 0.0;
 
@@ -1982,19 +2155,15 @@ private:
 
         double cmd_target = -u_pitch * cmd_scale_ - target_speed;
         cmd_target = bbot_jump::clamp_value(cmd_target, -1.20, 1.20);
-        if (effort_jump_preparation())
-            cmd_target = landing_capture_target(cmd_target);
-        const double max_cmd_step = (effort_jump_preparation() ? 8.0 : 5.0) * std::max(dt, 0.001);
+        const double max_cmd_step = 5.0 * std::max(dt, 0.001);
         const double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
                                                      cmd_target - last_wheel_cmd_x_, -max_cmd_step, max_cmd_step);
         publish_wheel_cmd(cmd_x, 0.0);
 
-        const bool ready_now = (!effort_jump_preparation() || capture_world_valid_) &&
-                               bbot_jump::rolling_prepare_ready(
-                                   effort_jump_preparation() ? capture_com_velocity_ : x_dot_,
-                                   jump_forward_speed_, target_speed_smoothed_,
-                                   pitch_ - active_jump_pitch_ref_, pitch_rate_,
-                                   pre_jump_speed_tolerance_, pre_jump_pitch_tolerance_, pre_jump_rate_limit_);
+        const bool ready_now = bbot_jump::rolling_prepare_ready(
+            x_dot_, jump_forward_speed_, target_speed_smoothed_,
+            pitch_ - active_jump_pitch_ref_, pitch_rate_,
+            pre_jump_speed_tolerance_, pre_jump_pitch_tolerance_, pre_jump_rate_limit_);
         pre_jump_stable_timer_ = ready_now ? (pre_jump_stable_timer_ + dt) : 0.0;
 
         RCLCPP_INFO_THROTTLE(
@@ -2031,13 +2200,8 @@ private:
             // PRE_JUMP 仍处于 Position/常规平衡域，不进入 RECOVERY，也不切换 Effort。
             jump_failure_reason_ = "PRE_JUMP未能建立滚动起跳工作点";
             RCLCPP_WARN(this->get_logger(),
-                        "[PRE_JUMP中止] %.2fs 内未稳定到目标 (vx=%.3f/%.3f pitch=%.3f/%.3f gyro=%.3f)，返回地面支撑",
+                        "[PRE_JUMP中止] %.2fs 内未稳定到目标 (vx=%.3f/%.3f pitch=%.3f/%.3f gyro=%.3f)，返回 BALANCE",
                         elapsed, x_dot_, jump_forward_speed_, pitch_, active_jump_pitch_ref_, pitch_rate_);
-            if (effort_jump_cycle_)
-            {
-                abort_jump_to_recovery(now_sec, "Effort PRE_JUMP准备超时");
-                return;
-            }
             current_state_ = bbot_jump::STATE_BALANCE;
             target_speed_const_ = 0.0;
             // 保留当前平滑速度和PI状态，让BALANCE移动分支逐步减速。
@@ -2064,15 +2228,15 @@ private:
         current_height_ = des_z;
 
         // 下蹲重力补偿力矩 + 高刚度轨迹跟踪 (Kp=350, Kd=14)
-        bbot_kinematics::IKSolution ik_sq = kinematics_.inverse_kinematics(base_link_height(des_z), 0.0);
+        bbot_kinematics::IKSolution ik_sq = kinematics_.inverse_kinematics(des_z, 0.0);
         bbot_kinematics::JointTorques g_torques = kinematics_.compute_gravity_torques(0.0, ik_sq.theta_hip, ik_sq.theta_knee);
         double support_force_total = TOTAL_MASS_ * 9.81;
         if (effort_mode_active_)
         {
             support_force_total = publish_effort_height_control(
                 des_z, des_v,
-                K_Z_BUFFER_, D_Z_BUFFER_, F_Z_BUFFER_MAX_,
-                25.0, 3.5, 45.0, 6.0,
+                550.0, 90.0, 220.0,
+                25.0, 4.0, 45.0, 6.0,
                 true);
         }
         else
@@ -2108,9 +2272,7 @@ private:
             cmd_scale_, 0.037, squat_progress);
         double cmd_target = -u_pitch * squat_cmd_scale - jump_forward_speed_;
         cmd_target = bbot_jump::clamp_value(cmd_target, -1.30, 1.30);
-        if (effort_jump_preparation())
-            cmd_target = landing_capture_target(cmd_target);
-        const double max_cmd_step = (effort_jump_preparation() ? 8.0 : 6.0) * std::max(dt, 0.001);
+        const double max_cmd_step = 6.0 * std::max(dt, 0.001);
         const double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
                                                      cmd_target - last_wheel_cmd_x_, -max_cmd_step, max_cmd_step);
         publish_wheel_cmd(cmd_x, 0.0);
@@ -2130,8 +2292,7 @@ private:
         const bool traj_done = (elapsed >= T_SQUAT_);
         const bool settled = (std::abs(current_z_dot_) < 0.25 && std::abs(current_z_ - L_SQUAT_) < 0.060);
         const bool motion_ready =
-            (!effort_jump_preparation() || capture_world_valid_) &&
-            std::abs((effort_jump_preparation() ? capture_com_velocity_ : x_dot_) - jump_forward_speed_) <= 0.12 &&
+            std::abs(x_dot_ - jump_forward_speed_) <= 0.12 &&
             std::abs(pitch_ - jump_pitch_ref_) <= 0.080 &&
             std::abs(pitch_rate_ - jump_takeoff_pitch_rate_) <=
                 jump_takeoff_pitch_rate_tolerance_;
@@ -2149,6 +2310,7 @@ private:
             state_start_time_ = now_sec;
             state_start_z_ = current_z_;
             thrust_trajectory_initialized_ = false;
+            thrust_velocity_reference_ = {};
             thrust_force_per_leg_ = TOTAL_MASS_ * 0.5 * 9.81;
             thrust_force_command_per_leg_ = thrust_force_per_leg_;
             velocity_reached_count_ = 0;
@@ -2164,12 +2326,9 @@ private:
             // 保留 moving-SQUAT 的最后轮速命令，THRUST 不得人为制造水平速度阶跃。
 
             // 切换前预写重力支撑力矩
-            if (!effort_mode_active_)
-            {
-                publish_effort_leg_control(ik_sq.theta_hip, ik_sq.theta_knee, 0.0, 0.0,
-                                           -g_torques.hip_torque * 0.5, -g_torques.knee_torque * 0.5,
-                                           80.0, 8.0, 80.0, 8.0);
-            } // Repeat jump keeps the last supporting effort until THRUST starts.
+            publish_effort_leg_control(ik_sq.theta_hip, ik_sq.theta_knee, 0.0, 0.0,
+                                       -g_torques.hip_torque * 0.5, -g_torques.knee_torque * 0.5,
+                                       80.0, 8.0, 80.0, 8.0);
             request_effort_controller();
 
             prev_q_hip_des_ = ik_sq.theta_hip;
@@ -2190,7 +2349,7 @@ private:
             // 控制器异步切换期间不能把刚建立的前倾角速度耗掉。
             // 腿仍保持下蹲位置，但轮控继续追踪“前倾角 + 正俯仰角速度”，并开始向离地前向速度加速。
             request_effort_controller();
-            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(base_link_height(L_SQUAT_), 0.0);
+            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(L_SQUAT_, 0.0);
             publish_position_leg_control(ik_hold.theta_hip, ik_hold.theta_knee);
 
             interpolate_lqr_gain();
@@ -2229,6 +2388,7 @@ private:
             // 接地时标定世界高度与 FK 的常量偏差；FK 只用于几何间隙。
             ground_height_offset_ = gazebo_world_z_ - 0.5 * (ground_geom_left + ground_geom_right);
             takeoff_confirmation_.reset();
+            takeoff_speed_latch_.reset();
             takeoff_rise_observed_ = false;
             airborne_confidence_count_ = 0;
             last_world_descent_time_ = -1.0;
@@ -2261,6 +2421,8 @@ private:
             (thrust_gate_has_opened_ && thrust_attitude_blocked_) ? 0.0 : thrust_pitch_ref.rate;
         const double pitch_err = pitch_ - active_jump_pitch_ref_;
         const double pitch_rate_err = pitch_rate_ - active_jump_pitch_rate_ref_;
+        thrust_gate_pitch_err_diag_ = pitch_err;
+        thrust_gate_rate_err_diag_ = pitch_rate_err;
         const double balance_pitch_err = pitch_ - balance_offset_;
 
         // 门控围绕“目标正俯仰角速度”判断，而不是要求角速度接近 0。
@@ -2279,6 +2441,7 @@ private:
         }
         const bool stable_duration_met =
             (thrust_attitude_stable_count_ * dt >= thrust_gate_duration);
+        thrust_gate_stable_elapsed_diag_ = thrust_attitude_stable_count_ * dt;
 
         // v6.0：把“短暂负角速度”和“真正后仰失稳”拆开。
         // 上一轮 pitch=0.152、jump_err=+0.008、balance_err=+0.114 都仍是明显前倾，
@@ -2295,7 +2458,7 @@ private:
         const bool hard_backward_tendency =
             (pitch_err < -0.10 || balance_pitch_err < -0.06 || pitch_rate_ < -1.35);
         const bool forward_tendency_excess =
-            (pitch_err > 0.12 || balance_pitch_err > 0.26 || pitch_rate_ > 1.20);
+            (pitch_err > 0.16 || balance_pitch_err > 0.28 || pitch_rate_ > 1.60);
         // 运行中 hard block 的解锁条件不再要求重新追到 +0.45 rad/s；
         // 只要回到可恢复的近零角速度区间即可继续，避免“一旦 block 就永远解不开”。
         const bool hard_block_recovery_ok =
@@ -2318,6 +2481,7 @@ private:
                 {
                     thrust_attitude_blocked_ = false;
                     thrust_gate_has_opened_ = true;
+                    thrust_gate_open_stamp_ = now_sec;
                     thrust_block_elapsed_ = 0.0;
                     thrust_block_recovery_count_ = 0;
                     RCLCPP_INFO(this->get_logger(),
@@ -2398,6 +2562,19 @@ private:
         // 估计缺失时仅保留有界开环推力，不用机身/FK速度冒充达标证据。
         const double vertical_velocity = centroidal_velocity_valid_ ? centroidal_height_.velocity() : 0.0;
         thrust_vertical_velocity_ = vertical_velocity;
+        const bool thrust_speed_armed = thrust_gate_has_opened_ &&
+                                        thrust_motion_elapsed_ > 0.0;
+        if (takeoff_speed_latch_.update_with_state(
+                centroidal_height_.stamp(), now_sec, thrust_speed_armed,
+                vertical_velocity, target_takeoff_velocity_,
+                centroidal_height_.height(),
+                capture_world_valid_ ? capture_com_velocity_ : x_dot_))
+        {
+            com_takeoff_latched_vz_ = takeoff_speed_latch_.velocity();
+            velocity_takeoff_reached_ = true;
+            if (actual_takeoff_velocity_ <= 0.0)
+                actual_takeoff_velocity_ = com_takeoff_latched_vz_;
+        }
         const double velocity_error = target_takeoff_velocity_ - vertical_velocity;
         const bool grounded_after_nominal_stroke =
             thrust_motion_elapsed_ >= thrust_duration_;
@@ -2493,9 +2670,6 @@ private:
         // 力矩突变，下一状态由腾空腿部轨迹接管。
         if (centroidal_velocity_valid_ && velocity_error <= 0.0)
         {
-            if (!velocity_takeoff_reached_)
-                actual_takeoff_velocity_ = vertical_velocity;
-            velocity_takeoff_reached_ = true;
             F_z_request = base_force;
         }
 
@@ -2529,7 +2703,7 @@ private:
         const double target_ik_z = bbot_jump::clamp_value(
             des_z, L_SQUAT_, H_TAKEOFF_);
         current_height_ = target_ik_z;
-        const auto ik = kinematics_.inverse_kinematics(base_link_height(target_ik_z), 0.0);
+        const auto ik = kinematics_.inverse_kinematics(target_ik_z, 0.0);
         // 名义推地轨迹已经走完却仍未离地时，不能再用固定 H_TAKEOFF
         // 的 IK 把已伸开的腿强行拉回去。上一轮中 current_z 已到 0.67 m，
         // 规划却停在 0.475 m，位置 PD 会撤掉尚未形成离地所需的最后冲量。
@@ -2550,14 +2724,19 @@ private:
         compute_leg_vertical_jacobian(pitch_, hip_pos_right_, knee_pos_right_, jh_right, jk_right);
         const double qdh_nominal = grounded_thrust_hold ? bbot_jump::thrust_extension_velocity(hip_vel_left_, 3.0, 1.0, thrust_extension_scale_) : thrust_extension_scale_ * bbot_jump::clamp_value((dt > 1e-4) ? (q_hip_des - prev_q_hip_des_) / dt : 0.0, -3.0, 3.0);
         const double qdk_nominal = grounded_thrust_hold ? bbot_jump::thrust_extension_velocity(knee_vel_left_, 6.0, -1.0, thrust_extension_scale_) : thrust_extension_scale_ * bbot_jump::clamp_value((dt > 1e-4) ? (q_knee_des - prev_q_knee_des_) / dt : 0.0, -6.0, 6.0);
-        const double qdh = (1.0 - 0.35 * terminal_brake_blend) * qdh_nominal;
+        // 速度释放事件通常比几何离地确认早数十毫秒。达到目标速度后推力已经
+        // 单调卸载，此时必须同步刹住残余伸腿速度；若仍等到 wheels_airborne，
+        // 膝会在确认窗口内撞到行程端点，并把高速髋带入 TUCK。
+        const double grounded_brake_factor = bbot_jump::thrust_brake_factor(
+            last_wheels_airborne_, thrust_release_.active(), terminal_brake_blend);
+        const double qdh = (1.0 - 0.35 * grounded_brake_factor) * qdh_nominal;
+        const double legacy_qdk = (1.0 - 0.75 * grounded_brake_factor) * qdk_nominal;
         const double q_hip_des_r = grounded_thrust_hold ? hip_pos_right_ : q_hip_des;
         const double q_knee_des_r = grounded_thrust_hold ? knee_pos_right_ : q_knee_des;
-        const double qdh_r = grounded_thrust_hold ? (1.0 - 0.35 * terminal_brake_blend) *
+        const double qdh_r = grounded_thrust_hold ? (1.0 - 0.35 * grounded_brake_factor) *
                                                         bbot_jump::thrust_extension_velocity(hip_vel_right_, 3.0, 1.0, thrust_extension_scale_)
                                                   : qdh;
-        const double legacy_qdk = (1.0 - 0.75 * terminal_brake_blend) * qdk_nominal;
-        const double legacy_qdk_r = grounded_thrust_hold ? (1.0 - 0.75 * terminal_brake_blend) *
+        const double legacy_qdk_r = grounded_thrust_hold ? (1.0 - 0.75 * grounded_brake_factor) *
                                                                bbot_jump::thrust_extension_velocity(knee_vel_right_, 6.0, -1.0, thrust_extension_scale_)
                                                          : legacy_qdk;
         double qdk = legacy_qdk, qdk_r = legacy_qdk_r;
@@ -2566,9 +2745,9 @@ private:
                                            torso_imu_.fresh(now_sec);
         if (!thrust_attitude_blocked_ && fresh_thrust_geometry)
         {
-            // Use the same target/ramp as vertical force feedback. A fixed
-            // H_TAKEOFF IK speed (~-3 rad/s) was braking a -10 rad/s knee while
-            // COM speed was still 1.44/1.98 m/s. Keep Kd=3; correct its reference.
+            // 用与竖直力反馈相同的目标速度反解膝参考，而不是沿用固定
+            // H_TAKEOFF_ 的 IK 差分速度（约 -3 rad/s）。后者会在 COM 仍处
+            // 1.44/1.98 m/s 时把 -10 rad/s 的膝当误差刹掉。
             thrust_velocity_reference_ = bbot_jump::thrust_velocity_reference(
                 {hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_},
                 pitch_, body_mass_, feedback_ramp * target_takeoff_velocity_,
@@ -2577,7 +2756,7 @@ private:
             {
                 qdk = bbot_jump::protected_thrust_knee_velocity(
                     thrust_velocity_reference_.knee_velocity,
-                    thrust_extension_scale_, terminal_brake_blend);
+                    thrust_extension_scale_, grounded_brake_factor);
                 qdk_r = qdk;
             }
         }
@@ -2587,18 +2766,18 @@ private:
         // 试验/调参前馈：当前模型中推地伸展对应 qdk<0。仅依据“将要发生的”
         // 膝伸展速度提前提供小幅正向髋补偿，抵消腿部内部反作用；有独立限幅，
         // 且在姿态门控阻塞时不允许它替代减推力保护。
-        // Isolate this correction to knee tracking. Do not retune the existing
-        // hip reaction feedforward implicitly by giving it the larger new rate.
-        const double knee_extension_speed = std::max(0.0, -legacy_qdk);
+        // 试验/调参值：前馈读的是"实际会被执行"的 qdk 而不是 legacy_qdk。v6.13 把膝
+        // 参考速度从 -6 抬到 -8~-11.6，仍按 legacy 给就会低估反作用，实测离地
+        // pitch_rate 从 -0.25 恶化到 -0.6~-0.96。
+        const double knee_extension_speed = std::max(0.0, -qdk);
         last_thrust_reaction_ff_ = bbot_jump::clamp_value(
             K_LEG_REACTION_FF_THRUST_ * knee_extension_speed,
             0.0, TAU_LEG_REACTION_FF_MAX_);
-        const double tau_body_per_hip = bbot_jump::clamp_value(
+        double tau_body_per_hip = bbot_jump::clamp_value(
             -0.5 * (K_BODY_P_THRUST_ * pitch_err +
                     K_BODY_D_THRUST_ * pitch_rate_err) +
                 last_thrust_reaction_ff_,
             -TAU_HIP_BODY_MAX_, TAU_HIP_BODY_MAX_);
-        last_tau_body_per_hip_ = tau_body_per_hip;
 
         // 髋关节在推地阶段的核心任务是姿态稳定(tau_body_per_hip)，构型保持只做低增益补偿；
         // 尤其在后仰趋势时，禁止髋关节PD产生负向拉扯力矩加剧后仰。
@@ -2607,13 +2786,12 @@ private:
             kp_hip_thrust * (q_hip_des - hip_pos_left_) +
                 kd_hip_thrust * (qdh - hip_vel_left_),
             pd_h_min, 3.0);
-        const double terminal_knee_brake_l = terminal_brake_blend * bbot_jump::clamp_value(
+        const double terminal_knee_brake_l = grounded_brake_factor * bbot_jump::clamp_value(
                                                                         -1.6 * knee_vel_left_, -12.0, 12.0);
-        const bool thrust_position_yield = centroidal_velocity_valid_ &&
-                                           vertical_velocity < 0.95 * target_takeoff_velocity_ &&
-                                           !thrust_attitude_blocked_ && !thrust_release_.active() &&
-                                           terminal_brake_blend == 0.0 && thrust_extension_scale_ >= 1.0;
-        thrust_knee_position_yield_ = thrust_position_yield;
+        // 力驱动行程中名义位置轨迹是伸展的下界，不是把已经伸开的膝往回拉的理由。
+        // 推地段全程保留 min(0,error)，严禁在接近限位时用双侧 P 把膝关节往回拉（破坏竖直冲量并诱发剧烈后仰）。
+        // 末端减速与限位缓冲完全由速度阻尼项 (kd 及 terminal_knee_brake) 承担。
+        const bool thrust_position_yield = true;
         const double pd_k_l = bbot_jump::clamp_value(
             kp_knee_thrust * bbot_jump::thrust_knee_position_error(
                                  q_knee_des, knee_pos_left_, thrust_position_yield) +
@@ -2623,13 +2801,14 @@ private:
             kp_hip_thrust * (q_hip_des_r - hip_pos_right_) +
                 kd_hip_thrust * (qdh_r - hip_vel_right_),
             pd_h_min, 3.0);
-        const double terminal_knee_brake_r = terminal_brake_blend * bbot_jump::clamp_value(
+        const double terminal_knee_brake_r = grounded_brake_factor * bbot_jump::clamp_value(
                                                                         -1.6 * knee_vel_right_, -12.0, 12.0);
         const double pd_k_r = bbot_jump::clamp_value(
             kp_knee_thrust * bbot_jump::thrust_knee_position_error(
                                  q_knee_des_r, knee_pos_right_, thrust_position_yield) +
                 kd_knee_thrust * (qdk_r - knee_vel_right_) + terminal_knee_brake_r,
             -22.0, 22.0);
+        last_thrust_position_yield_ = thrust_position_yield;
         // 推地任务解耦：膝关节负责竖直冲量，髋关节只负责机身姿态。
         // 本机构的 J^T Fz 髋力矩方向会抵消后仰纠姿力矩；即使只分配 25%，
         // 实测离地前也会把 +15 N*m 左右的纠姿命令抵消掉大半，使机器人
@@ -2668,6 +2847,19 @@ private:
         const double tau_ff_hip_right = thrust_hip_force_share * F_z_thrust * jh_right;
         const double tau_ff_knee_right = F_z_thrust * jk_right;
 
+        // 推力卸载时膝关节的正向急刹会把等量反作用角动量注入机身。
+        // 旧控制仅按期望伸膝速度给约 0.5~1.5 Nm 前馈，实测在膝刹车
+        // 达 +22 Nm/腿时，离地角速度会在 30 ms 内掉到 -1.55 rad/s。
+        // 用最终膝力矩估算该瞬态，并通过髋部做有界抵消。
+        const double knee_brake_reaction_ff =
+            bbot_jump::thrust_knee_brake_reaction_compensation(
+                tau_ff_knee_left + pd_k_l, tau_ff_knee_right + pd_k_r);
+        tau_body_per_hip = bbot_jump::clamp_value(
+            tau_body_per_hip + knee_brake_reaction_ff,
+            -TAU_HIP_BODY_MAX_, TAU_HIP_BODY_MAX_);
+        last_thrust_reaction_ff_ += knee_brake_reaction_ff;
+        last_tau_body_per_hip_ = tau_body_per_hip;
+
         if (terminal_brake_blend > 0.05)
         {
             RCLCPP_INFO_THROTTLE(
@@ -2679,19 +2871,36 @@ private:
                 terminal_knee_brake_l, terminal_knee_brake_r, F_z_thrust);
         }
 
+        // Diagnostic only: isolate late negative hip effort while preserving
+        // knee travel braking and all default controller behavior.
+        const double hip_request_l = tau_ff_hip_left + tau_body_per_hip + pd_h_l;
+        const double hip_request_r = tau_ff_hip_right + tau_body_per_hip + pd_h_r;
+        const bool imu_fresh_for_floor = torso_imu_.fresh(now_sec);
+        const double hip_send_l = bbot_jump::thrust_terminal_hip_command(
+            hip_request_l, thrust_terminal_hip_floor_, thrust_release_.active(),
+            takeoff_geometry_aligned_, wheel_clearance_, imu_fresh_for_floor, pitch_rate_raw_);
+        const double hip_send_r = bbot_jump::thrust_terminal_hip_command(
+            hip_request_r, thrust_terminal_hip_floor_, thrust_release_.active(),
+            takeoff_geometry_aligned_, wheel_clearance_, imu_fresh_for_floor, pitch_rate_raw_);
+        thrust_hip_requested_left_diag_ = hip_request_l;
+        thrust_hip_requested_right_diag_ = hip_request_r;
+        thrust_hip_floor_applied_diag_ = hip_send_l != hip_request_l || hip_send_r != hip_request_r;
+
         // 2. 髋关节姿态稳定前馈补偿；PD 只做低增益构型保持。
         publish_effort_leg_control_lr(
             q_hip_des, q_knee_des, q_hip_des_r, q_knee_des_r,
             qdh, qdk, qdh_r, qdk_r,
-            tau_ff_hip_left + tau_body_per_hip + pd_h_l, tau_ff_knee_left + pd_k_l,
-            tau_ff_hip_right + tau_body_per_hip + pd_h_r, tau_ff_knee_right + pd_k_r,
+            hip_send_l, tau_ff_knee_left + pd_k_l,
+            hip_send_r, tau_ff_knee_right + pd_k_r,
             // 使用上方与力矩预算一致的限幅 PD，通用下发层不得重复叠加。
             0.0, 0.0, 0.0, 0.0,
             tau_body_per_hip, tau_body_per_hip);
 
         // rolling-THRUST：从接近速度继续加速到更高的离地前向速度。
         // 当前符号链中负 cmd 对应正 x_dot，因此速度不足时让命令进一步变负。
-        const double forward_speed_error = jump_takeoff_forward_speed_ - x_dot_;
+        // 当世界系质心平移速度有效时优先闭环质心前向速度，消除伸腿几何前倾造成的超调。
+        const double current_forward_speed = capture_world_valid_ ? capture_com_velocity_ : x_dot_;
+        const double forward_speed_error = jump_takeoff_forward_speed_ - current_forward_speed;
         const double thrust_forward_cmd_mag = bbot_jump::clamp_value(
             jump_takeoff_forward_speed_ +
                 thrust_forward_velocity_kp_ * forward_speed_error,
@@ -2699,21 +2908,31 @@ private:
         // v6.4：名义伸腿时间结束不代表可以反向制动车轮。带前倾时
         // 撤回支撑点会加剧前倒；直到离地都保留与 PRE_JUMP 同符号的姿态反馈。
         interpolate_lqr_gain();
+        const double thrust_fwd_term = -thrust_forward_cmd_mag;
+        const double thrust_att_term = 0.037 * (current_gain_.k_theta * pitch_err +
+                                               current_gain_.k_theta_dot * pitch_rate_err);
         const double thrust_wheel_target = bbot_jump::thrust_ground_wheel_target(
             thrust_forward_cmd_mag, pitch_err, pitch_rate_err,
             current_gain_.k_theta, current_gain_.k_theta_dot);
-        const double max_thrust_wheel_step = 8.0 * std::max(dt, 0.001);
-        const double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
-                                                     thrust_wheel_target - last_wheel_cmd_x_,
-                                                     -max_thrust_wheel_step, max_thrust_wheel_step);
+        const double cmd_x = bbot_jump::thrust_wheel_rate_limit(
+            thrust_wheel_target, last_wheel_cmd_x_, dt, 8.0, thrust_wheel_max_decel_);
+        thrust_fwd_term_diag_ = thrust_fwd_term;
+        thrust_att_term_diag_ = thrust_att_term;
+        thrust_wheel_target_diag_ = thrust_wheel_target;
+        thrust_cmd_x_diag_ = cmd_x;
+        thrust_com_sample_stamp_diag_ = centroidal_world_.stamp();
+        thrust_com_valid_diag_ = capture_world_valid_ ? 1 : 0;
         publish_wheel_cmd(cmd_x, 0.0);
 
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 80,
-                             "[THRUST_COM_VREF v6.13] active=%d vz=%.3f/%.3f Jk=%.4f knee_v=%.2f/%.2f "
-                             "pd=%.2f F=%.1f travel=%.2f brake=%.2f limited=%d",
-                             thrust_velocity_reference_.valid ? 1 : 0, vertical_velocity,
+                             "[THRUST_COM_VREF v6.13] active=%d yield=%d vz=%.3f/%.3f Jk=%.4f knee_v=%.2f/%.2f "
+                             "pd=%.2f F=%.1f ff=%.2f hip_tau=%.2f travel=%.2f brake=%.2f limited=%d",
+                             thrust_velocity_reference_.valid ? 1 : 0, last_thrust_position_yield_ ? 1 : 0,
+                             vertical_velocity,
                              thrust_velocity_reference_.com_velocity, thrust_velocity_reference_.knee_jacobian,
-                             knee_vel_left_, qdk, pd_k_l, F_z_thrust, thrust_extension_scale_, terminal_brake_blend,
+                             knee_vel_left_, qdk,
+                             pd_k_l, F_z_thrust, last_thrust_reaction_ff_, tau_body_per_hip,
+                             thrust_extension_scale_, terminal_brake_blend,
                              thrust_velocity_reference_.speed_limited ? 1 : 0);
 
         last_thrust_force_ = F_z_thrust;
@@ -2732,7 +2951,8 @@ private:
         // 已观察到起跳上升后，不因临近顶点vz降低而永久禁止确认离地。
         // 普通净空仍需失重证据；两轮均超过20mm时可用连续几何确认，排除单次IMU冲击。
         const bool wheels_airborne = takeoff_confirmation_.update(
-            takeoff_odom_stamp_, now_sec, takeoff_geometry_aligned_ && elapsed > 0.10,
+            takeoff_odom_stamp_, now_sec,
+            takeoff_geometry_aligned_ && thrust_gate_has_opened_ && thrust_motion_elapsed_ > 0.0,
             takeoff_clearance_left_, takeoff_clearance_right_, accel_unloaded, takeoff_rise_observed_);
         airborne_confidence_count_ = takeoff_confirmation_.count();
         last_wheels_airborne_ = wheels_airborne;
@@ -2745,15 +2965,7 @@ private:
         log_data(cmd_x, 0.5 * (tau_ff_hip_left + tau_ff_hip_right),
                  0.5 * (tau_ff_knee_left + tau_ff_knee_right), F_z_thrust * 2.0);
 
-        if (velocity_takeoff_reached_ && vertical_velocity >= target_takeoff_velocity_ * 0.98)
-        {
-            velocity_reached_count_ = std::min(velocity_reached_count_ + 1, 20);
-        }
-        else
-        {
-            velocity_reached_count_ = 0;
-        }
-        bool velocity_takeoff = velocity_reached_count_ >= 3;
+        const bool velocity_takeoff = takeoff_speed_latch_.latched();
         // 速度或腿长变化均不能替代失重确认。只有轮子连续确认失重后，
         // 才允许进入 FLIGHT 并执行收腿/落地时序。
         const bool airborne_takeoff = wheels_airborne;
@@ -2784,6 +2996,14 @@ private:
 
         if (airborne_takeoff)
         {
+            takeoff_com_z_ = takeoff_speed_latch_.latched() ? takeoff_speed_latch_.height() : centroidal_height_.height();
+            takeoff_com_vz_ = takeoff_speed_latch_.latched() ? takeoff_speed_latch_.velocity() : vertical_velocity;
+            // Formal takeoff metrics use world-frame COM translation only.
+            // A missing sample is recorded as invalid rather than silently
+            // substituting wheel-derived chassis speed.
+            takeoff_com_vx_ = takeoff_speed_latch_.latched() ? takeoff_speed_latch_.vx() : (capture_world_valid_ ? capture_com_velocity_ : -1.0);
+            com_takeoff_confirmed_vz_ = vertical_velocity;
+            actual_takeoff_velocity_ = takeoff_com_vz_;
             takeoff_q_hip_left_ = hip_pos_left_;
             takeoff_q_knee_left_ = knee_pos_left_;
             takeoff_q_hip_right_ = hip_pos_right_;
@@ -2809,6 +3029,7 @@ private:
             // 滚动离地时轮子已经旋转。空中轮控必须围绕此基准做增量，
             // 不能把“目标0”解释成离地后立即刹轮，否则会额外注入俯仰冲量。
             air_wheel_baseline_ = last_wheel_cmd_x_;
+            landing_support_start_time_ = -1.0;
             target_speed_const_ = 0.0;
             target_speed_smoothed_ = 0.0;
             // 从这一帧起，正俯仰角速度任务完成；FLIGHT 负责把姿态平滑过渡到着陆工作点。
@@ -2837,7 +3058,7 @@ private:
             const auto end_q = [&](double q, double v0, double vf)
             {
                 return bbot_jump::clamp_value(
-                    q + 0.5 * (v0 + vf) * arrest_duration, -1.36, 1.36);
+                    q + 0.5 * (v0 + vf) * arrest_duration, -1.56, 1.56);
             };
             const double vh_l_end = end_v_hip(vh_l);
             const double vk_l_end = end_v_knee(vk_l);
@@ -2856,7 +3077,6 @@ private:
             if (!velocity_takeoff)
             {
                 jump_failure_reason_ = "已离地但未达到目标速度";
-                actual_takeoff_velocity_ = vertical_velocity;
             }
             const double flight_entry_pitch_err = pitch_ - balance_offset_;
             const double takeoff_ref_pitch_err = pitch_ - active_jump_pitch_ref_;
@@ -2867,17 +3087,17 @@ private:
                 std::abs(takeoff_ref_pitch_err) > 0.14 ||
                 std::abs(flight_entry_pitch_err) > 0.30 ||
                 std::abs(pitch_rate_) > 1.20;
-            // v6.1：protective 判定只看“当前实际关节状态”，不能使用
-            // thrust_extension_scale_ 的历史最小值。上一轮离地前曾触发 scale=0.40，
-            // 但真正离地时 hip_v≈1.1、knee_v≈-1.3 已经安全；若仍把历史 scale
-            // 当作 unsafe，会永久跳过 TUCK，直接进入保护展腿，造成长腿保持到触地。
-            const bool unsafe_leg_motion = !flight_leg_motion_ready();
-            const bool protective_takeoff = severe_attitude || unsafe_leg_motion;
+            // 离地瞬时必然保留推地残余角速度，由接下来的 ATTITUDE_ARREST 阶段消除。
+            // 只有当关节已严重超出物理行程范围时，才在离地时刻判定为保护起跳。
+            const bool severe_leg_overtravel =
+                std::abs(hip_pos_left_) > 1.52 || std::abs(hip_pos_right_) > 1.52 ||
+                std::abs(knee_pos_left_) > 1.5708 || std::abs(knee_pos_right_) > 1.5708;
+            const bool protective_takeoff = severe_attitude || severe_leg_overtravel;
             if (protective_takeoff)
             {
-                jump_failure_reason_ = severe_attitude ? "离地姿态超标" : "离地关节速度/行程超标";
+                jump_failure_reason_ = severe_attitude ? "离地姿态超标" : "离地关节行程超标";
                 RCLCPP_WARN(this->get_logger(),
-                            "[离地保护] 已确认离地，姿态或腿部运动超标 "
+                            "[离地保护] 已确认离地，姿态或行程超标 "
                             "(pitch=%.3f, flight_err=%.3f, gyro=%.3f)，先执行ATTITUDE_ARREST再规划落地构型",
                             pitch_, flight_entry_pitch_err, pitch_rate_);
             }
@@ -2915,14 +3135,6 @@ private:
             tuck_start_timestamp_ = 0.0;
             protective_deploy_initialized_ = false;
             protective_deploy_start_time_ = 0.0;
-            protective_attitude_seen_stable_ = false;
-            protective_attitude_brake_active_ = false;
-            protective_attitude_brake_start_time_ = 0.0;
-            protective_attitude_brake_duration_active_ = 0.0;
-            protective_attitude_brake_plan_check_ = -1;
-            protective_landing_progress_ = 0.0;
-            protective_landing_joint_alpha_ = 0.0;
-            protective_landing_com_end_ = 0.0;
             flight_subphase_ = bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST;
             if (protective_takeoff)
             {
@@ -2947,13 +3159,14 @@ private:
         double target_z, double body_pitch, double target_x) const
     {
         const auto &p = kinematics_.get_params();
+        constexpr double kHipBodyVerticalOffset = 0.07;
         constexpr double kCadWheelToHipLongitudinal = -0.01137221;
         const double phi1_0 = std::atan2(-0.29348091, 0.06220095);
         const double phi2_0 = std::atan2(0.28210870, 0.19553796);
 
         // 与 bbot_kinematics::inverse_kinematics() 完全相同的 target_z 定义：
         // target_z 为机身离地高度，先扣除髋->机身竖直偏置和轮半径。
-        double dZ_down = target_z - base_link_height_offset();
+        double dZ_down = target_z - (kHipBodyVerticalOffset + p.wheel_radius);
         dZ_down = bbot_jump::clamp_value(dZ_down, 0.10, 0.60);
 
         // 正 target_x 代表 wheel behind body，因此 wheel 相对 hip 的纵向坐标更负。
@@ -3005,33 +3218,22 @@ private:
 
     // 落地接近阶段的最后一道几何保护：
     // theta_shank = phi2_0 + q_hip + q_knee - body_pitch。
-    // 若期望小腿已经接近水平，直接调整膝目标把小腿拉回安全锥内；
-    // 同时将期望小腿角速度限制为不继续向危险方向增大。
+    // 若期望小腿已经接近水平，只做有界的逐帧安全投影。真实关节已经
+    // 在锥外时，一帧投影到边界不会让物理构型瞬移，只会制造膝目标和
+    // 速度目标阶跃；完整轨迹的安全终点负责在触地前进入安全锥。
     bool enforce_wheel_first_target(
         double &q_hip, double &q_knee,
-        double &qd_hip, double &qd_knee) const
+        double &qd_hip, double &qd_knee,
+        double reference_pitch, double reference_pitch_rate) const
     {
         const double phi2_0 = std::atan2(0.28210870, 0.19553796);
         const double limit = landing_shank_limit();
-        const double shank = phi2_0 + q_hip + q_knee - pitch_;
-        const double shank_safe = bbot_jump::clamp_value(shank, -limit, limit);
-        const bool clamped = std::abs(shank_safe - shank) > 1e-6;
-        if (clamped)
-        {
-            q_knee += (shank_safe - shank);
-            q_knee = bbot_jump::clamp_value(q_knee, -1.36, 1.36);
-
-            // 目标绝对小腿角速度 = qd_hip + qd_knee - pitch_rate。
-            // 在几何边界上不允许继续向外旋转。
-            const double shank_rate = qd_hip + qd_knee - pitch_rate_;
-            const double shank_after = phi2_0 + q_hip + q_knee - pitch_;
-            if ((shank_after >= limit - 1e-3 && shank_rate > 0.0) ||
-                (shank_after <= -limit + 1e-3 && shank_rate < 0.0))
-            {
-                qd_knee = pitch_rate_ - qd_hip;
-            }
-        }
-        return clamped;
+        const auto projected = bbot_jump::bounded_wheel_first_target(
+            q_hip, q_knee, qd_hip, qd_knee,
+            reference_pitch, reference_pitch_rate, phi2_0, limit);
+        q_knee = bbot_jump::clamp_value(projected.knee_position, -1.56, 1.56);
+        qd_knee = projected.knee_velocity;
+        return projected.active;
     }
 
     double body_height_above_wheel_ground(double hip, double knee) const
@@ -3064,11 +3266,13 @@ private:
         // 仅用于“是否可开始收腿”的安全准入，不应把已经充分伸开的
         // 起跳构型误判为只能展腿保护。上一轮真实离地时 knee≈-1.31 rad，
         // 旧的 1.10 rad 阈值使它永远无法进入 TUCK。这里保留距轨迹硬限
-        // 位约 0.02 rad 的裕量，并继续限制关节速度，避免高速反向收腿。
-        return std::abs(hip_vel_left_) <= 4.0 && std::abs(hip_vel_right_) <= 4.0 &&
+        // 位约 0.02 rad 的裕量。入口速度只排除明显失控；真正的安全性由
+        // plan_flight_round_trip 对整段位置/速度/加速度逐点校验。实测离地
+        // 髋速 4.38 rad/s 时完整轨迹仍可行，旧 4.0 门限却多耗掉约 25 ms。
+        return std::abs(hip_vel_left_) <= 5.5 && std::abs(hip_vel_right_) <= 5.5 &&
                std::abs(knee_vel_left_) <= 8.0 && std::abs(knee_vel_right_) <= 8.0 &&
-               std::abs(hip_pos_left_) <= 1.30 && std::abs(hip_pos_right_) <= 1.30 &&
-               std::abs(knee_pos_left_) <= 1.34 && std::abs(knee_pos_right_) <= 1.34;
+               std::abs(hip_pos_left_) <= 1.52 && std::abs(hip_pos_right_) <= 1.52 &&
+               std::abs(knee_pos_left_) <= 1.5708 && std::abs(knee_pos_right_) <= 1.5708;
     }
 
     double predicted_landing_forward_velocity(double now_sec) const
@@ -3103,7 +3307,7 @@ private:
         // 速度项按经典 capture 方向把轮子稍向前修正，因此从 back_bias 中减去。
         return bbot_jump::clamp_value(
             landing_wheel_back_bias_ - forward_lead,
-            -0.03, landing_target_x_max_);
+            -0.12, landing_target_x_max_);
     }
 
     void latch_landing_capture_plan(double now_sec)
@@ -3117,88 +3321,84 @@ private:
         landing_capture_offset_ = landing_capture_gain_ * landing_capture_raw_offset_;
         landing_target_x_ = bbot_jump::clamp_value(
             landing_wheel_back_bias_ - landing_capture_offset_,
-            -0.03, landing_target_x_max_);
+            -0.12, landing_target_x_max_);
         // 仅用于日志直观展示虚拟腿偏角，绝不再作为 body_pitch 传给 IK。
         landing_capture_comp_ = std::atan2(
             landing_target_x_, std::max(0.20, L_TOUCH_));
         landing_capture_planned_ = true;
 
         const auto landing_ik = inverse_kinematics_with_target_x(
-            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
+            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
         const auto &p = kinematics_.get_params();
         landing_target_shank_abs_ = landing_ik.theta_shank;
         landing_target_knee_axis_clearance_ =
             p.l1 * std::cos(landing_target_shank_abs_);
 
-        // v6.16：不凭空新增一个 COM 偏置。先把当前已经锁存的 landing_target_x_
-        // 通过同一套 CAD 质量模型换算成“完整 landing IK 应达到的 COM-forward”。
-        // 后续姿态制动最大化向这个已存在目标的实际进度，不改变原来的速度捕获项、
-        // wheel_back_bias 或 target_x 符号链。
-        const std::array<double, 4> landing_q{
-            landing_ik.theta_hip, landing_ik.theta_knee,
-            landing_ik.theta_hip, landing_ik.theta_knee};
-        const std::array<double, 4> landing_v{};
-        const double landing_pitch_ref =
-            balance_offset_ + flight_landing_pitch_bias_;
-        const auto landing_com = bbot_jump::centroidal_balance_state(
-            landing_q, landing_v, landing_pitch_ref, 0.0, body_mass_);
-        landing_com_forward_target_valid_ = landing_com.valid;
-        landing_com_forward_target_ = landing_com.valid ? landing_com.forward : 0.0;
-
         RCLCPP_INFO(this->get_logger(),
                     "[LANDING_PLACEMENT] vx_body=%.3f omega=%.3f raw_cp=%.3f "
                     "forward_lead=%.3f back_bias=%.3f -> target_x=%.3f m, "
-                    "COM_forward_target=%.3f valid=%d, shank=%.3f rad, "
-                    "knee_axis_above_wheel=%.3f m",
+                    "shank=%.3f rad, knee_axis_above_wheel=%.3f m",
                     landing_capture_vx_, landing_capture_omega_,
                     landing_capture_raw_offset_, landing_capture_offset_,
                     landing_wheel_back_bias_, landing_target_x_,
-                    landing_com_forward_target_, landing_com_forward_target_valid_ ? 1 : 0,
                     landing_target_shank_abs_, landing_target_knee_axis_clearance_);
     }
 
+    // v6.14：把一次收展腿往返当作整体预算来规划。旧的固定 T_FLIGHT_TUCK_/
+    // T_FLIGHT_EXTEND_ 只保证"名义时长"，在真实离地膝速很高时会在 0.10s 内
+    // 要求 12 rad/s 级别的反向关节速度，落地前把机身再次甩翻。
     bbot_jump::FlightRoundTripPlan plan_tuck_round_trip(double now_sec, double time_available) const
     {
         if (!flight_leg_motion_ready())
             return {};
-        // Validate exactly the measured boundary used by begin_tuck, not the
-        // older arrest reference. Incoming speed alone says nothing about the
-        // speed needed to retract a nearly straight leg in 0.10 s.
+        // 校验 begin_tuck 真正使用的实测边界，而不是 arrest 的预测参考。
+        // 仅看 incoming 速度并不能说明一条接近伸直的腿能否在 0.10s 内收回去。
         const std::array<double, 4> q{
             hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
         const std::array<double, 4> v{
             hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
         const std::array<double, 4> a{};
         const double tuck_comp = bbot_jump::clamp_value(pitch_ - balance_offset_, -0.24, 0.24);
-        const auto tuck = inverse_kinematics_with_target_x(base_link_height(L_RETRACT_), tuck_comp, 0.0);
+        const auto tuck = inverse_kinematics_with_target_x(L_RETRACT_, tuck_comp, 0.0);
         const auto land = inverse_kinematics_with_target_x(
-            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, preview_landing_target_x(now_sec));
+            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_,
+            preview_landing_target_x(now_sec));
         const std::array<double, 4> mid{
-            tuck.theta_hip, tuck.theta_knee, tuck.theta_hip, tuck.theta_knee};
+            bbot_jump::reaction_safe_configuration_step(
+                q[0], tuck.theta_hip, 0.14, v[0]),
+            bbot_jump::reaction_safe_configuration_step(
+                q[1], tuck.theta_knee, 0.04, v[1]),
+            bbot_jump::reaction_safe_configuration_step(
+                q[2], tuck.theta_hip, 0.14, v[2]),
+            bbot_jump::reaction_safe_configuration_step(
+                q[3], tuck.theta_knee, 0.04, v[3])};
         const std::array<double, 4> end{
             land.theta_hip, land.theta_knee, land.theta_hip, land.theta_knee};
-        // Reserve the same margin used by the TUCK landing deadline.
+        // 预留与 TUCK 着陆死线相同的裕量。
         return bbot_jump::plan_flight_round_trip(q, v, a, mid, end,
                                                  T_FLIGHT_TUCK_, T_FLIGHT_EXTEND_,
-                                                 time_available - landing_deploy_ready_margin_ - 0.020);
+                                                 time_available - landing_deploy_ready_margin_ - 0.020,
+                                                 flight_hip_speed_limit_, flight_knee_speed_limit_,
+                                                 flight_hip_acc_limit_, flight_knee_acc_limit_,
+                                                 flight_hip_pos_limit_, flight_knee_pos_limit_);
     }
 
-    bool normal_landing_plan_feasible(double now_sec) const
+    bool normal_landing_plan_feasible(double duration) const
     {
-        std::array<double, 4> q{}, v{}, a{};
-        sample_flight_joints(now_sec, q, v, a);
-        const std::array<double, 4> actual{
+        const std::array<double, 4> q{
             hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
-        // Existing 0.12 rad reference-tracking tolerance: do not extend from
-        // a fictitious tuck endpoint while the actual leg is still far away.
-        for (size_t i = 0; i < q.size(); ++i)
-            if (!std::isfinite(actual[i]) || std::abs(q[i] - actual[i]) > 0.12)
-                return false;
+        const std::array<double, 4> v{
+            hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
+        const std::array<double, 4> a{};
         const auto land = inverse_kinematics_with_target_x(
-            base_link_height(L_TOUCH_), balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
-        return bbot_jump::flight_segment_admissible(q, v, a,
-                                                    {land.theta_hip, land.theta_knee, land.theta_hip, land.theta_knee},
-                                                    flight_round_trip_plan_.extend_duration);
+            L_TOUCH_, balance_offset_ + flight_landing_pitch_bias_, landing_target_x_);
+        return bbot_jump::flight_segment_admissible(
+            q, v, a,
+            {land.theta_hip, land.theta_knee, land.theta_hip, land.theta_knee},
+            duration,
+            flight_hip_speed_limit_, flight_knee_speed_limit_,
+            flight_hip_acc_limit_, flight_knee_acc_limit_,
+            flight_hip_pos_limit_, flight_knee_pos_limit_);
     }
 
     // 以同一时刻的旧轨迹作为新轨迹边界，避免子阶段切换时重置目标。
@@ -3235,7 +3435,7 @@ private:
         if (flight_trajectory_initialized_)
             sample_flight_joints(now_sec, q, v, a);
         const auto ik = inverse_kinematics_with_target_x(
-            base_link_height(height), bbot_jump::clamp_value(body_pitch_ref, -0.30, 0.30),
+            height, bbot_jump::clamp_value(body_pitch_ref, -0.30, 0.30),
             target_x);
         const std::array<double, 4> end{ik.theta_hip, ik.theta_knee, ik.theta_hip, ik.theta_knee};
         std::array<bbot_jump::QuinticTrajectory *, 4> dest{
@@ -3254,20 +3454,25 @@ private:
                 // v6.1 提高到约50%的速度预算，并允许段末继续replan；
                 // 这样既避免单帧反向甩腿，也不会永久停在中间长腿构型。
                 const bool hip_joint = (i % 2) == 0;
-                const double speed_limit = hip_joint ? 5.0 : 7.0;
+                // 试验/调参值（对齐总结文档 v6.21）：5.0/7.0 在 duration=0.24s 时
+                // 只允许髋走 0.5*5*0.24=0.60 rad，而实测离地髋角 1.19、着陆构型
+                // 需要约 0.40，预算把大腿截断在中间位（PROTECTIVE_DEPLOY_PLAN
+                // rate_limited=1），收腿一直拖到触地前才做完，反作用把机身推成
+                // +0.52rad 前倾。8.0 给出 0.96 rad，够一程收完并把余量留给姿态环。
+                const double speed_limit = 8.0;
                 const double max_delta = 0.50 * speed_limit * std::max(0.05, duration);
                 const double requested_delta = end[i] - q[i];
                 double bounded_delta = bbot_jump::clamp_value(
                     requested_delta, -max_delta, max_delta);
 
                 // 当髋仍沿反方向高速摆动时，短时间内强制反向会把等量
-                // 角动量传给机身。髋关节先做短暂减速，不把这一帧变成
-                // 反向摆腿命令；膝关节仍可配合 wheel-first 几何约束展开。
+                // 角动量传给机身。保护段只把该速度刹到零、端点保持在
+                // 当前角度；旧逻辑把端点继续沿错误方向外推，使下一次
+                // 重规划需要更大的反向冲量。
                 if (hip_joint && std::abs(v[i]) > 0.50 &&
                     bounded_delta * v[i] < 0.0)
                 {
-                    bounded_delta = bbot_jump::clamp_value(
-                        0.25 * v[i] * duration, -max_delta, max_delta);
+                    bounded_delta = 0.0;
                 }
                 q_end = q[i] + bounded_delta;
                 protective_deploy_rate_limited_ =
@@ -3317,17 +3522,26 @@ private:
         // 低跳时不能继续依赖固定 T_FLIGHT_APEX_，否则腿刚缩完就已经来不及展回去。
         auto estimate_remaining_to_touchdown = [&]() -> double
         {
-            const bool fresh_world = odom_received_ &&
-                                     (now_sec - last_world_odom_time_ <= 0.10) &&
-                                     std::isfinite(gazebo_world_z_) &&
-                                     std::isfinite(gazebo_world_z_dot_);
-            if (!fresh_world)
-                return 0.30;
-            const double landing_world_z = ground_height_offset_ + L_TOUCH_;
-            const double dz = std::max(0.0, gazebo_world_z_ - landing_world_z);
-            const double vz = gazebo_world_z_dot_;
-            const double disc = std::max(0.0, vz * vz + 2.0 * 9.81 * dz);
-            return std::max(0.0, (vz + std::sqrt(disc)) / 9.81);
+            // base_link 会因空中收腿而上下移动，不能把该内部构型速度当成
+            // 整机弹道速度。使用同时间戳的世界系整机 COM，并以目标落地
+            // 构型的 COM 高度作为终点，避免 TUCK 中途虚报着陆死线。
+            if (centroidal_height_.valid(now_sec))
+            {
+                const double landing_pitch = balance_offset_ + flight_landing_pitch_bias_;
+                const auto landing = inverse_kinematics_with_target_x(
+                    L_TOUCH_, landing_pitch, preview_landing_target_x(now_sec));
+                const std::array<double, 4> landing_q{
+                    landing.theta_hip, landing.theta_knee,
+                    landing.theta_hip, landing.theta_knee};
+                const auto geometry = bbot_jump::centroidal_geometry(landing_q, body_mass_);
+                const double landing_com_world_z = ground_height_offset_ + wheel_radius_ +
+                    bbot_jump::rotate_about_hip(
+                        -landing_pitch, geometry.com - geometry.axle).z();
+                return bbot_jump::ballistic_time_to_height(
+                    centroidal_height_.height(), centroidal_height_.velocity(),
+                    landing_com_world_z);
+            }
+            return 0.30;
         };
 
         auto begin_tuck = [&](const char *reason)
@@ -3338,18 +3552,21 @@ private:
             const double tuck_comp = bbot_jump::clamp_value(
                 pitch_ - balance_offset_, -0.24, 0.24);
             const auto tuck_ik = inverse_kinematics_with_target_x(
-                base_link_height(L_RETRACT_), tuck_comp, 0.0);
+                L_RETRACT_, tuck_comp, 0.0);
 
             const std::array<double, 4> q0{
                 hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
             const std::array<double, 4> v0{
-                bbot_jump::clamp_value(hip_vel_left_, -2.8, 2.8),
-                bbot_jump::clamp_value(knee_vel_left_, -4.5, 4.5),
-                bbot_jump::clamp_value(hip_vel_right_, -2.8, 2.8),
-                bbot_jump::clamp_value(knee_vel_right_, -4.5, 4.5)};
+                hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
             const std::array<double, 4> qf{
-                tuck_ik.theta_hip, tuck_ik.theta_knee,
-                tuck_ik.theta_hip, tuck_ik.theta_knee};
+                bbot_jump::reaction_safe_configuration_step(
+                    q0[0], tuck_ik.theta_hip, 0.14, v0[0]),
+                bbot_jump::reaction_safe_configuration_step(
+                    q0[1], tuck_ik.theta_knee, 0.04, v0[1]),
+                bbot_jump::reaction_safe_configuration_step(
+                    q0[2], tuck_ik.theta_hip, 0.14, v0[2]),
+                bbot_jump::reaction_safe_configuration_step(
+                    q0[3], tuck_ik.theta_knee, 0.04, v0[3])};
 
             for (size_t i = 0; i < 4; ++i)
             {
@@ -3360,6 +3577,7 @@ private:
             }
             flight_trajectory_initialized_ = true;
             flight_subphase_ = bbot_jump::FLIGHT_SUBPHASE_TUCK;
+            tuck_entered_ = true;
             tuck_start_time_ = now_sec;
             tuck_start_timestamp_ = now_sec;
             tuck_start_z_ = current_z_;
@@ -3373,7 +3591,7 @@ private:
                         reason, elapsed, estimate_remaining_to_touchdown(),
                         tuck_start_z_, L_RETRACT_, flight_round_trip_plan_.tuck_duration,
                         flight_round_trip_plan_.extend_duration,
-                        hip_pos_left_, knee_pos_left_, tuck_ik.theta_hip, tuck_ik.theta_knee);
+                        hip_pos_left_, knee_pos_left_, qf[0], qf[1]);
         };
 
         auto begin_protective_deploy = [&](double start_target)
@@ -3381,14 +3599,6 @@ private:
             const double start_z = bbot_jump::clamp_value(
                 start_target, L_MIN_, L_TOUCH_);
             protective_deploy_start_time_ = now_sec;
-            protective_attitude_seen_stable_ = false;
-            protective_attitude_brake_active_ = false;
-            protective_attitude_brake_start_time_ = 0.0;
-            protective_attitude_brake_duration_active_ = 0.0;
-            protective_attitude_brake_plan_check_ = -1;
-            protective_landing_progress_ = 0.0;
-            protective_landing_joint_alpha_ = 0.0;
-            protective_landing_com_end_ = 0.0;
             // 锁存切换瞬间的真实关节角。仅按腿长做 IK 插值会因为当前构型
             // 与等效腿长 IK 不唯一而产生关节目标阶跃，正是本次展腿后再次
             // 注入后仰角动量的来源。
@@ -3422,208 +3632,6 @@ private:
             flight_subphase_ = bbot_jump::FLIGHT_SUBPHASE_PROTECTIVE_DEPLOY;
             protective_landing_ = true;
             L_target = start_z;
-        };
-
-        // v6.16：PROTECTIVE_DEPLOY 姿态监督。
-        // v6.15 已证明“姿态失稳后立即停止追 landing IK”能显著降低触地 pitch，
-        // 但最新日志中制动后腿停在中间构型，触地时 COM 仍在轮轴后约 0.195 m。
-        // 本版保留同一个 attitude_stable 判据和低增益反馈；区别只在制动轨迹段末：
-        // 在已有 flight_segment_admissible 预算内，选择能够把 COM 最接近已锁存
-        // landing COM 目标的零速端点。没有新姿态阈值、没有提高轮速/力矩上限。
-        auto begin_protective_attitude_brake = [&]() -> bool
-        {
-            if (protective_attitude_brake_active_ ||
-                flight_subphase_ != bbot_jump::FLIGHT_SUBPHASE_PROTECTIVE_DEPLOY)
-            {
-                return protective_attitude_brake_active_;
-            }
-
-            const std::array<double, 4> q0{
-                hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
-            const std::array<double, 4> v0{
-                hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
-            const std::array<double, 4> a0{};
-            const std::array<double, 4> zero_v{};
-
-            const double remaining_time = estimate_remaining_to_touchdown();
-            const double available_time = std::max(
-                0.0, remaining_time - landing_deploy_ready_margin_);
-
-            protective_attitude_brake_active_ = true;
-            protective_attitude_brake_start_time_ = now_sec;
-            protective_attitude_brake_duration_active_ = 0.0;
-            protective_attitude_brake_plan_check_ = 0;
-            protective_landing_progress_ = 0.0;
-            protective_landing_joint_alpha_ = 0.0;
-            protective_landing_com_end_ = centroidal_balance_.forward;
-            // 姿态保护一旦锁存，本次飞行不再使用原 PROTECTIVE_REPLAN 的高增益路径。
-            protective_deploy_rate_limited_ = false;
-            protective_deploy_replan_count_ = 2;
-
-            const double landing_pitch_ref =
-                balance_offset_ + flight_landing_pitch_bias_;
-            const auto landing_ik = inverse_kinematics_with_target_x(
-                base_link_height(L_TOUCH_), landing_pitch_ref, landing_target_x_);
-            const std::array<double, 4> landing_end{
-                landing_ik.theta_hip, landing_ik.theta_knee,
-                landing_ik.theta_hip, landing_ik.theta_knee};
-
-            const auto start_com_state = bbot_jump::centroidal_balance_state(
-                q0, v0, pitch_, pitch_rate_, body_mass_);
-            const auto landing_com_state = bbot_jump::centroidal_balance_state(
-                landing_end, zero_v, landing_pitch_ref, 0.0, body_mass_);
-            const bool com_progress_valid =
-                start_com_state.valid && landing_com_state.valid &&
-                std::abs(landing_com_state.forward - start_com_state.forward) > 1e-6;
-            if (landing_com_state.valid)
-            {
-                landing_com_forward_target_ = landing_com_state.forward;
-                landing_com_forward_target_valid_ = true;
-            }
-
-            // 使用已有保护展腿最短时长作为第一搜索点，时间仍按 200 Hz 的 5 ms
-            // 控制周期离散。每个时长先构造“连续停车端点”，再沿该端点到完整
-            // landing IK 的同一关节形状方向搜索 0..100% 的进度。100 份仅是数值
-            // 搜索分辨率，不引入新的物理阈值；所有可接受性仍由现有预算函数决定。
-            const double first_duration = std::min(
-                landing_protective_deploy_min_, available_time);
-            bool found_plan = false;
-            double selected_duration = 0.0;
-            double selected_progress = 0.0;
-            double selected_alpha = 0.0;
-            double selected_com_end = start_com_state.forward;
-            std::array<double, 4> selected_end = q0;
-
-            if (first_duration >= 0.005)
-            {
-                for (double duration = first_duration;
-                     duration <= available_time + 1e-9;
-                     duration += 0.005)
-                {
-                    std::array<double, 4> stop_end{};
-                    for (size_t i = 0; i < stop_end.size(); ++i)
-                    {
-                        // 与 v6.15 相同：q_stop=q+0.5*qdot*T 作为零速制动的连续端点。
-                        stop_end[i] = bbot_jump::clamp_value(
-                            q0[i] + 0.50 * v0[i] * duration, -1.40, 1.40);
-                    }
-                    double stop_qd_h_l = 0.0, stop_qd_k_l = 0.0;
-                    double stop_qd_h_r = 0.0, stop_qd_k_r = 0.0;
-                    enforce_wheel_first_target(
-                        stop_end[0], stop_end[1], stop_qd_h_l, stop_qd_k_l);
-                    enforce_wheel_first_target(
-                        stop_end[2], stop_end[3], stop_qd_h_r, stop_qd_k_r);
-
-                    for (int step = 100; step >= 0; --step)
-                    {
-                        const double alpha = static_cast<double>(step) / 100.0;
-                        std::array<double, 4> end{};
-                        for (size_t i = 0; i < end.size(); ++i)
-                        {
-                            end[i] = bbot_jump::lerp(
-                                stop_end[i], landing_end[i], alpha);
-                        }
-
-                        // 段末继续复用同一个 wheel-first 几何约束；段内不硬夹，
-                        // 保证 q/qdot/qddot 仍由同一条五次轨迹连续给出。
-                        double qd_h_l = 0.0, qd_k_l = 0.0;
-                        double qd_h_r = 0.0, qd_k_r = 0.0;
-                        enforce_wheel_first_target(
-                            end[0], end[1], qd_h_l, qd_k_l);
-                        enforce_wheel_first_target(
-                            end[2], end[3], qd_h_r, qd_k_r);
-
-                        if (!bbot_jump::flight_segment_admissible(
-                                q0, v0, a0, end, duration))
-                        {
-                            continue;
-                        }
-
-                        const auto end_com_state = bbot_jump::centroidal_balance_state(
-                            end, zero_v, landing_pitch_ref, 0.0, body_mass_);
-                        double progress = alpha;
-                        if (com_progress_valid && end_com_state.valid)
-                        {
-                            progress = bbot_jump::clamp_value(
-                                (end_com_state.forward - start_com_state.forward) /
-                                    (landing_com_state.forward - start_com_state.forward),
-                                0.0, 1.0);
-                        }
-
-                        const bool better_progress =
-                            !found_plan || progress > selected_progress + 1e-9;
-                        const bool same_progress_more_landing =
-                            found_plan && std::abs(progress - selected_progress) <= 1e-9 &&
-                            alpha > selected_alpha + 1e-9;
-                        const bool same_endpoint_gentler =
-                            found_plan && std::abs(progress - selected_progress) <= 1e-9 &&
-                            std::abs(alpha - selected_alpha) <= 1e-9 &&
-                            duration > selected_duration + 1e-9;
-                        if (better_progress || same_progress_more_landing ||
-                            same_endpoint_gentler)
-                        {
-                            found_plan = true;
-                            selected_duration = duration;
-                            selected_progress = progress;
-                            selected_alpha = alpha;
-                            selected_end = end;
-                            selected_com_end = end_com_state.valid ? end_com_state.forward : start_com_state.forward;
-                        }
-                    }
-                }
-            }
-
-            if (!found_plan)
-            {
-                // 没有足够剩余飞行时间生成满足现有预算的零速五次段时，
-                // 后续控制块继续使用 v6.15 的“实测 q/qdot 随动”回退。
-                RCLCPP_WARN(this->get_logger(),
-                            "[PROTECTIVE_ATT_BRAKE v6.16] 无可行连续段："
-                            "remaining=%.3f available=%.3f pitch_err=%.3f rate_err=%.3f，"
-                            "进入低增益实测随动回退",
-                            remaining_time, available_time,
-                            air_pitch_err, air_pitch_rate_err);
-                return false;
-            }
-
-            std::array<bbot_jump::QuinticTrajectory *, 4> dest{
-                &protective_hip_left_traj_, &protective_knee_left_traj_,
-                &protective_hip_right_traj_, &protective_knee_right_traj_};
-            for (size_t i = 0; i < dest.size(); ++i)
-            {
-                dest[i]->init(
-                    now_sec, selected_duration,
-                    q0[i], v0[i], 0.0,
-                    selected_end[i], 0.0, 0.0);
-            }
-
-            const double hold_z = bbot_jump::clamp_value(
-                current_z_, L_MIN_, L_TOUCH_);
-            protective_deploy_traj_.init(
-                now_sec, selected_duration,
-                hold_z, 0.0, 0.0,
-                hold_z, 0.0, 0.0);
-            protective_deploy_start_time_ = now_sec;
-            protective_deploy_duration_active_ = selected_duration;
-            protective_attitude_brake_duration_active_ = selected_duration;
-            protective_attitude_brake_plan_check_ = 1;
-            protective_landing_progress_ = selected_progress;
-            protective_landing_joint_alpha_ = selected_alpha;
-            protective_landing_com_end_ = selected_com_end;
-            flight_trajectory_initialized_ = true;
-
-            RCLCPP_WARN(this->get_logger(),
-                        "[PROTECTIVE_ATT_BRAKE v6.16] 姿态退出稳定区："
-                        "pitch_err=%.3f rate_err=%.3f remaining=%.3f，"
-                        "T=%.3f s landing_alpha=%.2f COM %.3f->%.3f/%.3f (progress=%.2f)；"
-                        "hip %.3f/%.2f->%.3f knee %.3f/%.2f->%.3f",
-                        air_pitch_err, air_pitch_rate_err, remaining_time,
-                        selected_duration, selected_alpha,
-                        start_com_state.forward, selected_com_end,
-                        landing_com_forward_target_, selected_progress,
-                        q0[0], v0[0], selected_end[0],
-                        q0[1], v0[1], selected_end[1]);
-            return true;
         };
 
         auto begin_checked_tuck = [&](const char *reason)
@@ -3673,8 +3681,8 @@ private:
             // 时会直接绕过 arrest 轨迹。这里只对接近硬限位的构型立即保护；
             // 正常高速关节至少给 90ms 去沿 arrest 五次轨迹减速。
             const bool leg_position_unsafe =
-                std::abs(hip_pos_left_) > 1.40 || std::abs(hip_pos_right_) > 1.40 ||
-                std::abs(knee_pos_left_) > 1.40 || std::abs(knee_pos_right_) > 1.40;
+                std::abs(hip_pos_left_) > 1.52 || std::abs(hip_pos_right_) > 1.52 ||
+                std::abs(knee_pos_left_) > 1.5708 || std::abs(knee_pos_right_) > 1.5708;
 
             // v6.1：离地时如果“当前”关节速度已经低，不能再固定等65~110ms。
             // 上一轮真正离地时 hip_v≈1.1、knee_v≈-1.3，已经足够安全，却仍被
@@ -3685,8 +3693,8 @@ private:
                 std::abs(knee_vel_left_), std::abs(knee_vel_right_));
             const bool tuck_joint_speed_safe =
                 flight_leg_motion_ready() &&
-                max_hip_speed <= 2.8 &&
-                max_knee_speed <= 4.5;
+                max_hip_speed <= 5.0 &&
+                max_knee_speed <= 6.5;
             const double remaining_time = estimate_remaining_to_touchdown();
             const double tuck_time_need =
                 T_FLIGHT_TUCK_ + T_FLIGHT_EXTEND_ + 0.025;
@@ -3696,8 +3704,8 @@ private:
                 std::abs(air_pitch_err) <= 0.24 &&
                 std::abs(air_pitch_rate_err) <= 1.10;
 
-            // These are entrance conditions only. begin_checked_tuck also
-            // validates the entire commanded retract/deploy motion.
+            // 这些只是入口条件。begin_checked_tuck 还会完整校验整条
+            // 收腿/展腿指令轨迹的速度、加速度与时间预算。
             const bool early_tuck_ready =
                 !protective_landing_ &&
                 !leg_position_unsafe &&
@@ -3710,6 +3718,17 @@ private:
             {
                 begin_checked_tuck("当前真实关节已低速，轨迹预算通过");
             }
+            // 诊断只走控制台：149 列 CSV 有下游消费者，不加列。
+            RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 80,
+                                 "[ARREST_TUCK_GATE v6.14] ready=%d unsafe_pos=%d speed_ok=%d "
+                                 "att_ok=%d time_ok=%d | hip_v=%.2f knee_v=%.2f rem=%.3f need=%.3f "
+                                 "pe=%.3f re=%.3f | tuck_chk=%d T=%.3f+%.3f",
+                                 early_tuck_ready ? 1 : 0, leg_position_unsafe ? 1 : 0,
+                                 tuck_joint_speed_safe ? 1 : 0, early_tuck_attitude_ok ? 1 : 0,
+                                 enough_time_for_tuck ? 1 : 0, max_hip_speed, max_knee_speed,
+                                 remaining_time, tuck_time_need, air_pitch_err, air_pitch_rate_err,
+                                 flight_tuck_plan_check_, flight_round_trip_plan_.tuck_duration,
+                                 flight_round_trip_plan_.extend_duration);
 
             if (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST)
             {
@@ -3796,22 +3815,47 @@ private:
                 // v6.2：低跳没有等待apex的余量。TUCK完成后立即EXTEND；
                 // 若剩余时间提前触及着陆deadline，即使TUCK尚差几毫秒也立即转展腿。
                 latch_landing_capture_plan(now_sec);
-                // The descent deadline may interrupt TUCK before its
-                // nominal endpoint. Validate this actual continuous
-                // reference and tracking error again before reversing it.
-                flight_extend_plan_check_ = normal_landing_plan_feasible(now_sec) ? 1 : 0;
+                // TUCK 的真实关节可能落后于参考，不能从虚构的收腿终点开始
+                // 展腿。以当前实测 q/v 为连续边界，并在剩余 COM 弹道时间
+                // 内搜索最短可行时长；这既不放宽速度/加速度上限，也不制造
+                // 位置或速度阶跃。
+                double feasible_extend_duration = 0.0;
+                const double max_extend_duration =
+                    remaining_time - landing_deploy_ready_margin_;
+                // 使用剩余弹道预算内最长的可行段，而不是最短段。上一轮
+                // 90 ms 轨迹让落后于参考的真实髋关节瞬间追到约 -11 rad/s；
+                // 多出的 20~30 ms 可显著降低加速度和机身反作用，同时仍
+                // 保留 landing_deploy_ready_margin_ 的触地前稳定时间。
+                const double first_candidate =
+                    std::floor(max_extend_duration / 0.005) * 0.005;
+                for (double candidate = first_candidate;
+                     candidate >= T_FLIGHT_EXTEND_ - 1e-9;
+                     candidate -= 0.005)
+                {
+                    if (normal_landing_plan_feasible(candidate))
+                    {
+                        feasible_extend_duration = candidate;
+                        break;
+                    }
+                }
+                flight_extend_plan_check_ = feasible_extend_duration > 0.0 ? 1 : 0;
                 if (flight_extend_plan_check_ == 0)
                 {
                     RCLCPP_WARN(this->get_logger(),
-                                "[FLIGHT_PLAN v6.14] 展腿预算或跟踪误差超限，连续转入保护展腿");
+                                "[FLIGHT_PLAN v6.14] 当前真实关节状态无法在剩余时间内安全展腿，转保护展腿");
                     begin_protective_deploy(current_height_);
                     break;
                 }
+                flight_round_trip_plan_.extend_duration = feasible_extend_duration;
+                // plan_flight_joints 在未初始化时读取当前真实 q/v；显式清除
+                // 旧 TUCK 参考，保证新段首帧与执行器状态连续。
+                flight_trajectory_initialized_ = false;
                 plan_flight_joints(now_sec, flight_round_trip_plan_.extend_duration, L_TOUCH_,
                                    false,
                                    balance_offset_ + flight_landing_pitch_bias_,
                                    landing_target_x_);
                 flight_subphase_ = bbot_jump::FLIGHT_SUBPHASE_EXTEND;
+                extend_entered_ = true;
                 extend_start_time_ = now_sec;
 
                 extend_traj_.init(
@@ -3840,24 +3884,21 @@ private:
 
         case bbot_jump::FLIGHT_SUBPHASE_EXTEND:
         {
-            if (attitude_unstable)
-            {
-                begin_protective_deploy(current_height_);
-            }
-            else
-            {
-                double extend_z;
-                double extend_v;
-                double extend_acc;
+            // EXTEND 已从当前实测 q/v 通过完整速度、加速度和行程校验。
+            // 姿态超限时切换到另一条 protective 轨迹不能修正机身姿态，
+            // 反而会重置关节边界并注入第二次扰动；保持已校验轨迹连续，
+            // 由反作用轮和落地捕获处理姿态误差。
+            double extend_z;
+            double extend_v;
+            double extend_acc;
 
-                extend_traj_.evaluate(
-                    now_sec,
-                    extend_z,
-                    extend_v,
-                    extend_acc);
+            extend_traj_.evaluate(
+                now_sec,
+                extend_z,
+                extend_v,
+                extend_acc);
 
-                L_target = extend_z;
-            }
+            L_target = extend_z;
             break;
         }
 
@@ -3867,26 +3908,6 @@ private:
             {
                 begin_protective_deploy(current_height_);
             }
-
-            // v6.16：继续使用现有 attitude_stable 判据，不新增姿态阈值。
-            // 只约束已进入 Effort 的 PROTECTIVE_DEPLOY：当前成功的首跳仍是
-            // Position 路径，不改变它。Effort 路径至少先进入过一次稳定区；
-            // 之后一旦退出，立即锁存连续减速。若直接触发原有 attitude_unstable
-            // 硬保护，即使尚未见过稳定状态也同样停止追完整 landing IK。
-            if (attitude_stable)
-            {
-                protective_attitude_seen_stable_ = true;
-            }
-            const bool protective_attitude_brake_needed =
-                effort_mode_active_ &&
-                !attitude_stable &&
-                (protective_attitude_seen_stable_ || attitude_unstable);
-            if (protective_attitude_brake_needed &&
-                !protective_attitude_brake_active_)
-            {
-                begin_protective_attitude_brake();
-            }
-
             double deploy_v = 0.0;
             double deploy_a = 0.0;
             protective_deploy_traj_.evaluate(
@@ -3899,7 +3920,6 @@ private:
                 (now_sec - protective_deploy_start_time_) >=
                 protective_deploy_duration_active_;
             if (segment_finished &&
-                !protective_attitude_brake_active_ &&
                 protective_deploy_rate_limited_ &&
                 protective_deploy_replan_count_ < 2)
             {
@@ -3943,6 +3963,19 @@ private:
 
         current_height_ = L_target;
 
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 80,
+                             "[FLIGHT_PLAN v6.14] sub=%s tuck_chk=%d ext_chk=%d T=%.3f+%.3f "
+                             "L_cmd=%.3f z=%.3f vz=%.2f q_k=(%.2f,%.2f) "
+                             "v_k=(%.2f,%.2f) v_h=(%.2f,%.2f) pitch=%.3f rate=%.2f",
+                             bbot_jump::flight_subphase_to_string(flight_subphase_),
+                             flight_tuck_plan_check_, flight_extend_plan_check_,
+                             flight_round_trip_plan_.tuck_duration,
+                             flight_round_trip_plan_.extend_duration,
+                             L_target, current_z_, current_z_dot_,
+                             knee_pos_left_, knee_pos_right_,
+                             knee_vel_left_, knee_vel_right_,
+                             hip_vel_left_, hip_vel_right_, pitch_, pitch_rate_);
+
         // 保持力矩控制模式
         const bool extend_finished =
             flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_EXTEND &&
@@ -3951,7 +3984,6 @@ private:
         const bool protective_deploy_finished =
             flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_PROTECTIVE_DEPLOY &&
             protective_deploy_initialized_ &&
-            !protective_attitude_brake_active_ &&
             (now_sec - protective_deploy_start_time_) >= protective_deploy_duration_active_;
 
         const bool legs_deployed =
@@ -3972,37 +4004,22 @@ private:
         sample_flight_joints(now_sec, q_des, qdot_des, qddot_des);
         flight_trajectory_initialized_ = true;
 
-        // v6.16 无可行五次段的回退：让位置/速度参考跟随当前实测值，
-        // 使关节 PD 不再主动追旧 landing IK。wheel-first 几何硬保护仍在下方保留。
-        if (protective_attitude_brake_active_ &&
-            protective_attitude_brake_plan_check_ == 0)
-        {
-            q_des = {hip_pos_left_, knee_pos_left_, hip_pos_right_, knee_pos_right_};
-            qdot_des = {hip_vel_left_, knee_vel_left_, hip_vel_right_, knee_vel_right_};
-            qddot_des = {0.0, 0.0, 0.0, 0.0};
-        }
-
         // v5.9：落地接近时显式保证 wheel-first。
-        // v6.16 的姿态制动/landing-progress 段在规划末端已经满足同一 wheel-first 约束；
-        // 减速进行中若再次逐帧硬夹膝目标，会破坏 q/qdot 连续性，所以段内暂缓硬夹，
-        // 段结束后自动恢复原几何保护。
+        // 不管五次轨迹的瞬态如何，都不允许期望小腿接近水平。
         bool landing_geom_clamped = false;
-        const bool protective_brake_in_progress =
-            protective_attitude_brake_active_ &&
-            protective_attitude_brake_plan_check_ == 1 &&
-            (now_sec - protective_attitude_brake_start_time_) <
-                protective_attitude_brake_duration_active_;
-        if (landing_approach && !protective_brake_in_progress)
+        if (landing_approach)
         {
             landing_geom_clamped |= enforce_wheel_first_target(
-                q_des[0], q_des[1], qdot_des[0], qdot_des[1]);
+                q_des[0], q_des[1], qdot_des[0], qdot_des[1],
+                air_pitch_ref, air_pitch_rate_ref);
             landing_geom_clamped |= enforce_wheel_first_target(
-                q_des[2], q_des[3], qdot_des[2], qdot_des[3]);
+                q_des[2], q_des[3], qdot_des[2], qdot_des[3],
+                air_pitch_ref, air_pitch_rate_ref);
 
             const double phi2_0 = std::atan2(0.28210870, 0.19553796);
             const auto &p = kinematics_.get_params();
-            const double shank_l = phi2_0 + q_des[0] + q_des[1] - pitch_;
-            const double shank_r = phi2_0 + q_des[2] + q_des[3] - pitch_;
+            const double shank_l = phi2_0 + q_des[0] + q_des[1] - air_pitch_ref;
+            const double shank_r = phi2_0 + q_des[2] + q_des[3] - air_pitch_ref;
             const double knee_axis_l = p.l1 * std::cos(shank_l);
             const double knee_axis_r = p.l1 * std::cos(shank_r);
             RCLCPP_INFO_THROTTLE(
@@ -4043,31 +4060,14 @@ private:
             }
             else if (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_PROTECTIVE_DEPLOY)
             {
-                if (protective_attitude_brake_active_)
-                {
-                    // v6.16：姿态保护已锁存时，不再沿用 PROTECTIVE_DEPLOY 的高增益
-                    // 追踪。复用 ATTITUDE_ARREST 已验证的“高速时降反馈”增益，
-                    // 配合上方连续零速轨迹降低腿部对机身的反作用角动量。
-                    const double knee_speed_mag = std::max(
-                        std::abs(knee_vel_left_), std::abs(knee_vel_right_));
-                    const double fast_blend = bbot_jump::clamp_value(
-                        (knee_speed_mag - 4.0) / 4.0, 0.0, 1.0);
-                    kp_hip_fl = bbot_jump::lerp(14.0, 8.0, fast_blend);
-                    kd_hip_fl = bbot_jump::lerp(2.8, 1.2, fast_blend);
-                    kp_knee_fl = bbot_jump::lerp(18.0, 8.0, fast_blend);
-                    kd_knee_fl = bbot_jump::lerp(3.2, 1.0, fast_blend);
-                }
-                else
-                {
-                    // 空中髋、膝只跟踪安全落地构型，机身姿态交给反作用轮。
-                    // 提高阻尼而不是只堆刚度，抑制上一轮中约 10 Hz 的关节摆动。
-                    const double gain_blend = bbot_jump::clamp_value(
-                        (now_sec - protective_deploy_start_time_) / 0.10, 0.0, 1.0);
-                    kp_hip_fl = bbot_jump::lerp(18.0, 32.0, gain_blend);
-                    kd_hip_fl = bbot_jump::lerp(4.5, 7.0, gain_blend);
-                    kp_knee_fl = bbot_jump::lerp(22.0, 40.0, gain_blend);
-                    kd_knee_fl = bbot_jump::lerp(5.0, 8.0, gain_blend);
-                }
+                // 空中髋、膝只跟踪安全落地构型，机身姿态交给反作用轮。
+                // 提高阻尼而不是只堆刚度，抑制上一轮中约 10 Hz 的关节摆动。
+                const double gain_blend = bbot_jump::clamp_value(
+                    (now_sec - protective_deploy_start_time_) / 0.10, 0.0, 1.0);
+                kp_hip_fl = bbot_jump::lerp(18.0, 32.0, gain_blend);
+                kd_hip_fl = bbot_jump::lerp(4.5, 7.0, gain_blend);
+                kp_knee_fl = bbot_jump::lerp(22.0, 40.0, gain_blend);
+                kd_knee_fl = bbot_jump::lerp(5.0, 8.0, gain_blend);
             }
             else if (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_EXTEND)
             {
@@ -4114,35 +4114,65 @@ private:
         if (landing_geometry_valid)
             wheel_clearance_ = gazebo_world_z_ - ground_height_offset_ -
                                std::max(landing_geom_left, landing_geom_right);
-        contact_window_ = landing_geometry_valid && world_descending && wheel_clearance_ <= 0.035;
+        // 0.035 是试验/调参值，且它已经不再是主通道：v6.28 之后 IMU 判据在 FLIGHT
+        // 起跳后 0.27~0.37 s 就先切换状态，全高/载荷 42 条日志里这条几何窗口一次都没开
+        // （FLIGHT 退出帧净空 +0.042~+0.052 m）；低高度 10 条里都开了，但退出帧净空
+        // 只有 +0.032~+0.038 m，正好压在门限两侧 ⇒ 往下调会让低高度也失效，保持不动。
+        contact_window_ = landing_geometry_valid && world_descending &&
+                          wheel_clearance_ <= 0.035;
+
+        // 触地判定的独立通道：躯干 IMU 比力（fz 是 specific force，不是世界加速度）。
+        // 上面那份净空用的是离地瞬间锁存的关节构型（aligned_takeoff_geometry），
+        // 腿在空中收展之后它就不再是轮底到地面的距离：21/21 条 v6.27 及更早的日志里
+        // contact_window_ 确实开过，但要到 FLIGHT 已经跑了 0.9~1.5 s 之后才开
+        // （退出帧净空 −0.013~+0.035 m），机身明明已被托住（fz≈9.5 m/s²）时它仍读
+        // +0.04~0.05 m ⇒ FLIGHT 比真实落地晚 0.6~1.3 s 才退出，其间空中轮律把
+        // +0.7 m/s 的前进速度拖成 −1.0~−1.75 m/s 的后退速度。实测自由飞行 fz 在
+        // −18~+5.3，支撑时中位 9.79 ⇒ 门限取 7.0（试验/调参值），并要求 50 ms 持续。
+        // 新鲜度必须直接问观察者：torso_imu_fresh_ 只在支撑腿 PD 分支里赋值，
+        // 其它状态一律置 false，在 FLIGHT 里恒为 false（第一轮 v6.28 实跑因此空转）。
+        constexpr double k_support_fz = 7.0;
+        constexpr double k_support_hold = 0.050;
+        const bool torso_supported = torso_imu_.fresh(now_sec) &&
+                                     torso_imu_.fz() >= k_support_fz &&
+                                     gazebo_world_z_dot_ < 0.30;
+        if (torso_supported)
+        {
+            if (landing_support_start_time_ < 0.0)
+                landing_support_start_time_ = now_sec;
+        }
+        else
+        {
+            landing_support_start_time_ = -1.0;
+        }
+        const bool sustained_support = landing_support_start_time_ >= 0.0 &&
+                                       now_sec - landing_support_start_time_ >= k_support_hold;
 
         // 3. 空中飞轮效应姿态控制 (动量轮反作用扭矩)
         // air_pitch_ref / air_pitch_rate_ref 已在本状态函数顶部统一生成；
         // 髋部小辅助力矩和反作用轮共同跟踪它，避免 reference 打架。
         // 降低旧版过强的 D 制动；现在 D 项针对参考角速度误差，而不是强迫 gyro=0。
         constexpr double k_air_p = 0.50;
-        constexpr double k_air_d = 0.45;
+        const double k_air_d = (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_EXTEND)
+                                   ? air_wheel_extend_kd_
+                                   : (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_TUCK)
+                                         ? air_wheel_tuck_kd_
+                                         : 0.45;
 
-        const double air_p_term = k_air_p * bbot_jump::deadband(air_pitch_err, 0.02);
-        const double air_d_term = k_air_d * bbot_jump::deadband(air_pitch_rate_err, 0.08);
-
-        // ATTITUDE_ARREST 中的关节减速已知会产生负俯仰反作用。
-        // 在姿态误差真正出现以前就给反作用轮一个小的前馈吸收量，
-        // 避免上一轮“先被腿打成 -2 rad/s，再靠反馈追”的滞后。
         double arrest_wheel_ff = 0.0;
-        if (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST)
-        {
-            const double knee_speed_mag = 0.5 * (std::abs(knee_vel_left_) + std::abs(knee_vel_right_));
-            const double speed_ff = bbot_jump::clamp_value(
-                (knee_speed_mag - 4.0) / 6.0, 0.0, 1.0);
-            const double time_ff = 1.0 - bbot_jump::clamp_value(elapsed / 0.10, 0.0, 1.0);
-            // 当前实测符号：负轮命令用于抵消负 pitch / 负 gyro。
-            arrest_wheel_ff = -0.35 * speed_ff * time_ff;
-        }
-
-        air_wheel_cmd_raw_ =
-            air_wheel_baseline_ + arrest_wheel_ff +
-            air_wheel_sign_ * (air_p_term + air_d_term);
+        double cmd_target = bbot_jump::flight_wheel_target(
+            air_wheel_baseline_,
+            air_pitch_err,
+            air_pitch_rate_err,
+            0.5 * (std::abs(knee_vel_left_) + std::abs(knee_vel_right_)),
+            elapsed,
+            flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST,
+            air_wheel_sign_,
+            k_air_p,
+            k_air_d,
+            air_wheel_linear_speed_limit_,
+            &arrest_wheel_ff,
+            &air_wheel_cmd_raw_);
 
         RCLCPP_INFO_THROTTLE(
             this->get_logger(), *this->get_clock(), 80,
@@ -4151,11 +4181,6 @@ private:
             elapsed, bbot_jump::flight_subphase_to_string(flight_subphase_),
             pitch_, air_pitch_ref, pitch_rate_, air_pitch_rate_ref,
             air_pitch_err, air_pitch_rate_err, arrest_wheel_ff, air_wheel_cmd_raw_);
-
-        double cmd_target =
-            bbot_jump::clamp_value(
-                air_wheel_cmd_raw_,
-                -1.40, 1.40);
 
         // 下降且轮底接近地面时，平滑退出反作用轮模式；到20mm内采用
         // 地面捕获方向。反作用轮的反转命令不能一直带到真实接触。
@@ -4168,18 +4193,26 @@ private:
             predicted_landing_forward_velocity(now_sec),
             current_gain_.k_theta, current_gain_.k_theta_dot, cmd_scale_));
         cmd_target = bbot_jump::lerp(cmd_target, landing_ground_cmd, landing_wheel_ground_blend_);
+
+        // Opt-in effort-servo diagnostic; keep wheel target and leg trajectory,
+        // but mark a short interval for a true zero-commanded-effort test.
+        flight_arrest_freewheel_active_ = flight_arrest_freewheel_duration_ > 0.0 &&
+            elapsed >= 0.0 && elapsed < flight_arrest_freewheel_duration_ &&
+            flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST;
+
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 70,
-                             "[LANDING_WHEEL_HANDOFF] clr=%.3f aligned=%d descending=%d blend=%.2f air=%.3f ground=%.3f target=%.3f",
+                             "[LANDING_WHEEL_HANDOFF] clr=%.3f aligned=%d descending=%d blend=%.2f air=%.3f ground=%.3f target=%.3f xdot=%.2f",
                              wheel_clearance_, landing_geometry_valid ? 1 : 0, world_descending ? 1 : 0,
-                             landing_wheel_ground_blend_, air_wheel_cmd_raw_, landing_ground_cmd, cmd_target);
+                             landing_wheel_ground_blend_, air_wheel_cmd_raw_, landing_ground_cmd, cmd_target,
+                             x_dot_);
 
         // 速度型轮控需要尽快建立轮加速度才能产生反作用力矩；0.12/周期
         // 对当前约 1.3 rad/s 的离地角速度制动偏慢。
         const double max_air_wheel_step =
             (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_ATTITUDE_ARREST) ? 0.25 : 0.18;
         double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
-                                               cmd_target - last_wheel_cmd_x_, -max_air_wheel_step, max_air_wheel_step);
-        publish_wheel_cmd(cmd_x, 0.0);
+            cmd_target - last_wheel_cmd_x_, -max_air_wheel_step, max_air_wheel_step);
+        publish_wheel_cmd(cmd_x, 0.0, flight_arrest_freewheel_active_);
 
         const bool leg_compressed = legs_deployed && contact_window_ &&
                                     current_z_ < L_target - 0.010 && current_z_dot_ < -0.10;
@@ -4203,9 +4236,15 @@ private:
         const bool persistent_contact = touchdown_confirmation_.update(
             takeoff_odom_stamp_, now_sec, landing_geometry_valid, wheel_clearance_,
             world_descending, acc_z_filt_);
-        if (persistent_contact || leg_compressed || torque_spike || imu_impact)
+        if (persistent_contact || leg_compressed || torque_spike || imu_impact || sustained_support)
         {
-            RCLCPP_INFO(this->get_logger(), ">>> 触地检测触发 (t=%.3fs, z=%.3f)！进入缓冲阻抗控制", elapsed, current_z_);
+            const char *trig = sustained_support ? "持续支撑" : (persistent_contact ? "持续接触" : (leg_compressed ? "腿压缩" : (torque_spike ? "膝力矩" : "IMU冲击")));
+            RCLCPP_INFO(this->get_logger(),
+                        ">>> 触地检测触发 [%s] (t=%.3fs, z=%.3f, air=%.2fs, vx=%.2f, fz=%.1f, "
+                        "wvx=%.2f, clr=%.3f)！进入缓冲阻抗控制",
+                        trig, elapsed, current_z_, now_sec - state_start_time_, x_dot_,
+                        torso_imu_.fz(), predicted_landing_forward_velocity(now_sec),
+                        wheel_clearance_);
             current_state_ = bbot_jump::STATE_TOUCHDOWN_BUFFER;
             state_start_time_ = now_sec;
             touchdown_buffer_initialized_ = false;
@@ -4222,6 +4261,9 @@ private:
             air_wheel_cmd_raw_ = 0.0;
             // 保留 FLIGHT 最后一帧轮速指令，避免触地瞬间人为把姿态控制截断。
             touchdown_catch_active_ = true;
+            touchdown_reverse_brake_active_ = false;
+            touchdown_reverse_brake_consumed_ = false;
+            landing_fall_start_time_ = -1.0;
             touchdown_catch_stable_count_ = 0;
             touchdown_catch_stable_time_ = 0.0;
             touchdown_settle_start_time_ = -1.0;
@@ -4259,12 +4301,69 @@ private:
         const double shank_rate = 0.5 * (hip_vel_left_ + knee_vel_left_ +
                                          hip_vel_right_ + knee_vel_right_) -
                                   torso_imu_.rate();
+        double velocity_reference = 0.0;
+        // 该律的速度不动点是 v = v_ref - 4*(omega*r + R*r_dot)。落地构型下 r 带着
+        // 结构性偏置（实测 -0.006~-0.012 m），于是整机以 0.2255 m/s（空载）/
+        // 0.3330 m/s（1 kg）永久前滚，顶穿 CATCH 释放门限 |v|<0.15（平地 8/8 不交权）。
+        // omega*r 这一路**不能整块抵掉**：各缓冲阶段自己的 catch_wheel_target P/D 项
+        // 在 capture_world_valid_ 为真时会被整个丢弃，ωr 就是缓冲段仅剩的姿态反馈。
+        // 直接把 v_ref 设成 4*(ωr+Rṙ)（=抵掉它）实跑 v631flatB_t1,t2,t3,t5 的后果是机身
+        // 一路倒到门限边缘 com_lean=-0.100、门每 0.1~0.3 s 抖一次（81 OFF / 82 ON），
+        // 速度只降到 0.042~0.062 m/s、p_fin 由 +0.058 退到 +0.071~+0.079，仍然不交权。所以这里只慢慢学掉它的**偏置**：
+        // 静稳期内 v_ref' = -k_i*v，收敛点恰是 v_ref = 4*(ωr+Rṙ) ⇒ v→0，
+        // 而快时间尺度上的 ωr 反馈原样保留。k_i=1.0 /s、限幅 ±0.60 m/s、
+        // 退出静稳区后以 1.0 m/s/s 归零，均为试验/调参值。
+        if (capture_anchor_active_)
+            velocity_reference = capture_v_ref_;
         capture_world_target_ = bbot_jump::centroidal_catch_target(
             capture_com_velocity_, centroidal_balance_.forward, centroidal_balance_.height,
-            shank_rate, kinematics_.get_params().wheel_radius, 5.0,
-            effort_jump_preparation() ? target_speed_smoothed_ : (current_state_ == bbot_jump::STATE_RECOVERY && recovery_ready_ ? recovery_drive_ref_ : 0.0));
+            shank_rate, kinematics_.get_params().wheel_radius, 5.0, velocity_reference);
         capture_world_active_ = true;
         return capture_world_target_;
+    }
+
+    // 门限取 CATCH 释放条件里的姿态子集（0.10 rad / 0.35 rad/s），故意不含速度项：
+    // 本门只负责"姿态已经安静"，绝不能因为比释放更严而挡住交权。
+    // FLIGHT/TUCK 不启用——空中轮律没有滚动约束，那条路径是 17/17 验收的原样。
+    bool capture_creep_anchor_ready() const
+    {
+        if (!centroidal_balance_.valid)
+            return false;
+        if (current_state_ != bbot_jump::STATE_TOUCHDOWN_BUFFER &&
+            current_state_ != bbot_jump::STATE_RECOVERY)
+            return false;
+        return std::abs(ground_balance_angle()) < 0.10 &&
+               std::abs(ground_balance_rate()) < 0.35;
+    }
+
+    // 每个控制周期在状态分支之前调用一次：先判门，再更新积分参考速度。
+    void update_capture_velocity_reference(double dt)
+    {
+        const bool anchor_on = capture_creep_anchor_ready() && capture_world_valid_;
+        if (anchor_on != capture_creep_anchor_latched_)
+        {
+            capture_creep_anchor_latched_ = anchor_on;
+            RCLCPP_INFO(this->get_logger(),
+                        "[CAPTURE_ANCHOR-B v6.31] %s state=%d com_lean=%.3f com_rate=%.3f r=%.4f "
+                        "v_com=%.3f v_ref=%.3f",
+                        anchor_on ? "ON" : "OFF", static_cast<int>(current_state_),
+                        ground_balance_angle(), ground_balance_rate(),
+                        centroidal_balance_.forward, capture_com_velocity_, capture_v_ref_);
+        }
+        capture_anchor_active_ = anchor_on;
+        double step_dt = dt;
+        if (!std::isfinite(step_dt) || step_dt <= 0.0 || step_dt > 0.05)
+            step_dt = 0.010;
+        if (anchor_on)
+        {
+            capture_v_ref_ = bbot_jump::clamp_value(
+                capture_v_ref_ - 1.0 * capture_com_velocity_ * step_dt, -0.60, 0.60);
+        }
+        else
+        {
+            const double release = 1.0 * step_dt;
+            capture_v_ref_ += bbot_jump::clamp_value(-capture_v_ref_, -release, release);
+        }
     }
 
     double ground_balance_angle() const
@@ -4310,6 +4409,21 @@ private:
         position_error = bbot_jump::deadband(position_error, 0.02);
         cmd_target += 0.35 * position_error;
 
+        wheel_pitch_err_diag_ = pitch_err;
+        wheel_balance_rate_diag_ = balance_rate;
+        wheel_k_theta_diag_ = current_gain_.k_theta;
+        wheel_k_theta_dot_diag_ = current_gain_.k_theta_dot;
+        wheel_control_height_diag_ = current_height_;
+        wheel_p_term_diag_ = p_term;
+        wheel_d_term_diag_ = d_term;
+        wheel_attitude_cmd_diag_ = attitude_cmd;
+        wheel_vel_error_diag_ = velocity_error;
+        wheel_vel_term_diag_ = 0.85 * velocity_error;
+        wheel_raw_pos_err_diag_ = raw_position_error;
+        wheel_pos_error_diag_ = position_error;
+        wheel_pos_term_diag_ = 0.35 * position_error;
+        wheel_cmd_raw_diag_ = cmd_target;
+
         // V17/V19：微捕获必须前后对称，但不能把“当前速度+余量”作为
         // 常驻轮速目标。那会把姿态传感器的小振荡整流成持续行走；capture
         // 只用于平滑放宽对应方向的饱和上限，真正失稳仍由 CATCH 处理。
@@ -4330,6 +4444,7 @@ private:
             min_forward_cmd = -bbot_jump::clamp_value(
                 0.75 + 1.75 * capture_guard, 0.75, 1.10);
         }
+
         // 超过回中范围后，只有明确进入倒下相平面才允许继续远离目标点。
         if (raw_position_error > 0.75 && capture_state < 0.12)
         {
@@ -4339,8 +4454,13 @@ private:
         {
             cmd_target = std::min(cmd_target, 0.0);
         }
-        return landing_capture_target(bbot_jump::clamp_value(
-            cmd_target, min_forward_cmd, max_backward_cmd));
+        wheel_cmd_pre_clamp_diag_ = cmd_target;
+        wheel_min_fwd_cmd_diag_ = min_forward_cmd;
+        wheel_max_bwd_cmd_diag_ = max_backward_cmd;
+        const double final_cmd_target = bbot_jump::clamp_value(
+            cmd_target, min_forward_cmd, max_backward_cmd);
+        wheel_cmd_target_diag_ = final_cmd_target;
+        return final_cmd_target;
     }
 
     // ── 阶段 4：触地缓冲阻抗控制 (TOUCHDOWN_BUFFER) ──
@@ -4349,7 +4469,7 @@ private:
         if (!effort_mode_active_)
         {
             request_effort_controller();
-            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(base_link_height(L_TOUCH_), 0.0);
+            bbot_kinematics::IKSolution ik_hold = kinematics_.inverse_kinematics(L_TOUCH_, 0.0);
             publish_position_leg_control(ik_hold.theta_hip, ik_hold.theta_knee);
             return;
         }
@@ -4361,12 +4481,26 @@ private:
             // 触地第一帧直接按下落速度预充阻尼支撑力；从静态重力起步会
             // 让高速下落的腿先压缩一段行程才开始承重。
             const double mass_per_leg = TOTAL_MASS_ * 0.5;
+            // 缓冲高度参考的起点。折叠式落地构型下机身触地时只有约 0.26 m，
+            // 直接以展腿参考 L_TOUCH_=0.50 起步会让第一帧请求 197 N/腿
+            // （体重仅 86 N/腿），实测把机身以 +1.0~1.2 m/s 重新弹离地面，
+            // 二次落地必然后倒。锚点取"触地实测高度"并夹在沉降带内。
+            touchdown_height_ = current_z_;
+            const auto buffer_profile = bbot_jump::landing_buffer_profile(
+                touchdown_height_, L_BUFFER_SETTLE_, L_STAND_);
+            touchdown_buffer_target_height_ = buffer_profile.target_height;
+            touchdown_buffer_settle_duration_ = buffer_profile.duration;
+            const double buffer_anchor_height = bbot_jump::clamp_value(
+                touchdown_height_, touchdown_buffer_target_height_, L_TOUCH_);
             const double preload_force = mass_per_leg * 9.81 +
-                                         K_Z_BUFFER_ * (L_TOUCH_ - current_z_) - D_Z_BUFFER_ * current_z_dot_;
+                                         K_Z_BUFFER_ * (buffer_anchor_height - current_z_) -
+                                         D_Z_BUFFER_ * current_z_dot_;
             const double min_force = 0.25 * mass_per_leg * 9.81;
             buffer_force_per_leg_ = bbot_jump::clamp_value(
                 preload_force, min_force, F_Z_BUFFER_MAX_);
             touchdown_catch_active_ = true;
+            touchdown_reverse_brake_active_ = false;
+            touchdown_reverse_brake_consumed_ = false;
             touchdown_catch_stable_count_ = 0;
             touchdown_catch_stable_time_ = 0.0;
             touchdown_settle_start_time_ = -1.0;
@@ -4386,14 +4520,52 @@ private:
         }
         double elapsed = now_sec - state_start_time_;
 
+        // +fall-guard-v6.27：缓冲段一旦俯仰越出可恢复范围就切断轮驱并退出状态机。
+        // 实测 B 型后倒是单调过程：站住样本触地后 1.5s 内 max|pitch| 只有
+        // 0.21~0.42 rad，摔倒样本全部越过 0.60（越过时刻 0.89~1.47s），此后姿态
+        // 不再回来，而捕获律继续以 12~23 rad/s 驱动轮子把整机拖行 15~18m
+        // （v626_roll_t2：x 从 +3.39 退到 -14.65，并在 TOUCHDOWN_BUFFER 停驻 14.7s）。
+        // 此时的追速需求已无解，轮驱只剩"把机器人往回拽"这一个作用。
+        // 0.60 rad / 0.15 s 为试验/调参值：夹在上面两组实测值之间。
+        constexpr double k_landing_fall_pitch = 0.60;
+        constexpr double k_landing_fall_hold = 0.15;
+        if (bbot_jump::landing_pitch_unrecoverable(
+                pitch_, pitch_rate_, k_landing_fall_pitch, 0.90))
+        {
+            if (landing_fall_start_time_ < 0.0)
+                landing_fall_start_time_ = now_sec;
+        }
+        else
+        {
+            landing_fall_start_time_ = -1.0;
+        }
+        if (landing_fall_start_time_ >= 0.0 &&
+            now_sec - landing_fall_start_time_ >= k_landing_fall_hold)
+        {
+            RCLCPP_WARN(this->get_logger(),
+                        "[落地终止] 触地后 %.2fs 俯仰 %.3f rad 越过 %.2f 且继续外倒 %.2fs，"
+                        "判定不可恢复：轮速清零并退出跳跃状态机 (x=%.2f, vx=%.2f, wl=%.1f)",
+                        elapsed, pitch_, k_landing_fall_pitch,
+                        now_sec - landing_fall_start_time_, x_, x_dot_, left_wheel_vel_);
+            jump_failure_reason_ = "landing_unrecoverable_pitch";
+            write_jump_summary(false, jump_failure_reason_);
+            publish_wheel_cmd(0.0, 0.0);
+            current_state_ = bbot_jump::STATE_EMERGENCY;
+            state_start_time_ = now_sec;
+            return;
+        }
+
         // 1. 任务空间阻抗计算
-        // 初触地保留展腿高度来吸收冲击，然后在 0.18 s 内下沉到
-        // 稳定缓冲高度。旧逻辑始终追踪 L_TOUCH_，会在首次压缩后将
-        // 机体重新弹回 0.42 m，放大俯仰反向超调。
-        const double settle_ratio = bbot_jump::clamp_value(elapsed / 0.18, 0.0, 1.0);
+        // 初触地保留展腿高度来吸收冲击。长腿 wheel-first 构型只执行
+        // 有限压缩，且按行程限制目标高度的变化率；旧 0.18 s 直接压到
+        // 0.34 m 会让髋、膝目标各翻转超过 1 rad，并把 COM 甩到轮轴后方。
+        const double settle_ratio = bbot_jump::clamp_value(
+            elapsed / touchdown_buffer_settle_duration_, 0.0, 1.0);
         const double smooth_settle = settle_ratio * settle_ratio * (3.0 - 2.0 * settle_ratio);
         const double buffer_height_target = bbot_jump::lerp(
-            L_TOUCH_, L_BUFFER_SETTLE_, smooth_settle);
+            bbot_jump::clamp_value(
+                touchdown_height_, touchdown_buffer_target_height_, L_TOUCH_),
+            touchdown_buffer_target_height_, smooth_settle);
         double z_err = buffer_height_target - current_z_;
         double m_single_leg = TOTAL_MASS_ * 0.5;
         double F_z_target = K_Z_BUFFER_ * z_err - D_Z_BUFFER_ * current_z_dot_ +
@@ -4413,24 +4585,27 @@ private:
         double pitch_err = pitch_ - balance_offset_;
 
         // 关节构型保持与吸能阻尼：追踪预定缓冲高度轨迹，禁止随实测下沉动态塌陷
-        const double ik_z_buf = bbot_jump::clamp_value(buffer_height_target, L_BUFFER_SETTLE_, L_TOUCH_);
+        const double ik_z_buf = bbot_jump::clamp_value(
+            buffer_height_target, touchdown_buffer_target_height_, L_TOUCH_);
         // 触地后的最初缓冲阶段继续保持腿在世界系近似竖直，防止一旦
         // 存在俯仰误差，IK 又把膝盖向地面方向折回去。
         const double buffer_pitch_comp = bbot_jump::clamp_value(
-            pitch_err, -0.30, 0.30);
+            pitch_err, -0.15, 0.15);
         bbot_kinematics::IKSolution ik_buf =
-            kinematics_.inverse_kinematics(base_link_height(ik_z_buf), buffer_pitch_comp);
+            kinematics_.inverse_kinematics(ik_z_buf, buffer_pitch_comp);
         // 触地瞬间保持空中末帧构型，随后再把 IK 参考平滑交接给缓冲控制。
         // 位置目标和速度目标都连续，避免髋关节为追赶新的 IK 反向猛甩。
         const double handoff_elapsed = std::max(
             0.0, now_sec - touchdown_joint_handoff_start_time_);
+        const double active_handoff_duration = std::max(
+            landing_joint_handoff_duration_, touchdown_buffer_settle_duration_);
         const double handoff_ratio = bbot_jump::clamp_value(
-            handoff_elapsed / landing_joint_handoff_duration_, 0.0, 1.0);
+            handoff_elapsed / active_handoff_duration, 0.0, 1.0);
         const double handoff_smooth = handoff_ratio * handoff_ratio *
                                       (3.0 - 2.0 * handoff_ratio);
         const double handoff_smooth_dot =
             (handoff_ratio > 0.0 && handoff_ratio < 1.0) ? 6.0 * handoff_ratio * (1.0 - handoff_ratio) /
-                                                               landing_joint_handoff_duration_
+                                                               active_handoff_duration
                                                          : 0.0;
         const double hip_left_cmd = bbot_jump::lerp(
             touchdown_hip_left_start_, ik_buf.theta_hip, handoff_smooth);
@@ -4452,10 +4627,8 @@ private:
         const double knee_right_vel_cmd = bbot_jump::clamp_value(
             (ik_buf.theta_knee - touchdown_knee_right_start_) * handoff_smooth_dot,
             -5.0, 5.0);
-        double tau_body_per_hip = -0.5 * (K_BODY_P_BUFFER_ * pitch_err +
-                                          K_BODY_D_BUFFER_ * pitch_rate_);
-        tau_body_per_hip = bbot_jump::clamp_value(tau_body_per_hip,
-                                                  -TAU_HIP_BODY_MAX_, TAU_HIP_BODY_MAX_);
+        double tau_body_per_hip = bbot_jump::touchdown_torso_pitch_torque(
+            pitch_err, pitch_rate_, K_BODY_P_BUFFER_, K_BODY_D_BUFFER_, TAU_HIP_BODY_MAX_);
         // 髋关节垂直支撑力矩：保持完整的几何雅可比力矩映射，平衡膝关节对大腿的反作用力矩
         double tau_hip_support = F_z_base * 0.5 * (jh_left + jh_right);
         const double tau_hip = tau_hip_support + tau_body_per_hip;
@@ -4494,6 +4667,7 @@ private:
                                             balance_angle, balance_rate, pitch_capture_state))
         {
             touchdown_catch_active_ = true;
+            touchdown_reverse_brake_active_ = false;
             touchdown_catch_stable_count_ = 0;
             touchdown_catch_stable_time_ = 0.0;
             touchdown_brake_active_ = false;
@@ -4516,6 +4690,7 @@ private:
             if (touchdown_catch_stable_time_ >= 0.12)
             {
                 touchdown_catch_active_ = false;
+                touchdown_reverse_brake_active_ = false;
                 touchdown_catch_stable_count_ = 0;
                 touchdown_catch_stable_time_ = 0.0;
                 touchdown_settle_start_time_ = now_sec;
@@ -4607,6 +4782,44 @@ private:
                 bbot_jump::touchdown_catch_limit(touchdown_catch_pitch_err, balance_rate, capture_height));
             cmd_target = landing_capture_target(cmd_target);
             cmd_accel_limit = 8.0;
+
+            if (!touchdown_reverse_brake_active_ &&
+                !touchdown_reverse_brake_consumed_ && capture_world_valid_ &&
+                bbot_jump::touchdown_reverse_brake_ready(
+                    capture_com_velocity_, x_dot_, pitch_capture_state, balance_angle, balance_rate))
+            {
+                touchdown_reverse_brake_active_ = true;
+                touchdown_reverse_brake_consumed_ = true;
+                RCLCPP_INFO(this->get_logger(),
+                            "[TOUCHDOWN_REVERSE_BRAKE] support crossed zero while COM recovered "
+                            "(v_com=%.3f xdot=%.3f capture=%.3f angle=%.3f rate=%.3f)",
+                            capture_com_velocity_, x_dot_, pitch_capture_state, balance_angle, balance_rate);
+            }
+            // If the torso clearly resumes falling backward, hand authority
+            // straight back to the full centroidal capture law.
+            const double com_obs_age = now_sec - centroidal_world_.stamp();
+            const bool capture_diverged = bbot_jump::reverse_brake_capture_diverged(
+                capture_world_valid_, com_obs_age, pitch_capture_state, -0.16, 0.080);
+            if (touchdown_reverse_brake_active_ &&
+                (bbot_jump::landing_pitch_unrecoverable(pitch_, pitch_rate_, 0.22, 0.65) ||
+                 capture_diverged))
+            {
+                touchdown_reverse_brake_active_ = false;
+                RCLCPP_WARN(this->get_logger(),
+                            "[TOUCHDOWN_RECAPTURE] reverse brake released (%s) "
+                            "(pitch=%.3f rate=%.3f capture=%.3f age=%.3fs)",
+                            capture_diverged ? "capture_diverged" : "diverging_torso",
+                            pitch_, pitch_rate_, pitch_capture_state, com_obs_age);
+            }
+            if (touchdown_reverse_brake_active_)
+            {
+                wheel_phase_name = "REVERSE_BRAKE";
+                // Positive command produces negative support velocity, so a
+                // command with the same sign as xdot is viscous braking here.
+                cmd_target = bbot_jump::clamp_value(
+                    0.90 * bbot_jump::deadband(x_dot_, 0.03), -0.80, 0.80);
+                cmd_accel_limit = 12.0;
+            }
         }
         else if (!touchdown_brake_active_)
         {
@@ -4635,6 +4848,7 @@ private:
             // 彻底删除 support_shift_cmd = backward_speed + 0.05 恶化项，采用统一阻尼控制律
             cmd_target = attitude_cmd + 1.20 * bbot_jump::deadband(x_dot_, 0.03);
             cmd_target = bbot_jump::clamp_value(cmd_target, -0.80, 0.80);
+            cmd_target = landing_capture_target(cmd_target);
             cmd_accel_limit = 8.0;
         }
         else
@@ -4652,8 +4866,8 @@ private:
 
             const bool post_brake_hold =
                 touchdown_brake_cmd_ref_ < 0.06 &&
-                pitch_capture_state > -0.02 &&
-                balance_rate > -0.20;
+                balance_rate > -0.20 &&
+                (pitch_capture_state > -0.06 || std::abs(balance_angle) < 0.05);
 
             if (post_brake_hold)
             {
@@ -4704,14 +4918,12 @@ private:
 
                 cmd_target = touchdown_brake_cmd_ref_ + attitude_cmd + 0.85 * velocity_error;
                 cmd_target = bbot_jump::clamp_value(cmd_target, -0.60, 1.50);
+                cmd_target = landing_capture_target(cmd_target);
                 cmd_accel_limit = 12.0;
             }
         }
 
-        // v6.11: PREPARE/BRAKE/HOLD must not disable the successful COM
-        // feedback. Phase bookkeeping only changes readiness, not this law.
-        cmd_target = landing_capture_target(cmd_target);
-        if (capture_world_active_)
+        if (capture_world_active_ && !touchdown_reverse_brake_active_)
             cmd_accel_limit = 8.0;
         const double max_cmd_step = cmd_accel_limit * std::max(dt, 0.001);
         const double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
@@ -4751,7 +4963,18 @@ private:
         // 角度/角速度分别落在阈值内仍可能处于单调后倒轨迹；V15 切换时
         // pitch=0.010、gyro=-0.154 看似合格，但 capture≈-0.050 且
         // wheel cmd=+0.153，实际尚未静稳。
-        const bool capture_settled = std::abs(pitch_capture_state) < 0.030;
+        // V6.32：V15 的 |capture|<0.030 是地形参数而非稳定判据。capture 的零点是
+        // 重心—轮轴连线相对重力线的夹角，稳态值随支撑面整体平移（实测 5° 坡 -0.021、
+        // 低高度坡 -0.028、平地 -0.0381），平地因此永远交不了权（v631bflatC/D 6/6
+        // 卡满 19.7 s，而其余六项门限都已 ≥93% 通过）。这里改用缓冲段自己宣布捕获完成
+        // 的同一判据（0.12/0.10/0.35，与 CATCH 释放、capture_creep_anchor_ready 一致）。
+        // 129 条归档日志离线复算：与旧的绝对门限相比，坡道验收批次交权时刻不变
+        // （1 kg 7/7 完全相同），平地 6/6 变为 1.80~2.22 s 交权；所有归档翻倒/蠕行
+        // 样本（v611_bufanchor、v625_antitow、v627_fall、v628_sup、v628pl1kg、
+        // v630flatB 蠕行）在新门限下仍然一项都不通过——挡住它们的是轮速与轮命令，
+        // 从来不是这个姿态幅值。
+        const bool capture_settled = bbot_jump::touchdown_capture_settled(
+            balance_angle, balance_rate, pitch_capture_state);
         const bool wheel_command_settled = std::abs(cmd_x) < 0.10;
         const bool brake_finished = !touchdown_catch_active_ &&
                                     touchdown_brake_active_ &&
@@ -4782,9 +5005,6 @@ private:
                 elapsed, safe_timeout_exit ? 1 : 0);
 
             current_state_ = bbot_jump::STATE_RECOVERY;
-            recovery_ready_ = false;
-            recovery_drive_ref_ = recovery_yaw_ref_ = 0.0;
-            target_speed_const_ = target_yaw_rate_ = 0.0;
             state_start_time_ = now_sec;
             recovery_x_ref_ = touchdown_x_ref_;
             target_x_ = touchdown_x_ref_;
@@ -4794,7 +5014,7 @@ private:
             height_force_per_leg_ = buffer_force_per_leg_;
             height_force_initialized_ = true;
             target_height_ = L_STAND_;
-            recovery_hold_height_ = L_BUFFER_SETTLE_;
+            recovery_hold_height_ = touchdown_buffer_target_height_;
             recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_RAISE;
             recovery_follow_height_ik_ = false;
             fail_recovery_stable_timer_ = 0.0;
@@ -4809,7 +5029,7 @@ private:
             recovery_descent_started_ = true;
 
             const auto ik_safe = kinematics_.inverse_kinematics(
-                base_link_height(recovery_hold_height_), 0.0);
+                recovery_hold_height_, 0.0);
             recovery_hip_reference_ = ik_safe.theta_hip;
             RCLCPP_INFO(
                 this->get_logger(),
@@ -4843,7 +5063,7 @@ private:
         height_force_initialized_ = true;
         recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_STABILIZE;
         recovery_follow_height_ik_ = false;
-        recovery_hip_reference_ = kinematics_.inverse_kinematics(base_link_height(L_STAND_), 0.0).theta_hip;
+        recovery_hip_reference_ = kinematics_.inverse_kinematics(L_STAND_, 0.0).theta_hip;
         recovery_stable_timer_ = 0.0;
         position_handoff_suppressed_for_jump_ = true;
         controller_mode_str_ = "EFFORT";
@@ -4864,14 +5084,6 @@ private:
         interpolate_lqr_gain();
         const double pos_error = bbot_jump::clamp_value(x_ - touchdown_x_ref_, -0.30, 0.30);
 
-        // Only the settled, user-operable recovery phase accepts travel.
-        // A zero reference is exactly v6.11 hold, with unchanged hip/knee control.
-        recovery_drive_ref_ = bbot_jump::ground_drive_reference(recovery_drive_ref_,
-                                                                recovery_ready_ && capture_world_valid_ ? target_speed_const_ : 0.0,
-                                                                dt, walk_speed_, 1.0 / speed_ramp_time_);
-        recovery_yaw_ref_ = bbot_jump::ground_drive_reference(recovery_yaw_ref_,
-                                                              recovery_ready_ && capture_world_valid_ ? target_yaw_rate_ : 0.0,
-                                                              dt, turn_speed_, 1.0 / speed_ramp_time_);
         // 统一轮速控制律
         double recovery_p_term = 0.0;
         double recovery_d_term = 0.0;
@@ -4885,7 +5097,7 @@ private:
         const double max_cmd_step = max_cmd_accel * std::max(dt, 0.001);
         double cmd_x = last_wheel_cmd_x_ + bbot_jump::clamp_value(
                                                cmd_target - last_wheel_cmd_x_, -max_cmd_step, max_cmd_step);
-        publish_wheel_cmd(cmd_x, recovery_yaw_ref_);
+        publish_wheel_cmd(cmd_x, 0.0);
 
         touchdown_phase_diag_ = bbot_jump::recovery_subphase_to_string(recovery_subphase_);
         touchdown_capture_diag_ = recovery_capture_state;
@@ -4914,7 +5126,7 @@ private:
             // 失败缩腿必须让髋、膝一起跟随完整 IK。旧 RECOVERY 会固定 hip target，
             // 那正是“腿看起来一直顶得很长”的一个附加原因。
             recovery_follow_height_ik_ = true;
-            const auto ik_fail = kinematics_.inverse_kinematics(base_link_height(des_z), 0.0);
+            const auto ik_fail = kinematics_.inverse_kinematics(des_z, 0.0);
             recovery_hip_reference_ = ik_fail.theta_hip;
             support_force_total = publish_effort_height_control(
                 des_z, des_v,
@@ -4932,7 +5144,7 @@ private:
                 recovery_hold_height_ = failed_thrust_crouch_height_;
                 current_height_ = failed_thrust_crouch_height_;
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         base_link_height(failed_thrust_crouch_height_), 0.0)
+                                                         failed_thrust_crouch_height_, 0.0)
                                               .theta_hip;
                 RCLCPP_INFO(this->get_logger(),
                             ">>> [FAIL_RECOVERY] 已缩腿到 %.3fm，先在低位稳定姿态再重新站起 <<<",
@@ -4951,7 +5163,7 @@ private:
             current_height_ = failed_thrust_crouch_height_;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     base_link_height(failed_thrust_crouch_height_), 0.0)
+                                                     failed_thrust_crouch_height_, 0.0)
                                           .theta_hip;
             support_force_total = publish_effort_height_control(
                 failed_thrust_crouch_height_, 0.0,
@@ -5005,7 +5217,7 @@ private:
             if (recovery_follow_height_ik_)
             {
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         base_link_height(des_z), 0.0)
+                                                         des_z, 0.0)
                                               .theta_hip;
             }
 
@@ -5021,7 +5233,7 @@ private:
                             ">>> [RECOVERY] EFFORT_RAISE 完成，进入 EFFORT_STABILIZE 稳态检测 <<<");
                 recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_STABILIZE;
                 recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                         base_link_height(L_STAND_), 0.0)
+                                                         L_STAND_, 0.0)
                                               .theta_hip;
                 recovery_follow_height_ik_ = false;
                 recovery_stable_timer_ = 0.0;
@@ -5061,34 +5273,18 @@ private:
 
             if (recovery_stable_timer_ >= 0.50)
             {
-                // Keep the validated support and wheel law after settling.
-                // Position handoff remains debug code, never an automatic
-                // consequence of a short quiet interval (agents.md §4/14).
-                constexpr bool kHoldRecoveryAfterJump = true;
-                if (kHoldRecoveryAfterJump)
-                {
-                    if (!recovery_ready_)
-                    {
-                        recovery_ready_ = true;
-                        RCLCPP_INFO(this->get_logger(),
-                                    "[READY v6.12] Effort就绪：W/S行驶，A/D转向，空格停车，停车后J再次跳跃");
-                    }
-                    recovery_stable_timer_ = 0.50;
-                    write_jump_summary(true, "");
-                    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                                         "[COM_HOLD v6.12] 持续Effort恢复: lean=%.4f vCOM=%.4f cmd=%.4f",
-                                         ground_balance_angle(), capture_com_velocity_, cmd_x);
-                    break;
-                }
-                if (!enable_position_handoff_ || position_handoff_suppressed_for_jump_)
+                if (auto_return_balance_ || !enable_position_handoff_ || position_handoff_suppressed_for_jump_)
                 {
                     RCLCPP_INFO(this->get_logger(),
-                                ">>> [RECOVERY] 静稳达标，未启用 Position 交接，直接切入 Effort BALANCE <<<");
-                    write_jump_summary(true, "");
+                                ">>> [RECOVERY] 连续静稳 0.50s，平滑切入 Effort BALANCE <<<");
                     current_state_ = bbot_jump::STATE_BALANCE;
                     balance_entry_time_ = now_sec;
+                    target_x_ = x_; // 同步位置参考，消除跳后位置大偏差
+                    target_speed_const_ = 0.0;
+                    target_speed_smoothed_ = 0.0;
                     post_landing_balance_soft_start_ = true;
                     post_landing_effort_support_ = true;
+                    post_jump_balance_stable_timer_ = 0.0;
                     return;
                 }
                 else
@@ -5195,7 +5391,7 @@ private:
             position_hold_timer_ += dt;
             if (position_hold_timer_ >= 0.25)
             {
-                auto ik_stand = kinematics_.inverse_kinematics(base_link_height(L_STAND_), 0.0);
+                auto ik_stand = kinematics_.inverse_kinematics(L_STAND_, 0.0);
                 traj_return_hip_l_.init(now_sec, 0.80, latched_pos_hip_left_, 0.0, 0.0, ik_stand.theta_hip, 0.0, 0.0);
                 traj_return_knee_l_.init(now_sec, 0.80, latched_pos_knee_left_, 0.0, 0.0, ik_stand.theta_knee, 0.0, 0.0);
                 traj_return_hip_r_.init(now_sec, 0.80, latched_pos_hip_right_, 0.0, 0.0, ik_stand.theta_hip, 0.0, 0.0);
@@ -5282,7 +5478,7 @@ private:
             current_z_, current_z_dot_, pitch_, pitch_err, pitch_rate_,
             x_dot_, pos_error, cmd_x, controller_mode_str_.c_str());
 
-        auto ik_log = kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
+        auto ik_log = kinematics_.inverse_kinematics(current_height_, 0.0);
         bbot_kinematics::JointTorques g_torques = kinematics_.compute_gravity_torques(
             0.0, ik_log.theta_hip, ik_log.theta_knee);
         log_data(cmd_x, g_torques.hip_torque * 0.5, g_torques.knee_torque * 0.5,
@@ -5293,7 +5489,7 @@ private:
     void run_state_standup()
     {
         bbot_kinematics::IKSolution ik_stand =
-            kinematics_.inverse_kinematics(base_link_height(L_MIN_), 0.0);
+            kinematics_.inverse_kinematics(L_MIN_, 0.0);
         if (effort_mode_active_)
         {
             publish_effort_leg_control(ik_stand.theta_hip, ik_stand.theta_knee, 0.0, 0.0,
@@ -5330,8 +5526,6 @@ private:
                      "[跳跃保护] %s (z=%.3f m, grounded_thrust=%d)，中止推地并进入恢复",
                      reason, current_z_, grounded_thrust_abort ? 1 : 0);
         current_state_ = bbot_jump::STATE_RECOVERY;
-        recovery_ready_ = false;
-        recovery_drive_ref_ = recovery_yaw_ref_ = 0.0;
         state_start_time_ = now_sec;
         target_speed_const_ = 0.0;
         target_speed_smoothed_ = 0.0;
@@ -5353,7 +5547,7 @@ private:
             // v6.0：轮子仍接地时，长腿是最差的失败恢复构型。先缩到约0.38m，
             // 降低质心并增加膝盖弯曲，再等待姿态变缓；之后才重新站回0.50m。
             const double safe_start_height = bbot_jump::clamp_value(
-                current_z_, L_SQUAT_, L_STAND_);
+                current_z_, L_SQUAT_, 0.70);
             // 失败恢复不允许目标轨迹继续向上伸长；若当前仍在上升，
             // 从 0 期望速度开始平滑缩腿，若已经下降则保留有限负速度连续性。
             const double safe_start_v = bbot_jump::clamp_value(
@@ -5362,7 +5556,7 @@ private:
             current_height_ = safe_start_height;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     base_link_height(safe_start_height), 0.0)
+                                                     safe_start_height, 0.0)
                                           .theta_hip;
             recovery_subphase_ = bbot_jump::RECOVERY_FAIL_CROUCH;
             quintic_traj_.init(
@@ -5384,7 +5578,7 @@ private:
             current_height_ = safe_start_height;
             recovery_follow_height_ik_ = true;
             recovery_hip_reference_ = kinematics_.inverse_kinematics(
-                                                     base_link_height(safe_start_height), 0.0)
+                                                     safe_start_height, 0.0)
                                           .theta_hip;
             recovery_subphase_ = bbot_jump::RECOVERY_EFFORT_RAISE;
             quintic_traj_.init(now_sec, 0.45, safe_start_height, 0.0, 0.0,
@@ -5415,14 +5609,6 @@ private:
         flight_extend_plan_check_ = -1;
         flight_round_trip_plan_ = {};
         protective_deploy_start_time_ = now_sec;
-        protective_attitude_seen_stable_ = false;
-        protective_attitude_brake_active_ = false;
-        protective_attitude_brake_start_time_ = 0.0;
-        protective_attitude_brake_duration_active_ = 0.0;
-        protective_attitude_brake_plan_check_ = -1;
-        protective_landing_progress_ = 0.0;
-        protective_landing_joint_alpha_ = 0.0;
-        protective_landing_com_end_ = 0.0;
         protective_landing_ = true;
         touchdown_knee_effort_count_ = 0;
         // 推地阶段已经在 effort 模式。此处若切到 Position，FLIGHT 的预展腿逻辑
@@ -5444,10 +5630,8 @@ private:
         double tau_hip = f_hold * 0.5 * (jh_left + jh_right);
         double tau_knee = f_hold * 0.5 * (jk_left + jk_right);
         const double pitch_err = pitch_ - balance_offset_;
-        double tau_body_per_hip = -0.5 * (K_BODY_P_BUFFER_ * pitch_err +
-                                          K_BODY_D_BUFFER_ * pitch_rate_);
-        tau_body_per_hip = bbot_jump::clamp_value(tau_body_per_hip,
-                                                  -TAU_HIP_BODY_MAX_, TAU_HIP_BODY_MAX_);
+        double tau_body_per_hip = bbot_jump::touchdown_torso_pitch_torque(
+            pitch_err, pitch_rate_, K_BODY_P_BUFFER_, K_BODY_D_BUFFER_, TAU_HIP_BODY_MAX_);
         tau_hip += tau_body_per_hip;
 
         // 预加载只建立承重前馈；位置参考保持当前实测构型，避免 effort
@@ -5545,7 +5729,7 @@ private:
             tau_hip_r += tau_body_per_hip;
         }
 
-        const auto ik = kinematics_.inverse_kinematics(base_link_height(z_des), 0.0);
+        const auto ik = kinematics_.inverse_kinematics(z_des, 0.0);
         const double hip_position_target =
             (current_state_ == bbot_jump::STATE_RECOVERY && !recovery_follow_height_ik_) ? recovery_hip_reference_ : ik.theta_hip;
         publish_effort_leg_control_lr(hip_position_target, ik.theta_knee, 0.0, 0.0,
@@ -5588,7 +5772,7 @@ private:
         double tau_hip_r = force_per_leg * jh_right;
         double tau_knee_r = force_per_leg * jk_right;
 
-        const auto ik = kinematics_.inverse_kinematics(base_link_height(z_des), 0.0);
+        const auto ik = kinematics_.inverse_kinematics(z_des, 0.0);
 
         // 零空间构型保持 (Jz * n = 0)
         constexpr double kNullspaceKp = 10.0;
@@ -5672,12 +5856,14 @@ private:
         current_height_ = bbot_jump::clamp_value(current_height_, L_MIN_, L_MAX_);
     }
 
-    void publish_wheel_cmd(double linear_x, double angular_z)
+    void publish_wheel_cmd(double linear_x, double angular_z, bool zero_wheel_effort = false)
     {
         last_wheel_cmd_x_ = linear_x;
         geometry_msgs::msg::TwistStamped cmd;
         cmd.header.stamp = this->now();
-        cmd.header.frame_id = "base_link";
+        // Atomic with this target; only the opt-in effort servo consumes the marker.
+        // Default velocity-mode commands retain the normal base_link frame.
+        cmd.header.frame_id = zero_wheel_effort ? "base_link__zero_wheel_effort" : "base_link";
         cmd.twist.linear.x = linear_x;
         cmd.twist.angular.z = angular_z;
         cmd_pub_->publish(cmd);
@@ -5692,13 +5878,37 @@ private:
     void publish_position_leg_control_lr(double q_hip_left, double q_knee_left,
                                          double q_hip_right, double q_knee_right)
     {
-        hip_pos_cmd_left_ = q_hip_left;
-        knee_pos_cmd_left_ = q_knee_left;
-        hip_pos_cmd_right_ = q_hip_right;
-        knee_pos_cmd_right_ = q_knee_right;
+        if (!pos_cmd_init_)
+        {
+            // 首次发布时从实际测量关节位置平滑起步，杜绝开机阶跃“踹地”
+            last_q_hip_cmd_left_ = hip_pos_left_;
+            last_q_knee_cmd_left_ = knee_pos_left_;
+            last_q_hip_cmd_right_ = hip_pos_right_;
+            last_q_knee_cmd_right_ = knee_pos_right_;
+            pos_cmd_init_ = true;
+        }
+
+        constexpr double kMaxJointSlewRate = 2.0; // rad/s 最大斜坡变化率
+        constexpr double dt = 0.005;
+        const double max_step = kMaxJointSlewRate * dt;
+
+        hip_pos_cmd_left_ = last_q_hip_cmd_left_ + bbot_jump::clamp_value(
+                                                       q_hip_left - last_q_hip_cmd_left_, -max_step, max_step);
+        knee_pos_cmd_left_ = last_q_knee_cmd_left_ + bbot_jump::clamp_value(
+                                                         q_knee_left - last_q_knee_cmd_left_, -max_step, max_step);
+        hip_pos_cmd_right_ = last_q_hip_cmd_right_ + bbot_jump::clamp_value(
+                                                         q_hip_right - last_q_hip_cmd_right_, -max_step, max_step);
+        knee_pos_cmd_right_ = last_q_knee_cmd_right_ + bbot_jump::clamp_value(
+                                                           q_knee_right - last_q_knee_cmd_right_, -max_step, max_step);
+
+        last_q_hip_cmd_left_ = hip_pos_cmd_left_;
+        last_q_knee_cmd_left_ = knee_pos_cmd_left_;
+        last_q_hip_cmd_right_ = hip_pos_cmd_right_;
+        last_q_knee_cmd_right_ = knee_pos_cmd_right_;
 
         std_msgs::msg::Float64MultiArray leg_cmd;
-        leg_cmd.data = {q_hip_left, q_knee_left, q_hip_right, q_knee_right};
+        leg_cmd.data = {hip_pos_cmd_left_, knee_pos_cmd_left_,
+                        hip_pos_cmd_right_, knee_pos_cmd_right_};
         leg_pos_pub_->publish(leg_cmd);
     }
 
@@ -5785,7 +5995,6 @@ private:
         // v6.9：箱体姿态与腿部任务分配不同自由度。承重前馈只限速，
         // 关节阻尼保持离散求解；髋共同力矩不再进入自由腿惯量求解后被抵消。
         const bool ground_feedback =
-            effort_jump_preparation() ||
             current_state_ == bbot_jump::STATE_TOUCHDOWN_BUFFER ||
             current_state_ == bbot_jump::STATE_RECOVERY ||
             (current_state_ == bbot_jump::STATE_BALANCE && post_landing_effort_support_);
@@ -5833,18 +6042,29 @@ private:
                 2.0 * std::max(joint_sample_period_, torso_imu_.period()) +
                     std::max(sample_age, imu_age) + 0.010,
                 0.030, 0.080);
-            // 过期或无效加速度只退回静态重力补偿，不能继续用旧接触冲击。
-            const double fy = torso_imu_fresh_ ? torso_imu_.fy() : -9.81 * std::sin(pitch_);
-            const double fz = torso_imu_fresh_ ? torso_imu_.fz() : 9.81 * std::cos(pitch_);
-            torso_torque_ = bbot_jump::torso_pitch_torque(
-                pitch_, effort_jump_preparation() ? active_jump_pitch_ref_ : balance_offset_,
-                torso_control_rate_ - (effort_jump_preparation() ? active_jump_pitch_rate_ref_ : 0.0),
-                fy, fz, body_mass_,
-                K_BODY_P_BUFFER_, K_BODY_D_BUFFER_, torso_control_horizon_, TAU_HIP_BODY_MAX_);
-            last_tau_body_per_hip_ = torso_torque_.command;
+            if (current_state_ == bbot_jump::STATE_TOUCHDOWN_BUFFER ||
+                current_state_ == bbot_jump::STATE_RECOVERY)
+            {
+                const double pitch_err = pitch_ - balance_offset_;
+                torso_torque_.feedback = bbot_jump::touchdown_torso_pitch_torque(
+                    pitch_err, torso_control_rate_, K_BODY_P_BUFFER_, K_BODY_D_BUFFER_, TAU_HIP_BODY_MAX_);
+                torso_torque_.force_feedforward = 0.0;
+                torso_torque_.command = torso_torque_.feedback;
+            }
+            else
+            {
+                // 过期或无效加速度只退回静态重力补偿，不能继续用旧接触冲击。
+                const double fy = torso_imu_fresh_ ? torso_imu_.fy() : -9.81 * std::sin(pitch_);
+                const double fz = torso_imu_fresh_ ? torso_imu_.fz() : 9.81 * std::cos(pitch_);
+                torso_torque_ = bbot_jump::torso_pitch_torque(
+                    pitch_, balance_offset_, torso_control_rate_, fy, fz, body_mass_,
+                    K_BODY_P_BUFFER_, K_BODY_D_BUFFER_, torso_control_horizon_, TAU_HIP_BODY_MAX_);
+            }
+            double torso_request = torso_torque_.command;
+            last_tau_body_per_hip_ = torso_request;
             hip_common_before_allocation_ = 0.5 * (leg_torque[0] + leg_torque[2]);
             const auto tau = bbot_jump::allocate_torso_hips(
-                leg_torque, torso_torque_.command, kHipTauLimit);
+                leg_torque, torso_request, kHipTauLimit);
             hip_differential_torque_ = 0.5 * (tau[0] - tau[2]);
             for (int i = 0; i < 4; ++i)
                 ground_pd_feedback_[i] = feedback[i];
@@ -5852,6 +6072,15 @@ private:
             tau_knee_left = tau[1];
             tau_hip_right = tau[2];
             tau_knee_right = tau[3];
+
+            if (current_state_ == bbot_jump::STATE_TOUCHDOWN_BUFFER ||
+                current_state_ == bbot_jump::STATE_RECOVERY)
+            {
+                tau_hip_left = bbot_jump::touchdown_hip_soft_limit_guard(
+                    hip_pos_left_, hip_vel_left_, tau_hip_left, TAU_HIP_BODY_MAX_, 1.20, 1.45, 0.025);
+                tau_hip_right = bbot_jump::touchdown_hip_soft_limit_guard(
+                    hip_pos_right_, hip_vel_right_, tau_hip_right, TAU_HIP_BODY_MAX_, 1.20, 1.45, 0.025);
+            }
         }
         else
         {
@@ -5871,6 +6100,14 @@ private:
         tau_knee_left = bbot_jump::clamp_value(tau_knee_left, -kKneeTauLimit, kKneeTauLimit);
         tau_hip_right = bbot_jump::clamp_value(tau_hip_right, -kHipTauLimit, kHipTauLimit);
         tau_knee_right = bbot_jump::clamp_value(tau_knee_right, -kKneeTauLimit, kKneeTauLimit);
+
+        if (current_state_ == bbot_jump::STATE_TOUCHDOWN_BUFFER)
+        {
+            tau_knee_left = bbot_jump::landing_knee_extension_guard(
+                knee_pos_left_, knee_vel_left_, tau_knee_left, kKneeTauLimit);
+            tau_knee_right = bbot_jump::landing_knee_extension_guard(
+                knee_pos_right_, knee_vel_right_, tau_knee_right, kKneeTauLimit);
+        }
 
         actual_tau_hip_left_ = tau_hip_left;
         actual_tau_knee_left_ = tau_knee_left;
@@ -5945,19 +6182,32 @@ private:
         request->strictness = controller_manager_msgs::srv::SwitchController::Request::STRICT;
         request->activate_asap = true;
         leg_mode_switch_pending_ = true;
+        effort_switch_request_stamp_ = this->now().seconds();
+        effort_switch_ack_stamp_ = -1.0;
+        effort_switch_result_ = 0;
         switch_ctrl_client_->async_send_request(request,
                                                 [this](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture future)
                                                 {
-                                                    auto result = future.get();
                                                     leg_mode_switch_pending_ = false;
-                                                    if (result->ok)
+                                                    effort_switch_ack_stamp_ = this->now().seconds();
+                                                    try
                                                     {
-                                                        effort_mode_active_ = true;
-                                                        RCLCPP_INFO(this->get_logger(), "[控制器切换] >>> Position → Effort 切换成功！全力爆发模式已激活 <<<");
+                                                        auto result = future.get();
+                                                        effort_switch_result_ = result->ok ? 1 : 2;
+                                                        if (result->ok)
+                                                        {
+                                                            effort_mode_active_ = true;
+                                                            RCLCPP_INFO(this->get_logger(), "[控制器切换] >>> Position → Effort 切换成功！全力爆发模式已激活 <<<");
+                                                        }
+                                                        else
+                                                        {
+                                                            RCLCPP_WARN(this->get_logger(), "[控制器切换] Position → Effort 切换失败！");
+                                                        }
                                                     }
-                                                    else
+                                                    catch (const std::exception &error)
                                                     {
-                                                        RCLCPP_WARN(this->get_logger(), "[控制器切换] Position → Effort 切换失败！");
+                                                        effort_switch_result_ = 3;
+                                                        RCLCPP_WARN(this->get_logger(), "[控制器切换] Position → Effort 响应异常: %s", error.what());
                                                     }
                                                 });
         RCLCPP_INFO(this->get_logger(), "[控制器切换] 请求 Position → Effort ...");
@@ -5996,7 +6246,7 @@ private:
         }
         else
         {
-            bbot_kinematics::IKSolution ik_stand = kinematics_.inverse_kinematics(base_link_height(current_height_), 0.0);
+            bbot_kinematics::IKSolution ik_stand = kinematics_.inverse_kinematics(current_height_, 0.0);
             publish_position_leg_control(ik_stand.theta_hip, ik_stand.theta_knee);
         }
 
@@ -6070,15 +6320,39 @@ private:
 
     void open_log_files()
     {
-        jump_log_file_.open(data_path_ + "jump_velocity_control_log.csv");
-        jump_summary_file_.open(data_path_ + "jump_velocity_summary.csv");
-        if (jump_summary_file_.is_open())
+        std::string log_file = jump_log_path_.empty() ? (data_path_ + "jump_velocity_control_log.csv") : jump_log_path_;
+        std::string summary_file = jump_summary_path_.empty() ? (data_path_ + "jump_velocity_summary.csv") : jump_summary_path_;
+
+        try {
+            if (!log_file.empty()) {
+                auto p = std::filesystem::path(log_file).parent_path();
+                if (!p.empty()) std::filesystem::create_directories(p);
+            }
+            if (!summary_file.empty()) {
+                auto p = std::filesystem::path(summary_file).parent_path();
+                if (!p.empty()) std::filesystem::create_directories(p);
+            }
+        } catch (const std::exception &e) {
+            RCLCPP_WARN(this->get_logger(), "创建日志目录异常: %s", e.what());
+        }
+
+        jump_log_file_.open(log_file);
+        bool summary_needs_header = true;
+        if (std::filesystem::exists(summary_file) && std::filesystem::file_size(summary_file) > 0) {
+            summary_needs_header = false;
+        }
+        jump_summary_file_.open(summary_file, std::ios::out | std::ios::app);
+        if (jump_summary_file_.is_open() && summary_needs_header)
         {
             jump_summary_file_ << "jump_id,jump_height_target,target_takeoff_velocity,"
                                << "takeoff_velocity,apex_height_delta,apex_world_z_delta,max_abs_pitch,"
                                << "takeoff_pitch_rate,landing_pitch_err,touchdown_drift_x,"
                                << "max_abs_hip_torque,max_abs_knee_torque,mechanical_work,"
-                               << "recovery_completed,failed,reason\n";
+                               << "recovery_completed,failed,reason,"
+                               << "takeoff_com_z,takeoff_com_vz,takeoff_com_vx,apex_com_z_delta,"
+                               << "tuck_entered,extend_entered,protective_reason,"
+                               << "touchdown_time,recovery_time,balance_return_time,exit_code\n";
+            jump_summary_file_.flush();
         }
         if (jump_log_file_.is_open())
         {
@@ -6090,7 +6364,15 @@ private:
                            << "hip_pos_cmd_left,knee_pos_cmd_left,hip_pos_cmd_right,knee_pos_cmd_right,"
                            << "tau_ff_hip,tau_ff_knee,F_z,F_z_request,F_z_limit,velocity_reached,wheels_airborne,airborne_confidence,target_takeoff_velocity,tau_body_hip,thrust_reaction_ff,"
                            << "flight_subphase,recovery_subphase,controller_mode,thrust_motion_elapsed,thrust_attitude_blocked,air_wheel_cmd_raw,left_wheel_vel,right_wheel_vel,attitude_arrest_stable_count,"
-                           << "touchdown_phase,brake_ref,capture_state,target_x,x_error,cmd_target,hip_vel_left,knee_vel_left,hip_vel_right,knee_vel_right,hip_vel_cmd_left,knee_vel_cmd_left,hip_vel_cmd_right,knee_vel_cmd_right,wheel_clearance,contact_window,thrust_extension_scale,air_pd_horizon,air_pd_raw_hl,air_pd_raw_kl,air_pd_raw_hr,air_pd_raw_kr,air_pd_discrete_hl,air_pd_discrete_kl,air_pd_discrete_hr,air_pd_discrete_kr,jump_forward_speed,jump_takeoff_forward_speed,jump_pitch_ref,active_jump_pitch_ref,jump_takeoff_pitch_rate,active_jump_pitch_rate_ref,pre_jump_stable_timer,takeoff_forward_speed,air_wheel_baseline,gazebo_world_x_dot,gazebo_world_y_dot,landing_capture_vx,landing_capture_raw_offset,landing_capture_offset,landing_target_x,landing_capture_comp,landing_capture_omega,landing_forward_axis_x,landing_forward_axis_y,landing_capture_planned,flight_air_pitch_ref,flight_air_pitch_rate_ref,protective_deploy_duration,protective_deploy_rate_limited,takeoff_aligned,takeoff_sample_stamp,takeoff_clearance_left,takeoff_clearance_right,landing_wheel_ground_blend,ground_pd_horizon,ground_pd_hl,ground_pd_kl,ground_pd_hr,ground_pd_kr,world_velocity_valid,odom_twist_z,thrust_release_active,thrust_release_blend,catch_stable_time,com_world_z,com_world_vz,com_velocity_valid,com_sample_stamp,com_forward_from_axle,com_height_above_axle,com_lean,com_lean_rate,com_balance_valid,thrust_feedback_vz,ground_gravity_hl,ground_gravity_kl,ground_gravity_hr,ground_gravity_kr,hip_effort_limit,knee_effort_limit,thrust_force_before_budget,thrust_knee_pd_left,torso_force_ff,torso_feedback,torso_hip_command,torso_rate,torso_horizon,torso_imu_fresh,torso_imu_fy,torso_imu_fz,hip_common_before_allocation,hip_differential_torque,capture_com_velocity,capture_world_valid,capture_world_active,capture_world_target,recovery_ready,recovery_drive_ref,recovery_yaw_ref,effort_jump_cycle,thrust_knee_position_yield,thrust_velocity_ref_valid,thrust_com_velocity_ref,thrust_com_knee_jacobian,thrust_knee_velocity_raw,thrust_knee_velocity_limited,flight_tuck_plan_check,flight_extend_plan_check,flight_tuck_duration,flight_extend_duration,protective_attitude_seen_stable,protective_attitude_brake_active,protective_attitude_brake_plan_check,protective_attitude_brake_duration,landing_com_forward_target,landing_com_forward_target_valid,protective_landing_progress,protective_landing_joint_alpha,protective_landing_com_end\n";
+                           << "touchdown_phase,brake_ref,capture_state,target_x,x_error,cmd_target,hip_vel_left,knee_vel_left,hip_vel_right,knee_vel_right,hip_vel_cmd_left,knee_vel_cmd_left,hip_vel_cmd_right,knee_vel_cmd_right,wheel_clearance,contact_window,thrust_extension_scale,air_pd_horizon,air_pd_raw_hl,air_pd_raw_kl,air_pd_raw_hr,air_pd_raw_kr,air_pd_discrete_hl,air_pd_discrete_kl,air_pd_discrete_hr,air_pd_discrete_kr,jump_forward_speed,jump_takeoff_forward_speed,jump_pitch_ref,active_jump_pitch_ref,jump_takeoff_pitch_rate,active_jump_pitch_rate_ref,pre_jump_stable_timer,takeoff_forward_speed,air_wheel_baseline,gazebo_world_x_dot,gazebo_world_y_dot,landing_capture_vx,landing_capture_raw_offset,landing_capture_offset,landing_target_x,landing_capture_comp,landing_capture_omega,landing_forward_axis_x,landing_forward_axis_y,landing_capture_planned,flight_air_pitch_ref,flight_air_pitch_rate_ref,protective_deploy_duration,protective_deploy_rate_limited,takeoff_aligned,takeoff_sample_stamp,takeoff_clearance_left,takeoff_clearance_right,landing_wheel_ground_blend,ground_pd_horizon,ground_pd_hl,ground_pd_kl,ground_pd_hr,ground_pd_kr,world_velocity_valid,odom_twist_z,thrust_release_active,thrust_release_blend,catch_stable_time,com_world_z,com_world_vz,com_velocity_valid,com_sample_stamp,com_forward_from_axle,com_height_above_axle,com_lean,com_lean_rate,com_balance_valid,thrust_feedback_vz,ground_gravity_hl,ground_gravity_kl,ground_gravity_hr,ground_gravity_kr,hip_effort_limit,knee_effort_limit,thrust_force_before_budget,thrust_knee_pd_left,torso_force_ff,torso_feedback,torso_hip_command,torso_rate,torso_horizon,torso_imu_fresh,torso_imu_fy,torso_imu_fz,hip_common_before_allocation,hip_differential_torque,capture_com_velocity,capture_world_valid,capture_world_active,capture_world_target,"
+                           << "com_takeoff_latched_vz,com_takeoff_confirmed_vz,apex_com_z_delta,"
+                           << "thrust_fwd_term,thrust_att_term,thrust_wheel_target,thrust_cmd_x,thrust_com_stamp,thrust_com_valid,"
+                           << "wheel_pitch_err,wheel_balance_rate,wheel_k_theta,wheel_k_theta_dot,wheel_control_height,"
+                           << "wheel_p_term,wheel_d_term,wheel_attitude_cmd,wheel_vel_error,wheel_vel_term,"
+                           << "wheel_raw_pos_err,wheel_pos_error,wheel_pos_term,wheel_cmd_raw,wheel_cmd_pre_clamp,"
+                           << "wheel_min_fwd_cmd,wheel_max_bwd_cmd,wheel_cmd_target,"
+                           << "odom_base_world_x,odom_base_world_y,odom_pose_valid,odom_sample_stamp,imu_sample_stamp,joint_sample_stamp,jump_cmd_rx_stamp,jump_cmd_accept_stamp,control_sim_dt_ms,control_wall_dt_ms,timer_calls_since_control,pitch_rate_raw,flight_arrest_freewheel_active,effort_switch_request_stamp,effort_switch_ack_stamp,effort_switch_result,effort_mode_active,leg_mode_switch_pending,thrust_gate_pitch_err,thrust_gate_rate_err,thrust_gate_stable_elapsed,thrust_gate_open_stamp,thrust_hip_requested_left,thrust_hip_requested_right,thrust_hip_floor_applied\n";
+            jump_log_file_.flush();
         }
     }
 
@@ -6120,6 +6402,20 @@ private:
             effective_reason += "Gazebo世界高度里程计不可用";
         }
         const bool effective_recovery_completed = recovery_completed && world_height_valid;
+        const double apex_com_z_delta = (max_com_z_during_jump_ > 0.0 && takeoff_com_z_ > 0.0) ?
+                                        (max_com_z_during_jump_ - takeoff_com_z_) : -1.0;
+        std::string effective_exit_code = exit_code_;
+        if (effective_exit_code == "NOT_STARTED" || effective_exit_code == "IN_PROGRESS")
+        {
+            if (effective_recovery_completed && effective_reason.empty() && tuck_entered_ && extend_entered_ && protective_reason_.empty())
+                effective_exit_code = "SUCCESS";
+            else if (!protective_reason_.empty())
+                effective_exit_code = "FAIL_PROTECTIVE_DEPLOY";
+            else if (!effective_reason.empty())
+                effective_exit_code = "FAIL_" + effective_reason;
+            else
+                effective_exit_code = "FAIL_INCOMPLETE";
+        }
         jump_summary_file_ << jump_id_ << ","
                            << jump_height_target_ << ","
                            << target_takeoff_velocity_ << ","
@@ -6135,7 +6431,18 @@ private:
                            << thrust_mechanical_work_ << ","
                            << (effective_recovery_completed ? 1 : 0) << ","
                            << (!effective_reason.empty() ? 1 : 0) << ","
-                           << effective_reason << "\n";
+                           << "\"" << effective_reason << "\","
+                           << takeoff_com_z_ << ","
+                           << takeoff_com_vz_ << ","
+                           << takeoff_com_vx_ << ","
+                           << apex_com_z_delta << ","
+                           << (tuck_entered_ ? 1 : 0) << ","
+                           << (extend_entered_ ? 1 : 0) << ","
+                           << "\"" << protective_reason_ << "\","
+                           << touchdown_time_ << ","
+                           << recovery_time_ << ","
+                           << balance_return_time_ << ","
+                           << "\"" << effective_exit_code << "\"\n";
         jump_summary_file_.flush();
         jump_summary_written_ = true;
     }
@@ -6146,6 +6453,8 @@ private:
         if (current_state_ != bbot_jump::STATE_BALANCE)
         {
             max_z_during_jump_ = std::max(max_z_during_jump_, current_z_);
+            if (centroidal_height_.height() > 0.0)
+                max_com_z_during_jump_ = std::max(max_com_z_during_jump_, centroidal_height_.height());
             max_abs_pitch_during_jump_ = std::max(max_abs_pitch_during_jump_, std::abs(pitch_));
             const double commanded_hip = std::max({std::abs(hip_cmd_left_), std::abs(hip_cmd_right_),
                                                    std::abs(tau_hip)});
@@ -6257,23 +6566,59 @@ private:
                            << torso_imu_fresh_ << "," << torso_imu_.fy() << "," << torso_imu_.fz() << ","
                            << hip_common_before_allocation_ << "," << hip_differential_torque_ << "," << capture_com_velocity_ << ","
                            << capture_world_valid_ << "," << capture_world_active_ << ","
-                           << capture_world_target_ << "," << recovery_ready_ << ","
-                           << recovery_drive_ref_ << "," << recovery_yaw_ref_ << ","
-                           << effort_jump_cycle_ << "," << thrust_knee_position_yield_ << ","
-                           << thrust_velocity_reference_.valid << "," << thrust_velocity_reference_.com_velocity << ","
-                           << thrust_velocity_reference_.knee_jacobian << "," << thrust_velocity_reference_.knee_velocity_raw << ","
-                           << thrust_velocity_reference_.speed_limited << "," << flight_tuck_plan_check_ << ","
-                           << flight_extend_plan_check_ << "," << flight_round_trip_plan_.tuck_duration << ","
-                           << flight_round_trip_plan_.extend_duration << ","
-                           << (protective_attitude_seen_stable_ ? 1 : 0) << ","
-                           << (protective_attitude_brake_active_ ? 1 : 0) << ","
-                           << protective_attitude_brake_plan_check_ << ","
-                           << protective_attitude_brake_duration_active_ << ","
-                           << landing_com_forward_target_ << ","
-                           << (landing_com_forward_target_valid_ ? 1 : 0) << ","
-                           << protective_landing_progress_ << ","
-                           << protective_landing_joint_alpha_ << ","
-                           << protective_landing_com_end_ << "\n";
+                           << capture_world_target_ << ","
+                           << com_takeoff_latched_vz_ << ","
+                           << com_takeoff_confirmed_vz_ << ","
+                           << ((max_com_z_during_jump_ > 0.0 && takeoff_com_z_ > 0.0) ? (max_com_z_during_jump_ - takeoff_com_z_) : -1.0) << ","
+                           << thrust_fwd_term_diag_ << ","
+                           << thrust_att_term_diag_ << ","
+                           << thrust_wheel_target_diag_ << ","
+                           << thrust_cmd_x_diag_ << ","
+                           << thrust_com_sample_stamp_diag_ << ","
+                           << thrust_com_valid_diag_ << ","
+                           << wheel_pitch_err_diag_ << ","
+                           << wheel_balance_rate_diag_ << ","
+                           << wheel_k_theta_diag_ << ","
+                           << wheel_k_theta_dot_diag_ << ","
+                           << wheel_control_height_diag_ << ","
+                           << wheel_p_term_diag_ << ","
+                           << wheel_d_term_diag_ << ","
+                           << wheel_attitude_cmd_diag_ << ","
+                           << wheel_vel_error_diag_ << ","
+                           << wheel_vel_term_diag_ << ","
+                           << wheel_raw_pos_err_diag_ << ","
+                           << wheel_pos_error_diag_ << ","
+                           << wheel_pos_term_diag_ << ","
+                           << wheel_cmd_raw_diag_ << ","
+                           << wheel_cmd_pre_clamp_diag_ << ","
+                           << wheel_min_fwd_cmd_diag_ << ","
+                           << wheel_max_bwd_cmd_diag_ << ","
+                           << wheel_cmd_target_diag_ << ","
+                           << odom_base_position_.x() << ","
+                           << odom_base_position_.y() << ","
+                           << (odom_received_ && takeoff_odom_pose_valid_) << ","
+                           << takeoff_odom_stamp_ << ","
+                           << torso_imu_.stamp() << ","
+                           << joint_sample_time_ << ","
+                           << jump_cmd_rx_stamp_ << ","
+                           << jump_cmd_accept_stamp_ << ","
+                           << control_sim_dt_ms_diag_ << ","
+                           << control_wall_dt_ms_diag_ << ","
+                           << timer_calls_for_update_diag_ << ","
+                           << pitch_rate_raw_ << ","
+                           << (current_state_ == bbot_jump::STATE_FLIGHT && flight_arrest_freewheel_active_) << ","
+                           << effort_switch_request_stamp_ << ","
+                           << effort_switch_ack_stamp_ << ","
+                           << effort_switch_result_ << ","
+                           << effort_mode_active_ << ","
+                           << leg_mode_switch_pending_ << ","
+                           << thrust_gate_pitch_err_diag_ << ","
+                           << thrust_gate_rate_err_diag_ << ","
+                           << thrust_gate_stable_elapsed_diag_ << ","
+                           << thrust_gate_open_stamp_ << ","
+                           << (current_state_ == bbot_jump::STATE_THRUST ? thrust_hip_requested_left_diag_ : 0.0) << ","
+                           << (current_state_ == bbot_jump::STATE_THRUST ? thrust_hip_requested_right_diag_ : 0.0) << ","
+                           << (current_state_ == bbot_jump::STATE_THRUST && thrust_hip_floor_applied_diag_) << "\n";
         }
     }
 };

@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+2,False,Recovery to stable Effort BALANCE not completed; Controller reported exit code: FAIL_landing_unrecoverable_pitch,True

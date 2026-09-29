@@ -70,6 +70,46 @@ public:
         return count_>=2 && stamp-first_stamp_>=0.010-1e-8;
     }
 };
+
+// Latch the first fresh COM-velocity sample that reaches the launch-speed
+// threshold. Geometry confirmation is intentionally independent: wheel
+// clearance may arrive a few sensor frames later, but that delay must not
+// erase evidence that the requested launch momentum was achieved.
+class TakeoffSpeedLatch
+{
+    bool latched_ = false;
+    double stamp_ = -1.0;
+    double velocity_ = 0.0;
+    double height_ = 0.0;
+    double vx_ = 0.0;
+public:
+    void reset() { latched_=false; stamp_=-1.0; velocity_=0.0; height_=0.0; vx_=0.0; }
+    bool latched() const { return latched_; }
+    double stamp() const { return stamp_; }
+    double velocity() const { return velocity_; }
+    double height() const { return height_; }
+    double vx() const { return vx_; }
+    bool update(double stamp, double now, bool armed,
+                double velocity, double target, double ratio=0.95) {
+        return update_with_state(stamp, now, armed, velocity, target, 0.0, 0.0, ratio);
+    }
+    bool update_with_state(double stamp, double now, bool armed,
+                           double velocity, double target, double height=0.0, double vx=0.0,
+                           double ratio=0.95) {
+        if (latched_) return true;
+        if (!armed || !std::isfinite(stamp) || !std::isfinite(now) ||
+            now<stamp || now-stamp>0.080 || !std::isfinite(velocity) ||
+            !std::isfinite(target) || target<=0.0 ||
+            !std::isfinite(ratio) || ratio<=0.0 || ratio>1.0) return false;
+        if (velocity < ratio*target) return false;
+        latched_=true;
+        stamp_=stamp;
+        velocity_=velocity;
+        height_=height;
+        vx_=vx;
+        return true;
+    }
+};
 // Persistent wheel contact must be accepted even while the deploy trajectory
 // is unfinished. Motor-reported effort may be zero in this simulator.
 class TouchdownConfirmation {

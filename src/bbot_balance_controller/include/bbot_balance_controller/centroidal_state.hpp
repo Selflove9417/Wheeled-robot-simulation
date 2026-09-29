@@ -123,6 +123,7 @@ public:
         const auto & v=velocity_.velocity();
         return v[0]*heading.x()+v[1]*heading.y();
     }
+    double stamp() const { return velocity_.sample_stamp(); }
 };
 
 // Differentiate the world COM position, after aligning q and odometry. Never

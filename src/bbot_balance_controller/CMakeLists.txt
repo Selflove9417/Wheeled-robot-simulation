@@ -115,6 +115,27 @@ ament_target_dependencies(position_torque_cascade_pid_controller
   bbot_kinematics
 )
 
+# Independent constrained Linear MPC balance controller (fixed height, phase 1)
+add_executable(linear_mpc_balance_controller
+  src/linear_mpc_balance_controller.cpp
+  src/keyboard_reader.cpp
+)
+target_link_libraries(linear_mpc_balance_controller Eigen3::Eigen)
+# 每拍按 current_height 重建 Ad/Bd/P 与预测矩阵/QP。实测默认构建（CMAKE_BUILD_TYPE
+# 为空，即 -O0）下重建 3.16 ms + QP 1.47 ms，已超 5 ms 控制周期；同一代码 -O2 下合计
+# 97 us（预算的 1.9%）。只给本目标开优化，其余控制器口径不变。
+target_compile_options(linear_mpc_balance_controller PRIVATE -O2)
+ament_target_dependencies(linear_mpc_balance_controller
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  bbot_kinematics
+)
+
 # C++ 键盘控制终端 (无 Python / Conda 冲突)
 add_executable(teleop_keyboard
   src/teleop_keyboard.cpp
@@ -163,6 +184,7 @@ ament_target_dependencies(bbot_velocity_jump_controller
 # 安装规则
 install(TARGETS
   balance_controller_keyboard
+  linear_mpc_balance_controller
   lqr_balance_controller_yaokong
   lqr_gain_scheduled_controller
   adaptive_lqr_balance_controller
@@ -194,6 +216,14 @@ install(PROGRAMS
   scripts/run_formal_pid_gslqr_campaign.py
   scripts/analyze_formal_pid_gslqr.py
   scripts/analyze_chapter42_height_recheck.py
+  scripts/run_flat_ground_jump_trial.py
+  scripts/record_wheel_contacts.py
+  scripts/record_wheel_joint_state.py
+  scripts/wheel_effort_velocity_servo.py
+  scripts/analyze_wheel_chain.py
+  scripts/analyze_flat_jump_repeatability.py
+  scripts/analyze_jump_handoff.py
+  scripts/analyze_command_transport.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -235,9 +265,35 @@ if(BUILD_TESTING)
   add_executable(test_torso_pitch_control test/test_torso_pitch_control.cpp)
   target_link_libraries(test_torso_pitch_control Eigen3::Eigen)
   add_test(NAME torso_pitch_control COMMAND test_torso_pitch_control)
+  add_executable(test_dense_active_set_qp test/test_dense_active_set_qp.cpp)
+  target_link_libraries(test_dense_active_set_qp Eigen3::Eigen)
+  add_test(NAME dense_active_set_qp COMMAND test_dense_active_set_qp)
+  add_executable(test_lqr_plant_model test/test_lqr_plant_model.cpp)
+  target_link_libraries(test_lqr_plant_model Eigen3::Eigen)
+  ament_target_dependencies(test_lqr_plant_model bbot_kinematics)
+  add_test(NAME lqr_plant_model COMMAND test_lqr_plant_model)
+  add_executable(test_linear_mpc test/test_linear_mpc.cpp)
+  target_link_libraries(test_linear_mpc Eigen3::Eigen)
+  ament_target_dependencies(test_linear_mpc bbot_kinematics)
+  add_test(NAME linear_mpc COMMAND test_linear_mpc)
   add_executable(test_ground_joint_pd test/test_ground_joint_pd.cpp)
   target_link_libraries(test_ground_joint_pd Eigen3::Eigen)
   add_test(NAME ground_joint_pd COMMAND test_ground_joint_pd)
+  add_executable(test_jump_regression test/test_jump_regression.cpp)
+  target_link_libraries(test_jump_regression Eigen3::Eigen)
+  add_test(NAME jump_regression COMMAND test_jump_regression)
+  add_test(
+    NAME wheel_effort_velocity_servo
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_wheel_effort_velocity_servo.py
+  )
+  add_test(
+    NAME jump_handoff_diagnostics
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_jump_handoff_diagnostics.py
+  )
+  add_test(
+    NAME mpc_sweep_harness
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_mpc_sweep_harness.py
+  )
 endif()
 
 ament_package()

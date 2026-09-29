@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+1,False,"COM apex height delta 0.237m out of [0.17, 0.23]m; Takeoff COM vx 0.626m/s out of [0.35, 0.55]m/s; Normal TUCK/EXTEND not fully completed (tuck=0, extend=0); Recovery to stable Effort BALANCE not completed; Controller reported exit code: FAIL_landing_unrecoverable_pitch",

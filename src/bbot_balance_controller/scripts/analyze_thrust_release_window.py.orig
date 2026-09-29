@@ -1,0 +1,522 @@
+#!/usr/bin/env python3
+"""Compare the thrust-release window across flat-jump trials (diagnostic only).
+
+Runs no simulation; reads an existing controller log plus the matching
+`*_contacts.csv` written by record_wheel_contacts.py.
+
+Every column is labelled by source, so that a command, a model estimate and a
+measurement are never read as each other:
+
+  COMMAND    torque setpoint written by the controller to the effort interface
+  MEASURED   joint_states velocity, IMU rate, contact-topic presence
+  ESTIMATED  controller-side reconstruction (requested ground force, COM
+             vertical velocity, wheel clearance, release blend)
+  MISSING    constant-zero telemetry: joint_states effort, contact normal force
+
+Alignment is by the simulation stamps stored in each log row.  Nothing is
+interpolated; each printed row carries its own joint/IMU sample ages, and the
+optional angular-momentum pass drops rows whose IMU and joint stamps disagree
+by more than the analysis script's gate.
+"""
+
+import argparse
+import csv
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from analyze_flight_momentum import momentum
+except Exception:  # pragma: no cover - momentum pass simply disables itself
+    momentum = None
+
+# Hard ceilings one layer below the controller's own clamp: the ros2_control
+# command_interface block of bbot.urdf.xacro, which the logged
+# hip/knee_effort_limit columns do not reflect.
+ACTUATOR_LIMIT = {"hip": 75.0, "knee": 60.0}
+RELEASE_TRIGGER_RATIO = 0.86
+TORQUE = (("actual_tau_hip_left", "hip", "COMMAND"),
+          ("actual_tau_knee_left", "knee", "COMMAND"))
+VELOCITY = (("hip_vel_left", "hip L", "MEASURED"),
+            ("knee_vel_left", "knee L", "MEASURED"),
+            ("hip_vel_right", "hip R", "MEASURED"),
+            ("knee_vel_right", "knee R", "MEASURED"))
+
+
+def num(row, key):
+    value = row.get(key, "")
+    if value in ("", "nan", "inf"):
+        return None
+    return float(value)
+
+
+def ticks(start, stop, step):
+    return [start + index * step
+            for index in range(int(round((stop - start) / step)) + 1)]
+
+
+class Trial:
+    def __init__(self, path, tag):
+        self.tag = tag
+        self.name = path.name
+        with path.open(newline="") as stream:
+            self.rows = list(csv.DictReader(stream))
+        self.thrust = [r for r in self.rows if r["state_name"] == "THRUST"]
+        if not self.thrust:
+            raise SystemExit(f"{path.name}: no THRUST rows (never entered THRUST)")
+        self.t0 = float(self.thrust[0]["timestamp"])
+        flight = next((r for r in self.rows if r["state_name"] == "FLIGHT"), None)
+        self.t_flight = float(flight["timestamp"]) if flight else None
+        self.contacts = {}
+        self.contact_force_rows = 0
+        self.contact_rows = 0
+        self.contact_wrench_present_rows = 0
+        self.contact_wrench_missing_rows = 0
+        contact_path = path.with_name(path.name.replace("_log.csv", "_contacts.csv"))
+        if contact_path.exists():
+            with contact_path.open(newline="") as stream:
+                for row in csv.DictReader(stream):
+                    self.contacts.setdefault(row["side"], []).append(
+                        (float(row["stamp_sec"]), float(row["normal_force_z"]),
+                         float(row["force_mag"])))
+                    if row.get("force_status") == "WRENCH_PRESENT":
+                        self.contact_wrench_present_rows += 1
+                    elif row.get("force_status") == "WRENCH_MISSING":
+                        self.contact_wrench_missing_rows += 1
+                    # Historical CSVs have no force_status: their zero fields
+                    # cannot distinguish zero measured force from absent data.
+                    self.contact_rows += 1
+                    if row["normal_force_z"] not in ("", "0.000") or \
+                            row["force_mag"] not in ("", "0.000"):
+                        self.contact_force_rows += 1
+            self.contacts = {side: sorted(set(stamp for stamp, _, _ in values))
+                             for side, values in self.contacts.items()}
+
+    def at(self, offset):
+        stamp = self.t0 + offset
+        exact = [r for r in self.thrust if abs(float(r["timestamp"]) - stamp) < 1e-6]
+        return exact[0] if exact else None
+
+    def last_contact_before(self, sim_time):
+        out = {}
+        for side, stamps in self.contacts.items():
+            index = 0
+            while index < len(stamps) and stamps[index] <= sim_time + 1e-9:
+                index += 1
+            out[side] = stamps[index - 1] if index else None
+        return out
+
+    def gaps(self, side, low, high, threshold):
+        """Message interruptions longer than `threshold` inside a sim window."""
+        stamps = self.contacts.get(side, [])
+        found = []
+        for previous, current in zip(stamps, stamps[1:]):
+            if low <= previous - self.t0 <= high and current - previous > threshold:
+                found.append((previous, current, current - previous))
+        return found
+
+    def cadence(self, side):
+        stamps = self.contacts.get(side, [])
+        gaps = sorted(b - a for a, b in zip(stamps, stamps[1:]))
+        if not gaps:
+            return None
+        return {
+            "median": gaps[len(gaps) // 2],
+            "p999": gaps[min(len(gaps) - 1, int(0.999 * len(gaps)))],
+            "max": gaps[-1],
+            "count": len(stamps),
+        }
+
+
+def print_coverage(trials, args):
+    print("== anchors, command ceiling and telemetry coverage ==")
+    for trial in trials:
+        arm = next((i for i, r in enumerate(trial.thrust)
+                    if num(r, "thrust_release_active") == 1.0), None)
+        arm_row = trial.thrust[arm] if arm is not None else None
+        target = num(trial.thrust[0], "target_takeoff_velocity")
+        flight = ("never entered FLIGHT" if trial.t_flight is None
+                  else "FLIGHT {:+.3f} s rel".format(trial.t_flight - trial.t0))
+        peaks = {}
+        window = [r for r in trial.thrust
+                  if args.start - 1e-6 <= round(float(r["timestamp"]) - trial.t0, 6) <= args.stop + 1e-6]
+        for column, label in (("actual_tau_hip_left", "hip"),
+                              ("actual_tau_knee_left", "knee")):
+            full = max(abs(num(r, column)) for r in trial.thrust)
+            win = max(abs(num(r, column)) for r in window)
+            clipped = sum(1 for r in trial.thrust
+                          if abs(num(r, column)) > ACTUATOR_LIMIT[label] - 0.5)
+            peaks[label] = (full, win, clipped)
+        effort = [abs(num(r, column)) for r in trial.rows
+                  for column in ("hip_effort_left", "knee_effort_left",
+                                 "hip_effort_right", "knee_effort_right")
+                  if num(r, column) is not None]
+        print(f"  {trial.tag}  {trial.name}")
+        print(f"      THRUST {trial.t0:.3f} s ({len(trial.thrust)} ticks), {flight}")
+        print(f"      target_takeoff_velocity {target:.3f} m/s")
+        if arm_row is None:
+            print("      release never armed in THRUST")
+        else:
+            print(f"      release armed {float(arm_row['timestamp']) - trial.t0:+.3f} s rel, "
+                  f"estimated COM vz {num(arm_row, 'com_world_vz'):.3f} m/s at sample stamp "
+                  f"{num(arm_row, 'com_sample_stamp'):.3f} s "
+                  f"(trigger {RELEASE_TRIGGER_RATIO * target:.3f} m/s, "
+                  f"blend {num(arm_row, 'thrust_release_blend'):.3f} that tick)")
+        for label in ("hip", "knee"):
+            full, win, clipped = peaks[label]
+            print(f"      {label} torque command: peak {full:.1f} N.m over THRUST, "
+                  f"{win:.1f} N.m in window; {clipped} THRUST ticks above the "
+                  f"{ACTUATOR_LIMIT[label]:.0f} N.m command_interface ceiling "
+                  f"(logged {label}_effort_limit column = "
+                  f"{num(trial.thrust[0], f'{label}_effort_limit'):.0f})")
+        print(f"      joint_states effort: max |value| {max(effort):.3f} N.m over "
+              f"{len(trial.rows)} rows -> MISSING")
+        for side in ("LEFT", "RIGHT"):
+            cadence = trial.cadence(side)
+            if cadence is None:
+                print(f"      contact {side}: no messages -> MISSING")
+                continue
+            print(f"      contact {side}: {cadence['count']} stamps, median {cadence['median']*1e3:.1f} ms, "
+                  f"p99.9 {cadence['p999']*1e3:.1f} ms, max {cadence['max']*1e3:.0f} ms")
+        print(f"      contact rows with nonzero recorded force: "
+              f"{trial.contact_force_rows}/{trial.contact_rows}")
+        if trial.contact_wrench_present_rows or trial.contact_wrench_missing_rows:
+            print(f"      contact wrench payload: present "
+                  f"{trial.contact_wrench_present_rows}, missing "
+                  f"{trial.contact_wrench_missing_rows}; "
+                  "legacy 0.000 is not a measured zero when wrench is missing")
+    print()
+
+
+def print_window(trials, args):
+    print("== release / torque command / measured joint rate in the window ==")
+    print("   rel  tri jAge iAge  blend*  Fzreq*   tauHip^  tauKnee^  hipPd^ floor^  "
+          "hipV#  kneeV#  hipVr#  kneeVr#  clearance*  comVz#*  pitch#  "
+          "gyro#   lastL  lastR")
+    for offset in ticks(args.start, args.stop, args.step):
+        for trial in trials:
+            row = trial.at(offset)
+            if row is None:
+                print(f"{offset:+.3f} {trial.tag}   -- no THRUST tick at this offset --")
+                continue
+            joint_age = float(row["timestamp"]) - float(row["joint_sample_stamp"])
+            imu_age = float(row["timestamp"]) - float(row["imu_sample_stamp"])
+            last = trial.last_contact_before(float(row["timestamp"]))
+            # Floor of the hip configuration PD
+            # (bbot_velocity_jump_controller.cpp:2783): a backwards-rotating
+            # body removes the negative pull entirely, so the hip command jumps
+            # by 3 N.m whenever a trial lands on the other side of this test.
+            floor = 0.0 if (num(row, "pitch_rate") < 0.0 or
+                            num(row, "thrust_gate_pitch_err") < 0.0) else -3.0
+            hip_pd = num(row, "actual_tau_hip_left") - num(row, "tau_body_hip")
+            print(f"{offset:+.3f} {trial.tag:<3} {joint_age*1e3:4.0f} {imu_age*1e3:4.0f}  "
+                  f"{num(row, 'thrust_release_blend'):>7.3f} "
+                  f"{num(row, 'F_z_request'):>7.1f}  "
+                  f"{num(row, 'actual_tau_hip_left'):>7.2f} "
+                  f"{num(row, 'actual_tau_knee_left'):>8.2f}  "
+                  f"{hip_pd:>6.2f} {floor:>6.1f}  "
+                  f"{num(row, 'hip_vel_left'):>6.2f} {num(row, 'knee_vel_left'):>6.2f} "
+                  f"{num(row, 'hip_vel_right'):>7.2f} {num(row, 'knee_vel_right'):>7.2f}  "
+                  f"{num(row, 'wheel_clearance'):>10.2e} "
+                  f"{num(row, 'com_world_vz'):>7.2f}  "
+                  f"{num(row, 'pitch'):>6.3f}  {num(row, 'pitch_rate_raw'):>6.3f}  "
+                  f"{(last.get('LEFT') or 0) - trial.t0:+.3f} "
+                  f"{(last.get('RIGHT') or 0) - trial.t0:+.3f}")
+        print()
+
+
+def print_contacts(trials, args):
+    print("== contact message interruptions around the window ==")
+    for trial in trials:
+        for side in ("LEFT", "RIGHT"):
+            cadence = trial.cadence(side)
+            if cadence is None:
+                continue
+            threshold = 5 * cadence["p999"]
+            found = trial.gaps(side, args.start - 0.06, args.stop + 0.06, threshold)
+            print(f"  {trial.tag} {side}: threshold {threshold*1e3:.0f} ms "
+                  f"(5 x p99.9 cadence)")
+            if not found:
+                print("      none in [-0.06, +0.06] of the window")
+            for previous, current, gap in found:
+                print(f"      silent {gap*1e3:.0f} ms: last stamp {previous:.3f} s "
+                      f"({previous - trial.t0:+.3f} s rel THRUST), resumes {current:.3f} s "
+                      f"({current - trial.t0:+.3f} s rel THRUST)")
+    print()
+
+
+def print_momentum(trials, args):
+    if momentum is None:
+        print("== momentum pass skipped (analyze_flight_momentum.py not importable) ==\n")
+        return
+    print("== model-estimated pitch-axis angular momentum at stamp-aligned rows ==")
+    print("   rel  tri  total H   dH/dt    body     leg   wheel_orb  wheel_ax")
+    for trial in trials:
+        previous = None
+        for offset in ticks(args.start - 0.010, args.stop + 0.010, args.step):
+            row = trial.at(offset)
+            if row is None:
+                continue
+            stamp_gap = abs(float(row["imu_sample_stamp"]) - float(row["joint_sample_stamp"]))
+            if stamp_gap > 0.0011:
+                print(f"{offset:+.3f} {trial.tag:<3}   dropped: IMU/joint stamp gap "
+                      f"{stamp_gap*1e3:.1f} ms > 1.1 ms")
+                previous = None
+                continue
+            body, leg, wheel_orbital, wheel_axial, total = momentum(row)
+            rate = "" if previous is None else f"{(total - previous[1]) / (offset - previous[0]):7.1f}"
+            print(f"{offset:+.3f} {trial.tag:<3} {total:>8.3f} {rate:>8} "
+                  f"{body:>8.3f} {leg:>8.3f} {wheel_orbital:>10.3f} {wheel_axial:>9.3f}")
+            previous = (offset, total)
+        print()
+
+
+def print_divergence(trials, args):
+    ref = next(t for t in trials if t.tag == args.ref)
+    others = [t for t in trials if t.tag != args.ref]
+    signals = ([("release blend", "ESTIMATED", "thrust_release_blend", 0.05)]
+               + [(f"{label} torque cmd", "COMMAND", column, 1.0)
+                  for column, label, _ in TORQUE]
+               + [(f"{label} rate", "MEASURED", column, 0.10)
+                  for column, label, _ in VELOCITY]
+               + [("requested ground force", "ESTIMATED", "F_z_request", 5.0),
+                  ("model wheel clearance", "ESTIMATED", "wheel_clearance", 5e-4),
+                  ("estimated COM vz", "ESTIMATED", "com_world_vz", 0.05),
+                  ("measured left wheel rate", "MEASURED", "left_wheel_vel", 0.20),
+                  ("measured wheel rate target", "COMMAND", "thrust_wheel_target", 0.20),
+                  ("IMU pitch rate", "MEASURED", "pitch_rate_raw", 0.05),
+                  ("IMU pitch", "MEASURED", "pitch", 0.005)])
+    print(f"== earliest separation: |{ref.tag} - mean(others)| vs within-group spread ==")
+    print(f"  reference {ref.tag} = {ref.name}; others = {[t.tag for t in others]}\n")
+    for label, kind, column, floor in signals:
+        first = None
+        for offset in ticks(args.start, args.stop, args.step):
+            values = [num(o.at(offset), column) if o.at(offset) else None for o in others]
+            row = ref.at(offset)
+            if row is None or any(v is None for v in values):
+                continue
+            between = abs(num(row, column) - sum(values) / len(values))
+            within = max(values) - min(values)
+            if between > max(floor, 3.0 * within):
+                first = (offset, between, within)
+                break
+        if first is None:
+            print(f"  {label:<24} {kind:<9} no separation in window")
+        else:
+            offset, between, within = first
+            print(f"  {label:<24} {kind:<9} first at {offset:+.3f} s  "
+                  f"between {between:.4g}  within-group {within:.4g}")
+    print()
+
+
+def shift_scan(trials, args):
+    """Phase shift vs amplitude difference.
+
+    A one-tick (5 ms) offset in the commanded trajectory is not the same finding
+    as a different achieved plant state, so each pair is compared both at zero
+    shift and at the shift that best cancels it.
+    """
+    print("== same comparison, allowing a whole-tick shift of the reference ==")
+    signals = [("knee pos cmd", "knee_pos_cmd_left"), ("hip pos cmd", "hip_pos_cmd_left"),
+               ("knee torque cmd", "actual_tau_knee_left"),
+               ("hip torque cmd", "actual_tau_hip_left"),
+               ("release blend", "thrust_release_blend"),
+               ("request force", "F_z_request"),
+               ("measured knee pos", "knee_pos_left"),
+               ("measured hip pos", "hip_pos_left"),
+               ("measured hip rate", "hip_vel_left"),
+               ("measured knee rate", "knee_vel_left"),
+               ("measured left wheel rate", "left_wheel_vel"),
+               ("IMU pitch rate", "pitch_rate_raw"),
+               ("model clearance", "wheel_clearance")]
+    shifts = [delta * args.step for delta in range(-4, 5)]
+    print("  gaps are the mean |difference| over the window, in signal units; the share is\n""  that gap divided by the window peak-to-peak, so ~0% means a pure time shift\n")
+    for label, column in signals:
+        for left, right in ((args.ref, "B"), (args.ref, "C"), ("B", "C")):
+            ref = next(t for t in trials if t.tag == left)
+            oth = next(t for t in trials if t.tag == right)
+            scale = 0.0
+            for trial in (ref, oth):
+                values = [num(trial.at(o), column) for o in
+                          ticks(args.start - 0.020, args.stop + 0.020, args.step)]
+                values = [v for v in values if v is not None]
+                scale = max(scale, max(values) - min(values) if values else 0.0)
+            if scale == 0.0:
+                continue
+            rows = []
+            for shift in shifts:
+                residuals = []
+                for offset in ticks(args.start, args.stop, args.step):
+                    a = ref.at(offset)
+                    b = oth.at(round(offset + shift, 6))
+                    if a is None or b is None:
+                        continue
+                    residuals.append(abs(num(a, column) - num(b, column)))
+                if residuals:
+                    rows.append((shift, sum(residuals) / len(residuals)))
+            if not rows:
+                continue
+            at_zero = next((g for s, g in rows if abs(s) < 1e-9), None)
+            best_shift, best_gap = min(rows, key=lambda item: item[1])
+            print(f"  {label:<24} {left}-{right}: gap@0 {at_zero if at_zero is None else round(at_zero, 4)}"
+                  f"  best shift {best_shift*1e3:+4.0f} ms -> {best_gap:.4g} "
+                  f"({100.0 * best_gap / scale:.1f}% of {scale:.3g} span)")
+        print()
+
+
+def print_events(trials, args):
+    """Absolute timing of the named events inside/around the window."""
+    print("== event times, seconds relative to each trial's THRUST entry ==")
+    print("  tri  blend=0.5  knee tau crosses 0  hip PD floor flips  filtered pitch "
+          "rate crosses 0  wheel rate V-turn  clearance crosses 0  "
+          "last L msg  last R msg  Fz->0")
+    for trial in trials:
+        span = [r for r in trial.thrust
+                if args.start - 0.06 <= float(r["timestamp"]) - trial.t0 <= args.stop + 0.06]
+
+        def first_where(predicate):
+            for row in span:
+                if predicate(row):
+                    return float(row["timestamp"]) - trial.t0
+            return None
+
+        def fmt(value):
+            return "   --  " if value is None else f"{value:+7.3f} "
+
+        def floor_term(row):
+            # Recomputed from the rule, not from the float residual, which
+            # carries 1e-6 noise that would look like a state change.
+            return 0.0 if (num(row, "pitch_rate") < 0.0
+                           or num(row, "thrust_gate_pitch_err") < 0.0) else -3.0
+
+        def value(row, column):
+            if column == "hip_pd_floor_term":
+                return floor_term(row)
+            return num(row, column)
+
+        def crossing(column, ascending):
+            previous = None
+            for row in span:
+                current = value(row, column)
+                if previous is not None and current is not None:
+                    if ascending and previous < 0.0 <= current:
+                        return float(row["timestamp"]) - trial.t0
+                    if not ascending and previous > 0.0 >= current:
+                        return float(row["timestamp"]) - trial.t0
+                previous = current
+            return None
+
+        blend = first_where(lambda r: num(r, "thrust_release_blend") >= 0.5)
+        tau = crossing("actual_tau_knee_left", True)
+        # The hip configuration PD is pinned at its floor every tick in this
+        # window (hip term == floor exactly), so the floor flip is what makes
+        # the hip torque command jump between the trials.  Report the first
+        # tick inside the window where it differs from the window's opening
+        # value; the term is either exactly 0 or exactly -3.
+        in_window = [r for r in span
+                     if float(r["timestamp"]) - trial.t0 >= args.start - 1e-9]
+        opening = floor_term(in_window[0]) if in_window else None
+        floor = first_where(lambda r: float(r["timestamp"]) - trial.t0 >= args.start - 1e-9
+                            and floor_term(r) != opening)
+        prate = crossing("pitch_rate", True)
+        clr = first_where(lambda r: num(r, "wheel_clearance") > 0.0)
+        fz = first_where(lambda r: num(r, "F_z_request") == 0.0)
+        # V-turn of the measured wheel rate: last tick of the monotone segment.
+        rates = [(float(r["timestamp"]) - trial.t0, num(r, "left_wheel_vel")) for r in span]
+        turn = None
+        for index in range(1, len(rates) - 1):
+            if rates[index][1] > rates[index - 1][1] and rates[index][1] > rates[index + 1][1]:
+                turn = rates[index][0]
+                break
+        last = {}
+        for side in ("LEFT", "RIGHT"):
+            stamps = trial.contacts.get(side, [])
+            near = [s - trial.t0 for s in stamps
+                    if args.start - 0.06 <= s - trial.t0 <= args.stop + 0.06]
+            last[side] = near[-1] if near else None
+        print(f"  {trial.tag}  {fmt(blend)}{fmt(tau)}{fmt(floor)}{fmt(prate)}"
+              f"{fmt(turn)}{fmt(clr)}{fmt(last.get('LEFT'))}{fmt(last.get('RIGHT'))}{fmt(fz)}")
+    print()
+
+
+def aligned_H(trial, offset):
+    """Model-estimated total H at a stamp-aligned row, or None."""
+    row = trial.at(offset)
+    if row is None or momentum is None:
+        return None
+    if abs(float(row["imu_sample_stamp"]) - float(row["joint_sample_stamp"])) > 0.0011:
+        return None
+    return momentum(row)
+
+
+def print_matched_momentum(trials, args, phase_shift):
+    """Reference at t against the others at t + phase_shift.
+
+    The trials' stamp-aligned rows sit on 10 ms grids one tick apart, so an
+    equal-relative-time momentum comparison is impossible; matching the stroke
+    phase is the only comparison that uses no interpolation.
+    """
+    if momentum is None:
+        return
+    ref = next(t for t in trials if t.tag == args.ref)
+    others = [t for t in trials if t.tag != args.ref]
+    print(f"== matched-phase momentum (reference at t, others at t{phase_shift*1e3:+.0f} ms) ==")
+    head = f"  {'t':>6} {ref.tag:>7}"
+    for o in others:
+        head += f" {o.tag:>7}"
+    print(head + "  ref-mean(others)   body     leg    wheel_orb wheel_ax")
+    # Use actual stamp-aligned rows in the reference trial. A requested window
+    # may start halfway between its 10 ms sample grid points.
+    offsets = sorted({round(float(row["timestamp"]) - ref.t0, 6)
+                      for row in ref.thrust
+                      if args.start - 1e-6 <= float(row["timestamp"]) - ref.t0
+                      <= args.stop + 1e-6
+                      and abs(float(row["imu_sample_stamp"]) -
+                              float(row["joint_sample_stamp"])) <= 0.0011})
+    for offset in offsets:
+        r = aligned_H(ref, offset)
+        o = [aligned_H(t, round(offset + phase_shift, 6)) for t in others]
+        if r is None or any(x is None for x in o):
+            continue
+        mean_rest = sum(x[4] for x in o) / len(o)
+        print(f"  {offset:+6.3f} {r[4]:7.3f} " + " ".join(f"{x[4]:7.3f}" for x in o)
+              + f"        {r[4] - mean_rest:+8.3f} "
+              f"{r[0]-sum(x[0] for x in o)/len(o):+7.3f} "
+              f"{r[1]-sum(x[1] for x in o)/len(o):+7.3f} "
+              f"{r[2]-sum(x[2] for x in o)/len(o):+8.3f} "
+              f"{r[3]-sum(x[3] for x in o)/len(o):+8.3f}")
+    print("  (the last four columns are reference minus the others' mean, per term)\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("logs", nargs="+", type=Path)
+    parser.add_argument("--start", type=float, default=0.145,
+                        help="window open, seconds after THRUST entry (default 0.145)")
+    parser.add_argument("--stop", type=float, default=0.200)
+    parser.add_argument("--step", type=float, default=0.005)
+    parser.add_argument("--ref", default="A", help="reference trial tag")
+    parser.add_argument("--phase-shift", type=float, default=0.005,
+                        help="stroke-phase offset applied to the non-reference "
+                             "trials in the matched-phase momentum table")
+    args = parser.parse_args()
+
+    trials = [Trial(path, chr(ord("A") + index)) for index, path in enumerate(args.logs)]
+    for trial in trials:
+        print(f"{trial.tag} = {trial.name}")
+    if len(args.logs) < 2:
+        parser.error("at least two trial logs are required for phase comparison")
+    print()
+    print_coverage(trials, args)
+    print_window(trials, args)
+    print_contacts(trials, args)
+    print_events(trials, args)
+    print_momentum(trials, args)
+    print_matched_momentum(trials, args, args.phase_shift)
+    print_divergence(trials, args)
+    shift_scan(trials, args)
+
+
+if __name__ == "__main__":
+    main()

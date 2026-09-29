@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+3,False,"COM apex height delta 0.252m out of [0.17, 0.23]m; Recovery to stable Effort BALANCE not completed; Controller reported exit code: FAIL_landing_unrecoverable_pitch",True

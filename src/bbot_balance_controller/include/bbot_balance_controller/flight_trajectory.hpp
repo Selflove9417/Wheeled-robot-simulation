@@ -7,6 +7,33 @@
 namespace bbot_jump
 {
 
+inline double bounded_configuration_step(double current, double requested,
+                                         double maximum_delta)
+{
+    if (!std::isfinite(current) || !std::isfinite(requested) ||
+        !std::isfinite(maximum_delta) || maximum_delta <= 0.0)
+        return current;
+    return current + std::clamp(requested - current,
+                                -maximum_delta, maximum_delta);
+}
+
+inline double reaction_safe_configuration_step(
+    double current, double requested, double maximum_delta,
+    double current_velocity, double reversal_speed_threshold = 0.50)
+{
+    const double bounded = bounded_configuration_step(
+        current, requested, maximum_delta);
+    if (!std::isfinite(current_velocity) ||
+        !std::isfinite(reversal_speed_threshold) ||
+        reversal_speed_threshold < 0.0)
+        return current;
+    const double requested_motion = bounded - current;
+    if (std::abs(current_velocity) > reversal_speed_threshold &&
+        requested_motion * current_velocity < 0.0)
+        return current;
+    return bounded;
+}
+
 /// @brief 五次多项式轨迹生成器 (C2 连续)
 struct QuinticTrajectory
 {
@@ -66,13 +93,14 @@ struct QuinticTrajectory
 
 // 有限采样的轨迹准入检查；保留位置裕量，不能只验证端点连续。
 inline bool flight_trajectory_admissible(const QuinticTrajectory & traj,
-                                         double speed_limit, double acceleration_limit)
+                                         double speed_limit, double acceleration_limit,
+                                         double position_limit = 1.45)
 {
     for (int i = 0; i <= 256; ++i) {
         double q, v, a;
         traj.evaluate(traj.t0 + (traj.tf - traj.t0) * i / 256.0, q, v, a);
         if (!std::isfinite(q) || !std::isfinite(v) || !std::isfinite(a) ||
-            std::abs(q) > 1.45 || std::abs(v) > speed_limit ||
+            std::abs(q) > position_limit || std::abs(v) > speed_limit ||
             std::abs(a) > acceleration_limit) return false;
     }
     return true;
@@ -83,7 +111,10 @@ inline bool flight_trajectory_admissible(const QuinticTrajectory & traj,
 inline bool flight_segment_admissible(
     const std::array<double, 4> & q, const std::array<double, 4> & v,
     const std::array<double, 4> & a, const std::array<double, 4> & end,
-    double duration)
+    double duration,
+    double hip_speed_limit = 7.5, double knee_speed_limit = 10.0,
+    double hip_acceleration_limit = 240.0, double knee_acceleration_limit = 320.0,
+    double hip_position_limit = 1.45, double knee_position_limit = 1.45)
 {
     // Shorter intervals use the trajectory's stationary fallback and cannot
     // represent the requested endpoint, so they are inadmissible for flight.
@@ -93,9 +124,10 @@ inline bool flight_segment_admissible(
             !std::isfinite(a[i]) || !std::isfinite(end[i])) return false;
         QuinticTrajectory segment;
         segment.init(0.0, duration, q[i], v[i], a[i], end[i], 0.0, 0.0);
-        const double speed_limit = (i % 2 == 0) ? 7.5 : 10.0;
-        const double acceleration_limit = (i % 2 == 0) ? 240.0 : 320.0;
-        if (!flight_trajectory_admissible(segment, speed_limit, acceleration_limit))
+        const double pos_limit = (i % 2 == 0) ? hip_position_limit : knee_position_limit;
+        const double speed_limit = (i % 2 == 0) ? hip_speed_limit : knee_speed_limit;
+        const double acceleration_limit = (i % 2 == 0) ? hip_acceleration_limit : knee_acceleration_limit;
+        if (!flight_trajectory_admissible(segment, speed_limit, acceleration_limit, pos_limit))
             return false;
     }
     return true;
@@ -105,7 +137,10 @@ inline bool flight_round_trip_admissible(
     const std::array<double, 4> & q, const std::array<double, 4> & v,
     const std::array<double, 4> & a, const std::array<double, 4> & mid,
     const std::array<double, 4> & end, double tuck_duration,
-    double extend_duration, double time_available)
+    double extend_duration, double time_available,
+    double hip_speed_limit = 7.5, double knee_speed_limit = 10.0,
+    double hip_acceleration_limit = 240.0, double knee_acceleration_limit = 320.0,
+    double hip_position_limit = 1.45, double knee_position_limit = 1.45)
 {
     if (!std::isfinite(tuck_duration) || tuck_duration <= 1e-4 ||
         !std::isfinite(extend_duration) || extend_duration <= 1e-4 ||
@@ -113,8 +148,14 @@ inline bool flight_round_trip_admissible(
         !std::isfinite(tuck_duration + extend_duration) ||
         time_available < tuck_duration + extend_duration) return false;
     const std::array<double, 4> rest{};
-    return flight_segment_admissible(q, v, a, mid, tuck_duration) &&
-        flight_segment_admissible(mid, rest, rest, end, extend_duration);
+    return flight_segment_admissible(q, v, a, mid, tuck_duration,
+                                     hip_speed_limit, knee_speed_limit,
+                                     hip_acceleration_limit, knee_acceleration_limit,
+                                     hip_position_limit, knee_position_limit) &&
+        flight_segment_admissible(mid, rest, rest, end, extend_duration,
+                                  hip_speed_limit, knee_speed_limit,
+                                  hip_acceleration_limit, knee_acceleration_limit,
+                                  hip_position_limit, knee_position_limit);
 }
 
 struct FlightRoundTripPlan
@@ -125,13 +166,17 @@ struct FlightRoundTripPlan
 };
 
 // Preserve both requested configurations and the existing motion budgets.
-// Allocate time to the monotone rest-to-rest deployment first, then search
-// bounded tuck durations for the supplied (possibly moving) initial boundary.
+// Allocate time to the monotone rest-to-rest deployment first, then find the
+// first tuck duration that satisfies the explicitly configured speed and
+// acceleration limits. The limits, rather than unused time, bound momentum.
 inline FlightRoundTripPlan plan_flight_round_trip(
     const std::array<double, 4> & q, const std::array<double, 4> & v,
     const std::array<double, 4> & a, const std::array<double, 4> & mid,
     const std::array<double, 4> & end, double nominal_tuck,
-    double nominal_extend, double time_available)
+    double nominal_extend, double time_available,
+    double hip_speed_limit = 7.5, double knee_speed_limit = 10.0,
+    double hip_acceleration_limit = 240.0, double knee_acceleration_limit = 320.0,
+    double hip_position_limit = 1.45, double knee_position_limit = 1.45)
 {
     FlightRoundTripPlan result;
     if (!std::isfinite(nominal_tuck) || nominal_tuck <= 1e-4 ||
@@ -144,12 +189,13 @@ inline FlightRoundTripPlan plan_flight_round_trip(
     const double budget = std::min(time_available, flight_timeout);
     double minimum_extend = nominal_extend;
     for (std::size_t i = 0; i < q.size(); ++i) {
+        const double pos_limit = (i % 2 == 0) ? hip_position_limit : knee_position_limit;
+        const double speed_limit = (i % 2 == 0) ? hip_speed_limit : knee_speed_limit;
+        const double acceleration_limit = (i % 2 == 0) ? hip_acceleration_limit : knee_acceleration_limit;
         if (!std::isfinite(q[i]) || !std::isfinite(v[i]) ||
             !std::isfinite(a[i]) || !std::isfinite(mid[i]) ||
-            !std::isfinite(end[i]) || std::abs(q[i]) > 1.45 ||
-            std::abs(mid[i]) > 1.45 || std::abs(end[i]) > 1.45) return result;
-        const double speed_limit = (i % 2 == 0) ? 7.5 : 10.0;
-        const double acceleration_limit = (i % 2 == 0) ? 240.0 : 320.0;
+            !std::isfinite(end[i]) || std::abs(q[i]) > pos_limit ||
+            std::abs(mid[i]) > pos_limit || std::abs(end[i]) > pos_limit) return result;
         if (std::abs(v[i]) > speed_limit || std::abs(a[i]) > acceleration_limit)
             return result;
         const double delta = std::abs(end[i] - mid[i]);
@@ -162,12 +208,18 @@ inline FlightRoundTripPlan plan_flight_round_trip(
         std::ceil(minimum_extend / control_period) * control_period;
     if (!std::isfinite(extend_duration) || extend_duration > budget) return result;
     const std::array<double, 4> rest{};
-    if (!flight_segment_admissible(mid, rest, rest, end, extend_duration)) return result;
+    if (!flight_segment_admissible(mid, rest, rest, end, extend_duration,
+                                   hip_speed_limit, knee_speed_limit,
+                                   hip_acceleration_limit, knee_acceleration_limit,
+                                   hip_position_limit, knee_position_limit)) return result;
 
     for (int candidate = 0; candidate < max_tuck_candidates; ++candidate) {
         const double tuck_duration = nominal_tuck + control_period * candidate;
         if (tuck_duration + extend_duration > budget) break;
-        if (flight_segment_admissible(q, v, a, mid, tuck_duration)) {
+        if (flight_segment_admissible(q, v, a, mid, tuck_duration,
+                                      hip_speed_limit, knee_speed_limit,
+                                      hip_acceleration_limit, knee_acceleration_limit,
+                                      hip_position_limit, knee_position_limit)) {
             result.valid = true;
             result.tuck_duration = tuck_duration;
             result.extend_duration = extend_duration;

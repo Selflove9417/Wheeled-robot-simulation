@@ -1,0 +1,2 @@
+trial,success,reason,valid_flight
+1,False,"COM apex height delta -1.000m out of [0.17, 0.23]m; Takeoff COM vz 0.000m/s out of [1.83, 2.13]m/s; Takeoff COM vx 0.000m/s out of [0.35, 0.55]m/s; Normal TUCK/EXTEND not fully completed (tuck=0, extend=0); Recovery to stable Effort BALANCE not completed; Controller reported exit code: FAIL_THRUST初始姿态门控超过0.20s",
