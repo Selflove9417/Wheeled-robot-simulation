@@ -39,4 +39,4 @@ ros2 topic pub --once /jump_cmd std_msgs/msg/String '{data: jump}'
 
 当前恢复版本单独保存在 `src/bbot_balance_controller/src/data_logs/flat_jump_trials/restore_complete_jump_20261003_102513/restored_snapshot`；恢复前的试验代码和程序保存在同目录的 `before_restore`。后续借鉴开源项目的改动应使用单独的试验入口，在通过验证前保留本版默认。
 
-[本次恢复记录](/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/restore_complete_jump_20261003_102513/REVIEW.md)。髋膝扭矩日志目前仍主要反映控制命令，不能当作有效的电机轴实测扭矩。
+本次恢复记录（本地资料：`/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/restore_complete_jump_20261003_102513/REVIEW.md`）。髋膝扭矩日志目前仍主要反映控制命令，不能当作有效的电机轴实测扭矩。
