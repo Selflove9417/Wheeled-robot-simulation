@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/jazzy/include/**",
+                "/home/ubuntu2404/bbot_ws/src/bbot_description/include/**",
+                "/usr/include/**",
+                "/home/ubuntu2404/bbot_ws/src/bbot_balance_controller/include/bbot_balance_controller",
+                "/opt/ros/jazzy/include/rclcpp/rclcpp"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}

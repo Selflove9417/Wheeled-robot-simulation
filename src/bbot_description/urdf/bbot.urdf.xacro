@@ -2569,11 +2569,25 @@
   <gazebo reference="link_004">
     <mu1>1.0</mu1>
     <mu2>1.0</mu2>
+    <sensor name="left_wheel_contact" type="contact">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <contact>
+        <collision>link_004_collision_collision</collision>
+      </contact>
+    </sensor>
   </gazebo>
 
   <gazebo reference="link_007">
     <mu1>1.0</mu1>
     <mu2>1.0</mu2>
+    <sensor name="right_wheel_contact" type="contact">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <contact>
+        <collision>link_007_collision_collision</collision>
+      </contact>
+    </sensor>
   </gazebo>
 
   

@@ -45,7 +45,7 @@
    - 硬件接口中配置了 `position_proportional_gain: 600.0`。在未配置微分阻尼（$K_d$）的情况下，硬件接口形成了 30~50Hz 的高刚度弹簧振荡系统。
 
 #### 3. 解决方案
-- **修改 URDF 碰撞体为解析几何体**（[bbot.urdf.xacro](file:///home/admin/bbot_ws_new/src/bbot_description/urdf/bbot.urdf.xacro)）：
+- **修改 URDF 碰撞体为解析几何体**（[bbot.urdf.xacro](../src/bbot_description/urdf/bbot.urdf.xacro)）：
   将左右轮的碰撞网格替换为解析圆柱体：
   ```xml
   <collision name="link_004_collision">
@@ -104,7 +104,7 @@
 
 #### 3. 解决方案
 - 移除 spawner 中的 `--stopped` 参数，以 Active 模式直接挂载控制器。
-- 在 [bbot_gazebo.launch.py](file:///home/admin/bbot_ws_new/src/bbot_bringup/launch/bbot_gazebo.launch.py) 中，于第 2.0 秒自动接管自平衡控制，实现落地即稳。
+- 在 [bbot_gazebo.launch.py](../src/bbot_bringup/launch/bbot_gazebo.launch.py) 中，于第 2.0 秒自动接管自平衡控制，实现落地即稳。
 
 ---
 
@@ -137,7 +137,7 @@
 - 用户的终端激活了 Conda `(base)` 环境，默认环境变量 `#!/usr/bin/env python3` 启动了 Conda 的 Python，缺失 ROS 2 相关包。
 
 #### 3. 解决方案
-- **提供纯 C++ 原生编译版本** [teleop_keyboard.cpp](file:///home/admin/bbot_ws_new/src/bbot_balance_controller/src/teleop_keyboard.cpp)：
+- **提供纯 C++ 原生编译版本** [teleop_keyboard.cpp](../src/bbot_balance_controller/src/teleop_keyboard.cpp)：
   编译为独立二进制文件，彻底摆脱 Python 解释器和 Conda 环境依赖。
 - **将 Python 脚本 Shebang 强制绑定为系统 Python**：
   改为 `#!/usr/bin/python3`。
@@ -159,7 +159,7 @@
    - `MODE_STANDUP` 中后倒时错误地下发了 `-2.5 m/s`。
 
 #### 3. 解决方案
-- 在 [lqr_balance_controller_yaokong.cpp](file:///home/admin/bbot_ws_new/src/bbot_balance_controller/src/lqr_balance_controller_yaokong.cpp) 中修正 LQR 控制律与起立模式符号：
+- 在 [lqr_balance_controller_yaokong.cpp](../src/bbot_balance_controller/src/lqr_balance_controller_yaokong.cpp) 中修正 LQR 控制律与起立模式符号：
   ```cpp
   // 稳态 LQR 纠偏指令
   cmd_x = -u_pitch * cmd_scale_ - target_speed;
@@ -238,10 +238,10 @@ ros2 run bbot_balance_controller teleop_keyboard
 
 | 模块 / 文件 | 主要修改内容 |
 | :--- | :--- |
-| [bbot.urdf.xacro](file:///home/admin/bbot_ws_new/src/bbot_description/urdf/bbot.urdf.xacro) | 替换车轮碰撞体为解析柱体（$R=0.07\text{m}$）；注入 Gazebo IMU 系统插件；清理异常刚度配置 |
-| [bbot_controllers.yaml](file:///home/admin/bbot_ws_new/src/bbot_bringup/config/bbot_controllers.yaml) | 修正轮径为 `0.07`；配置差速控制器与腿部位置控制接口 |
-| [bbot_gazebo.launch.py](file:///home/admin/bbot_ws_new/src/bbot_bringup/launch/bbot_gazebo.launch.py) | 增加 `controller_type` 参数；移除 `--stopped`；配置 IMU/Clock Bridge 与平稳拉起机制 |
-| [balance_controller_keyboard.cpp](file:///home/admin/bbot_ws_new/src/bbot_balance_controller/src/balance_controller_keyboard.cpp) | 接入 `/cmd_vel`、`/target_height`、`/robot_mode` 话题；同步 $R=0.07\text{m}$ 与高度范围 |
-| [lqr_balance_controller_yaokong.cpp](file:///home/admin/bbot_ws_new/src/bbot_balance_controller/src/lqr_balance_controller_yaokong.cpp) | 纠正 LQR 输出符号与起立恢复方向；启用完整状态反馈矩阵；同步物理参数 |
-| [teleop_keyboard.cpp](file:///home/admin/bbot_ws_new/src/bbot_balance_controller/src/teleop_keyboard.cpp) | 新增纯 C++ 原生遥控终端程序，杜绝 Conda/Python 环境冲突 |
-| [robot_params.hpp](file:///home/admin/bbot_ws_new/src/bbot_kinematics/include/bbot_kinematics/robot_params.hpp) | 同步动力学模型参数 $R=0.07\text{m}$ |
+| [bbot.urdf.xacro](../src/bbot_description/urdf/bbot.urdf.xacro) | 替换车轮碰撞体为解析柱体（$R=0.07\text{m}$）；注入 Gazebo IMU 系统插件；清理异常刚度配置 |
+| [bbot_controllers.yaml](../src/bbot_bringup/config/bbot_controllers.yaml) | 修正轮径为 `0.07`；配置差速控制器与腿部位置控制接口 |
+| [bbot_gazebo.launch.py](../src/bbot_bringup/launch/bbot_gazebo.launch.py) | 增加 `controller_type` 参数；移除 `--stopped`；配置 IMU/Clock Bridge 与平稳拉起机制 |
+| [balance_controller_keyboard.cpp](../src/bbot_balance_controller/src/balance_controller_keyboard.cpp) | 接入 `/cmd_vel`、`/target_height`、`/robot_mode` 话题；同步 $R=0.07\text{m}$ 与高度范围 |
+| [lqr_balance_controller_yaokong.cpp](../src/bbot_balance_controller/src/lqr_balance_controller_yaokong.cpp) | 纠正 LQR 输出符号与起立恢复方向；启用完整状态反馈矩阵；同步物理参数 |
+| [teleop_keyboard.cpp](../src/bbot_balance_controller/src/teleop_keyboard.cpp) | 新增纯 C++ 原生遥控终端程序，杜绝 Conda/Python 环境冲突 |
+| [robot_params.hpp](../src/bbot_kinematics/include/bbot_kinematics/robot_params.hpp) | 同步动力学模型参数 $R=0.07\text{m}$ |

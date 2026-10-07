@@ -80,6 +80,83 @@ int main() {
     require(!observer.valid(observer.stamp()+.081),"stale COM velocity allowed launch release");
     require(!observer.update(5,5,0,Eigen::Vector3d::UnitZ(),history,9.5),"unaligned pose extrapolated");
     require(!observer.update(0,0,0,Eigen::Vector3d::Zero(),history,9.5),"invalid orientation accepted");
+
+    // Lean rate is differentiated from odometry poses with joints interpolated
+    // to each exact pose stamp. The hip/knee motion here is canceled by torso
+    // rotation, isolating the specified physical COM-lean rate.
+    JointPoseHistory aligned_history;
+    CentroidalLeanRateObserver lean_rate;
+    for (int i=0;i<12;++i) {
+        const double t=3.0+.01*i;
+        const double desired_lean=.3*t;
+        const std::array<double,4> pose{.2+.15*t,-.4-.3*t,.2+.15*t,-.4-.3*t};
+        const auto geom=centroidal_geometry(pose,9.5);
+        const double geometric_lean=std::atan2((geom.com-geom.axle).y(),(geom.com-geom.axle).z());
+        const Eigen::Matrix3d rotation=Eigen::AngleAxisd(geometric_lean-desired_lean,
+            Eigen::Vector3d::UnitX()).toRotationMatrix();
+        auto before=pose,after=pose;
+        aligned_history.push(t-.005,before); aligned_history.push(t+.005,after);
+        const bool valid=lean_rate.update(t,t+.002,rotation,aligned_history,9.5);
+        if (i==0) require(!valid,"first pose invented a rate");
+        else require(valid && std::abs(lean_rate.rate()-.3)<.02,"aligned torso/leg lean rate mismatch");
+        if (i==5) {
+            const double old_rate=lean_rate.rate(), old_stamp=lean_rate.stamp();
+            require(!lean_rate.update(t,t+.003,rotation,aligned_history,9.5),"duplicate pose accrued rate evidence");
+            require(lean_rate.valid(t+.003) && lean_rate.rate()==old_rate && lean_rate.stamp()==old_stamp,
+                    "duplicate pose erased the fresh estimate");
+        }
+    }
+    require(!lean_rate.valid(lean_rate.stamp()+.081),"stale aligned lean rate accepted");
+    require(!lean_rate.update(4.0,4.001,Eigen::Matrix3d::Identity(),aligned_history,9.5),
+            "missing joint bracket accepted for lean rate");
+    JointPoseHistory temporal_history;
+    temporal_history.push(.995,{.2,-.4,.2,-.4});
+    temporal_history.push(1.005,{.2,-.4,.2,-.4});
+    CentroidalLeanRateObserver temporal_rate;
+    require(!temporal_rate.update(1.0,1.002,Eigen::Matrix3d::Identity(),temporal_history,9.5),
+            "first temporal frame invented a derivative");
+    temporal_history.push(1.015,{.2,-.4,.2,-.4});
+    require(temporal_rate.update(1.01,1.012,Eigen::Matrix3d::Identity(),temporal_history,9.5),
+            "valid temporal pair rejected");
+    require(!temporal_rate.update(.99,1.012,Eigen::Matrix3d::Identity(),temporal_history,9.5) &&
+            !temporal_rate.valid(1.012),"backwards timestamp retained stale derivative");
+    temporal_history.push(1.20,{.2,-.4,.2,-.4});
+    require(!temporal_rate.update(1.20,1.202,Eigen::Matrix3d::Identity(),temporal_history,9.5),
+            "large timestamp gap produced a valid rate");
+
+    JointPoseHistory asynchronous_history;
+    asynchronous_history.push(2.995,{.2,-.4,.2,-.4});
+    asynchronous_history.push(3.000,{.2,-.4,.2,-.4});
+    CentroidalLeanRateObserver asynchronous_rate;
+    require(!asynchronous_rate.update(3.000,3.002,Eigen::Matrix3d::Identity(),
+                                      asynchronous_history,9.5),
+            "first asynchronous pose invented a rate");
+    asynchronous_history.push(3.005,{.2,-.4,.2,-.4});
+    require(asynchronous_rate.update(3.005,3.007,Eigen::Matrix3d::Identity(),
+                                     asynchronous_history,9.5),
+            "second aligned asynchronous pose was rejected");
+    const double cached_rate=asynchronous_rate.rate(), cached_stamp=asynchronous_rate.stamp();
+    require(!asynchronous_rate.update(3.010,3.012,Eigen::Matrix3d::Identity(),
+                                      asynchronous_history,9.5) &&
+            asynchronous_rate.valid(3.012) && asynchronous_rate.rate()==cached_rate &&
+            asynchronous_rate.stamp()==cached_stamp,
+            "pending joint upper bracket discarded fresh aligned rate");
+    asynchronous_history.push(3.015,{.2,-.4,.2,-.4});
+    require(asynchronous_rate.update(3.010,3.016,Eigen::Matrix3d::Identity(),
+                                     asynchronous_history,9.5),
+            "pending odometry frame could not update when joint bracket arrived");
+    require(!asynchronous_rate.valid(3.091),
+            "permanently missing joint data stayed valid beyond 80ms");
+    Eigen::Matrix3d invalid_rotation=Eigen::Matrix3d::Identity();
+    invalid_rotation(0,0)=std::numeric_limits<double>::quiet_NaN();
+    require(!asynchronous_rate.update(3.020,3.021,invalid_rotation,
+                                      asynchronous_history,9.5) &&
+            !asynchronous_rate.valid(3.021),
+            "nonfinite rotation retained aligned rate validity");
+    require(!asynchronous_rate.update(3.004,3.021,Eigen::Matrix3d::Identity(),
+                                      asynchronous_history,9.5) &&
+            !asynchronous_rate.valid(3.021),
+            "timestamp rollback retained aligned rate validity");
     std::array<double,4> bad=q; bad[0]=std::numeric_limits<double>::quiet_NaN();
     require(!centroidal_balance_state(bad,v,0,0,9.5).valid,"invalid joint state accepted");
     require(!centroidal_balance_state(q,v,0,0,-1).valid,"invalid mass accepted");
@@ -89,7 +166,7 @@ int main() {
     ThrustRelease release;
     release.update(10.633,1,1.15,1.98,185.5);
     require(!release.active(),"low momentum still releases thrust");
-    release.update(10.7,1,1.95,1.98,185.5);
-    require(release.active(),"real target COM speed cannot release thrust");
+    release.update(10.7,1,1.71,1.98,185.5);
+    require(release.active(),"real COM momentum cannot start predictive unloading");
     std::cout<<"PASS: COM geometry, joint/pitch derivatives, aligned momentum and landing direction\n";
 }

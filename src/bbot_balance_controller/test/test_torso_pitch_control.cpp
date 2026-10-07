@@ -49,7 +49,105 @@ TorsoResult run_torso(double mass, int period_ms, double inertia_scale, double i
     return {peak,std::abs(pitch-target),std::abs(rate),maximum};
 }
 
+struct TouchdownHandoffResult { double peak_post_capture_rate, final_error, final_rate; };
+TouchdownHandoffResult run_touchdown_handoff(bool converge) {
+    constexpr double mass=9.5, target=.03, dt=.001;
+    constexpr int sensor_period_ms=15, measurement_delay_ms=40;
+    const double inertia_com=.159013*mass/14.;
+    const double inertia=inertia_com+mass*(.00761282*.00761282+.12396677*.12396677);
+    double pitch=.09, rate=-.8, sampled_pitch=pitch, sampled_rate=rate;
+    double applied=0.0, pending=0.0;
+    std::vector<std::pair<double,std::pair<double,double>>> history;
+    TorsoImuObserver delayed_imu;
+    double peak_rate=0.0;
+    for (int ms=0; ms<3000; ++ms) {
+        const double t=dt*ms;
+        history.push_back({t,{pitch,rate}});
+        if (ms%sensor_period_ms==0) {
+            const double wanted=std::max(0.0,t-.001*measurement_delay_ms);
+            auto sample=history.front();
+            for (const auto & item:history) {
+                if (item.first>wanted) break;
+                sample=item;
+            }
+            sampled_pitch=sample.second.first;
+            sampled_rate=sample.second.second;
+            delayed_imu.update(1.0+sample.first,sampled_rate,0.0,0.0);
+            applied=pending; // one sensor-period actuator delay
+            while (history.size()>2 && history[1].first<wanted) history.erase(history.begin());
+        }
+        if (ms%5==0) {
+            const double measured_rate=delayed_imu.rate();
+            const auto impact=touchdown_torso_pitch_torque(sampled_pitch-target,measured_rate,55,15,20);
+            const auto balance=torso_pitch_torque(sampled_pitch,target,measured_rate,
+                0.0,0.0,mass,55,15,.060,20);
+            const double blend=converge ? touchdown_torso_convergence_blend(t-.50,.20) : 0.0;
+            pending=2.0*blend_torso_pitch_torque(
+                TorsoPitchTorque{0.0,impact,impact},balance,blend).command;
+        }
+        const double landing_impulse=3.0*std::sin(2.0*M_PI*2.0*t)*std::exp(-t/.25);
+        rate+=dt*(applied+landing_impulse-.05*rate)/inertia;
+        pitch+=dt*rate;
+        if (t>=.50) peak_rate=std::max(peak_rate,std::abs(rate));
+        require(std::isfinite(pitch)&&std::isfinite(rate),"delayed touchdown torso model diverged numerically");
+    }
+    return {peak_rate,std::abs(pitch-target),std::abs(rate)};
+}
+
 int main() {
+    require(!touchdown_effort_support_active(false,false) &&
+            !touchdown_effort_support_active(true,true),
+            "Position support and a pending leg-mode switch must not enable convergence");
+    require(touchdown_effort_support_active(true,false),
+            "a Position first hop may converge after touchdown Effort support is active");
+    require(!touchdown_torso_convergence_ready(
+                touchdown_effort_support_active(false,false),.8,true,0.0,0.0,0.0),
+            "pre-switch Position support must retain its existing touchdown controller");
+    require(!touchdown_torso_convergence_ready(
+                touchdown_effort_support_active(true,true),.8,true,0.0,0.0,0.0),
+            "pending Effort support switch must retain the impact correction");
+    require(touchdown_torso_convergence_ready(
+                touchdown_effort_support_active(true,false),.8,true,0.0,0.0,0.0),
+            "a captured first-hop landing may converge after Effort support is active");
+    require(!touchdown_torso_convergence_ready(true,.499,true,0.0,0.0,0.0),
+            "Effort convergence must wait at least 0.50 s after touchdown");
+    require(!touchdown_torso_convergence_ready(true,.5,false,0.0,0.0,0.0),
+            "stale world COM must not enable touchdown convergence");
+    require(!touchdown_torso_convergence_ready(true,.5,true,.1001,0.0,0.0),
+            "COM lean outside capture range must not enable convergence");
+    require(!touchdown_torso_convergence_ready(true,.5,true,0.0,.3501,0.0),
+            "COM velocity outside capture range must not enable convergence");
+    require(!touchdown_torso_convergence_ready(true,.5,true,0.0,0.0,.1501),
+            "large body angle must retain the asymmetric touchdown correction");
+    require(touchdown_torso_convergence_ready(true,.5,true,.10,-.35,-.15),
+            "inclusive convergence capture boundaries must be accepted");
+    require(touchdown_torso_convergence_blend(0.0)==0.0 &&
+            touchdown_torso_convergence_blend(.20)==1.0,
+            "convergence blend must begin/end at exact controller endpoints");
+    double prior_blend=0.0;
+    for (int i=1;i<=200;++i) {
+        const double blend=touchdown_torso_convergence_blend(.001*i);
+        require(blend>=prior_blend && blend-prior_blend<.008,
+                "20 ms blend profile must remain monotonic and continuous");
+        prior_blend=blend;
+    }
+    const TorsoPitchTorque impact_endpoint{0.0,7.0,7.0};
+    const TorsoPitchTorque saturated_balance{35.0,12.0,20.0};
+    for (int i=0;i<=100;++i) {
+        const auto mixed=blend_torso_pitch_torque(impact_endpoint,saturated_balance,.01*i);
+        require(std::abs(mixed.command)<=20.0,
+                "torso blend must preserve the saturated endpoint torque cap");
+    }
+    require(blend_torso_pitch_torque(impact_endpoint,saturated_balance,0.0).command==7.0 &&
+            blend_torso_pitch_torque(impact_endpoint,saturated_balance,1.0).command==20.0,
+            "torso blend must preserve both bounded endpoint commands");
+    const auto delayed_legacy=run_touchdown_handoff(false);
+    const auto delayed_converged=run_touchdown_handoff(true);
+    require(delayed_converged.peak_post_capture_rate<delayed_legacy.peak_post_capture_rate,
+            "fresh-COM touchdown convergence must reduce post-capture rate in an independent delayed-sensor model");
+    require(delayed_converged.final_error<.01 && delayed_converged.final_rate<.05,
+            "smooth torso-law transition must settle the independent delayed-sensor model");
+
     // The 6.136 s failure row still delivered +0.434 Nm at pitch +1.102 rad,
     // rate +5.361 rad/s. Support cannot cancel the independent torso command.
     const double pitch=1.10237;
@@ -119,7 +217,80 @@ int main() {
             worst_rate=std::max(worst_rate,result.final_rate);++cases;
         }
     }
+    // Test touchdown_torso_pitch_torque asymmetric damping:
+    // 1. Logged failure case: pitch_err = -0.292 rad, pitch_rate = +1.13 rad/s
+    // Without asymmetric damping, D term (+16.95 Nm) cancels P term (-16.06 Nm), giving negative torque.
+    // With asymmetric damping, D is limited to 45% of P (7.227 Nm), preserving forward restoring torque.
+    const double tau_logged = touchdown_torso_pitch_torque(-0.292, 1.13, 55.0, 15.0, 20.0);
+    require(tau_logged > 4.40 && tau_logged < 4.43,
+            "logged recovering point must deliver positive restoring torque");
+
+    // 2. Near-neutral zone (|pitch_err| <= 0.10): full damping preserved to prevent forward overshoot
+    const double tau_neutral = touchdown_torso_pitch_torque(-0.05, 1.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_neutral - (-6.125)) < 1e-12,
+            "near-neutral zone must retain full damping to brake forward overshoot");
+
+    // 3. Diverging motion: pitch_err = -0.25 rad, pitch_rate = -1.0 rad/s
+    const double tau_diverging = touchdown_torso_pitch_torque(-0.25, -1.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_diverging - 14.375) < 1e-12,
+            "diverging motion must receive full reinforcing torque");
+
+    // 4. Clamping at limits
+    require(touchdown_torso_pitch_torque(-1.0, -5.0, 55.0, 15.0, 20.0) == 20.0,
+            "must clamp to positive limit");
+    require(touchdown_torso_pitch_torque(1.0, 5.0, 55.0, 15.0, 20.0) == -20.0,
+            "must clamp to negative limit");
+
+    // 5. Continuous smooth transition across 0.10 rad boundary in [0.06, 0.25]
+    double prev_tau = touchdown_torso_pitch_torque(-0.04, 3.0, 55.0, 15.0, 20.0);
+    for (double err = 0.041; err <= 0.28; err += 0.001) {
+        const double curr_tau = touchdown_torso_pitch_torque(-err, 3.0, 55.0, 15.0, 20.0);
+        const double step = std::abs(curr_tau - prev_tau);
+        require(step < 0.25, "pitch torque must be continuous and smooth across transition zone");
+        prev_tau = curr_tau;
+    }
+    const double tau_0099 = touchdown_torso_pitch_torque(-0.0999, 4.0, 55.0, 15.0, 20.0);
+    const double tau_0101 = touchdown_torso_pitch_torque(-0.1001, 4.0, 55.0, 15.0, 20.0);
+    require(std::abs(tau_0101 - tau_0099) < 0.02,
+            "0.10 rad boundary must not have any discrete jump");
+
+    // 6. Test touchdown_hip_soft_limit_guard
+    // Test Case A: q=1.57, q_dot=0, req=+10.0 (pinned against mechanical stop at zero velocity)
+    const double tau_pinned = touchdown_hip_soft_limit_guard(1.57, 0.0, 10.0, 20.0);
+    require(tau_pinned <= -19.0,
+            "q=1.57, q_dot=0, req=+10.0 must output full negative restoring spring torque");
+
+    // Test Case B: q=1.45, q_dot < 0, req=-10.0 (clearly receding from limit with negative request)
+    const double tau_receding_neg = touchdown_hip_soft_limit_guard(1.45, -0.5, -10.0, 20.0);
+    require(tau_receding_neg == -10.0,
+            "q=1.45, q_dot<0, req=-10.0 must be passed through unchanged");
+
+    // Test Case C: q=1.25, q_dot=0, req=+5.0 (inside warning zone [1.20, 1.45], positive torque prohibited)
+    const double tau_warning_zero = touchdown_hip_soft_limit_guard(1.25, 0.0, 5.0, 20.0);
+    require(tau_warning_zero <= -3.5 && tau_warning_zero < 0.0,
+            "q=1.25, q_dot=0 must prohibit positive torque and apply active restoring spring");
+
+    // Test Case D: q=1.10, q_dot=0, req=+15.0 (in safe zone below 1.20 rad)
+    const double tau_safe = touchdown_hip_soft_limit_guard(1.10, 0.0, 15.0, 20.0);
+    require(tau_safe == 15.0,
+            "safe configuration below 1.20 rad must pass through requested torque");
+
+    // Test Case E: High-speed approaching sample q=1.39, q_dot=19.0
+    const double tau_brake = touchdown_hip_soft_limit_guard(1.39, 19.0, 5.0, 20.0);
+    require(tau_brake <= -18.0,
+            "sample q=1.39, q_dot=19 must trigger strong negative soft limit braking");
+
+    // Test Case F: Asymmetric left/right hip states protected independently
+    const double tau_left = touchdown_hip_soft_limit_guard(1.05, 0.0, 8.0, 20.0);
+    const double tau_right = touchdown_hip_soft_limit_guard(1.57, 0.0, 8.0, 20.0);
+    require(tau_left == 8.0,
+            "left hip in safe zone must remain at requested +8.0 Nm");
+    require(tau_right <= -19.0,
+            "right hip at limit must be forced to negative restoring torque");
+    require(tau_left != tau_right,
+            "left and right hips must be protected independently without shared common clamp");
+
     std::cout<<"PASS: uncancelled torso torque, retained leg damping; "<<cases
              <<" moving-hip/IMU/delay cases, final error/rate="<<worst_error<<"/"<<worst_rate
-             <<" (not Gazebo validation)\n";
+             <<", continuous asymmetric damping & independent hip soft limit guard verified\n";
 }

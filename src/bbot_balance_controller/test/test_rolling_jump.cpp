@@ -38,5 +38,43 @@ int main() {
     }
     require(std::abs(command+.568)<1e-12,"abort cannot converge to balance output");
     require(rolling_abort_wheel_command(1,-.2,0)==-.2,"paused clock must hold command");
-    std::cout << "PASS: rolling readiness, continuous squat reference, bounded abort handoff\n";
+
+    // Flight wheel target tests:
+    // 1. Baseline wheel speed preserved when within deadband
+    require(std::abs(flight_wheel_target(0.40, 0.0, 0.0, 0.0, 0.0, false, -1.0) - 0.40) < 1e-12,
+            "baseline wheel speed must be preserved");
+    require(std::abs(flight_wheel_target(0.40, -0.015, -0.05, 0.0, 0.0, false, -1.0) - 0.40) < 1e-12,
+            "within-deadband pitch error/rate must not perturb baseline");
+
+    // 2. Reaction wheel direction: air_wheel_sign=-1.0 must accelerate backward (cmd > baseline) for negative pitch/rate
+    const double cmd_neg_pitch = flight_wheel_target(0.0, -0.10, -0.50, 0.0, 0.0, false, -1.0);
+    require(cmd_neg_pitch > 0.0,
+            "negative pitch/rate with air_wheel_sign=-1.0 must produce positive wheel velocity cmd");
+    const double cmd_pos_pitch = flight_wheel_target(0.0, 0.10, 0.50, 0.0, 0.0, false, -1.0);
+    require(cmd_pos_pitch < 0.0,
+            "positive pitch/rate with air_wheel_sign=-1.0 must produce negative wheel velocity cmd");
+
+    // 3. ATTITUDE_ARREST knee braking feedforward sign mapping
+    double arrest_ff_neg = 0.0;
+    double cmd_arrest_neg = flight_wheel_target(0.0, 0.0, 0.0, 10.0, 0.0, true, -1.0, 0.50, 0.45, 1.40, &arrest_ff_neg);
+    require(std::abs(arrest_ff_neg - 0.35) < 1e-12, "arrest_ff must be +0.35 for air_wheel_sign=-1.0");
+    require(std::abs(cmd_arrest_neg - 0.35) < 1e-12, "cmd must equal arrest_ff when error is zero");
+
+    double arrest_ff_pos = 0.0;
+    double cmd_arrest_pos = flight_wheel_target(0.0, 0.0, 0.0, 10.0, 0.0, true, +1.0, 0.50, 0.45, 1.40, &arrest_ff_pos);
+    require(std::abs(arrest_ff_pos - (-0.35)) < 1e-12, "arrest_ff must be -0.35 for air_wheel_sign=+1.0 (legacy)");
+    require(std::abs(cmd_arrest_pos - (-0.35)) < 1e-12, "cmd must equal -0.35 under legacy sign");
+
+    // 4. Feedforward and feedback cooperate (both positive, reinforcing)
+    const double cmd_both = flight_wheel_target(0.0, 0.0, -0.50, 10.0, 0.0, true, -1.0);
+    const double cmd_fb_only = flight_wheel_target(0.0, 0.0, -0.50, 0.0, 0.0, false, -1.0);
+    require(cmd_both > cmd_fb_only + 0.30, "feedforward and feedback must reinforce each other");
+
+    // 5. Clamping at speed limits
+    const double cmd_sat_pos = flight_wheel_target(0.0, -2.0, -10.0, 0.0, 0.0, false, -1.0, 0.50, 0.45, 1.40);
+    require(std::abs(cmd_sat_pos - 1.40) < 1e-12, "must clamp to positive speed limit");
+    const double cmd_sat_neg = flight_wheel_target(0.0, 2.0, 10.0, 0.0, 0.0, false, -1.0, 0.50, 0.45, 1.40);
+    require(std::abs(cmd_sat_neg - (-1.40)) < 1e-12, "must clamp to negative speed limit");
+
+    std::cout << "PASS: rolling readiness, continuous squat reference, bounded abort handoff, flight wheel control\n";
 }

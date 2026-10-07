@@ -73,6 +73,73 @@ struct CentroidalBalanceState {
     bool valid=false;
 };
 
+// Time-align torso pose and joint geometry before differentiating lean. This
+// intentionally keeps its own pose history: repeated odometry frames do not
+// accrue evidence and stale/missing joint interpolation invalidates the rate.
+class CentroidalLeanRateObserver {
+    double previous_stamp_=-1.0;
+    double previous_angle_=0.0;
+    double stamp_=-1.0;
+    double rate_=0.0;
+    bool valid_=false;
+public:
+    bool update(double stamp, double now, const Eigen::Matrix3d & rotation,
+                const JointPoseHistory & history, double body_mass) {
+        // Reject bad pose metadata immediately. A pending odometry frame is
+        // handled separately below because joint-state transport commonly
+        // trails odometry by a few milliseconds.
+        if (!std::isfinite(stamp) || !std::isfinite(now) || now < stamp ||
+            now - stamp > 0.080 || !rotation.allFinite() ||
+            (rotation.transpose()*rotation-Eigen::Matrix3d::Identity()).norm()>1e-5 ||
+            std::abs(rotation.determinant()-1.0)>1e-5 ||
+            !std::isfinite(body_mass) || body_mass<=0.0) {
+            valid_=false;
+            return false;
+        }
+        if (previous_stamp_ >= 0.0 && stamp < previous_stamp_) {
+            previous_stamp_ = -1.0;
+            valid_ = false;
+            return false;
+        }
+        std::array<double,4> q{};
+        if (!history.interpolate(stamp,q)) {
+            // No extrapolation: retain the last complete aligned estimate
+            // until it expires, so an odometry frame that arrives before its
+            // joint-history upper bracket does not reset a stability gate.
+            return false;
+        }
+        const auto geometry=centroidal_geometry(q,body_mass);
+        const Eigen::Vector3d relative=rotation*(geometry.com-geometry.axle);
+        Eigen::Vector3d heading=rotation.col(1);
+        heading.z()=0.0;
+        if (heading.norm()<0.5) { valid_=false; return false; }
+        heading.normalize();
+        const double horizontal=relative.dot(heading);
+        const double angle=std::atan2(horizontal,relative.z());
+        if (!std::isfinite(angle)) { valid_=false; return false; }
+        if (previous_stamp_>=0.0 && stamp==previous_stamp_)
+            return false; // no new evidence; retain estimate until its age expires
+        if (previous_stamp_<0.0 || stamp<previous_stamp_) {
+            if (stamp<previous_stamp_) { previous_stamp_=-1.0; valid_=false; }
+            valid_=false;
+            if (stamp>previous_stamp_) { previous_stamp_=stamp; previous_angle_=angle; }
+            return false;
+        }
+        const double dt=stamp-previous_stamp_;
+        previous_stamp_=stamp;
+        const double delta=std::remainder(angle-previous_angle_,2.0*M_PI);
+        previous_angle_=angle;
+        valid_=dt>=0.001 && dt<=0.080;
+        if (valid_) { rate_=delta/dt; stamp_=stamp; }
+        return valid_;
+    }
+    bool valid(double now) const {
+        return valid_ && std::isfinite(now) && now>=stamp_ && now-stamp_<=0.080;
+    }
+    double rate() const { return rate_; }
+    double stamp() const { return stamp_; }
+};
+
 inline CentroidalBalanceState centroidal_balance_state(
     const std::array<double,4> & q, const std::array<double,4> & v,
     double pitch, double pitch_rate, double body_mass)
@@ -101,6 +168,7 @@ inline CentroidalBalanceState centroidal_balance_state(
 // moving base origin. Align joints to each pose before differentiating.
 class CentroidalWorldObserver {
     WorldPoseVelocity velocity_;
+    Eigen::Vector3d com_world_position_ = Eigen::Vector3d::Zero();
 public:
     bool update(double stamp, double now, const Eigen::Vector3d & base,
                 const Eigen::Matrix3d & rotation, const JointPoseHistory & history,
@@ -113,7 +181,9 @@ public:
             !std::isfinite(body_mass) || body_mass<=0 ||
             now<stamp || now-stamp>0.080 || !history.interpolate(stamp,q)) return false;
         const Eigen::Vector3d com=base+rotation*centroidal_geometry(q,body_mass).com;
-        return velocity_.update(stamp,{com.x(),com.y(),com.z()});
+        if (!velocity_.update(stamp,{com.x(),com.y(),com.z()})) return false;
+        com_world_position_=com;
+        return true;
     }
     bool valid(double now) const {
         return std::isfinite(now) && velocity_.valid() &&
@@ -123,6 +193,8 @@ public:
         const auto & v=velocity_.velocity();
         return v[0]*heading.x()+v[1]*heading.y();
     }
+    const Eigen::Vector3d & position() const { return com_world_position_; }
+    double stamp() const { return velocity_.sample_stamp(); }
 };
 
 // Differentiate the world COM position, after aligning q and odometry. Never

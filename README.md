@@ -2,7 +2,7 @@
 
 工作区：`/home/xy/bbot_ws_new` · ROS 2 Iron / Gazebo Sim。
 
-当前为 `main` 旧代码基线。最新源码、独立实验与跳跃修复在 [work/jump-repair](https://github.com/Selflove9417/Wheeled-robot-simulation/tree/work/jump-repair)，尚未完成物理验收。下表 MPC 只在开发分支提供；main 的 launch 不支持 `controller_type:=mpc`。
+当前开发分支为 `work/jump-repair`，该分支与下述跳跃修复仍未验收。`main` 保持旧基线，不能把候选改动视为已合并或已通过。
 
 ## 环境与日常启动
 
@@ -32,10 +32,10 @@ ros2 topic pub --once /jump_cmd std_msgs/msg/String '{data: jump}'
 自动演示入口：
 
 ```bash
-# 自动演示脚本在 work/jump-repair 分支提供
+./run_complete_jump_demo.sh
 ```
 
-`jump_height` 用于生成离地速度目标，不代表实际轮底净空。当前跳跃修复状态和目标验收见 [LANDING_REPAIR.md](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/LANDING_REPAIR.md)。
+`jump_height` 用于生成离地速度目标，不代表实际轮底净空。当前跳跃修复状态和目标验收见 [LANDING_REPAIR.md](LANDING_REPAIR.md)。
 
 ## 控制方式
 
@@ -49,28 +49,27 @@ ros2 topic pub --once /jump_cmd std_msgs/msg/String '{data: jump}'
 | `lqr` | 速度级 LQR 平衡 | 控制器内的状态反馈与速度环参数 | [实现与说明](src/bbot_balance_controller/src/README_LQR.md) · [源码](src/bbot_balance_controller/src/lqr_balance_controller_yaokong.cpp) |
 | `gs_lqr` | 按腿部高度调度增益的 LQR 平衡 | 控制器内的高度节点与增益表 | [实现与说明](src/bbot_balance_controller/src/README_LQR_gain_scheduled.md) · [源码](src/bbot_balance_controller/src/lqr_gain_scheduled_controller.cpp) |
 | `adaptive_lqr` | 自适应平衡点的 LQR 平衡 | `adaptive_gain_mode`，如 `scheduled`、`fixed_midpoint` | [实现与说明](src/bbot_balance_controller/src/README_adaptive_LQR.md) · [源码](src/bbot_balance_controller/src/adaptive_lqr_balance_controller.cpp) |
-| `mpc` | 带约束滚动优化的平衡控制 | [参数文件](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/src/bbot_balance_controller/config/mpc_balance_params.yaml) | [实现与说明](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/src/bbot_balance_controller/src/README_MPC.md) · [源码](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/src/bbot_balance_controller/src/linear_mpc_balance_controller.cpp) |
-| `jump` | 经典多阶段跳跃与落地缓冲 | 由跳跃状态机配置控制 | [源码](src/bbot_balance_controller/src/bbot_jump_controller.cpp) · [入口说明](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/jump/README.md) |
-| `jump_velocity` | 按目标离地速度生成跳跃动作；当前 launch 默认入口 | `jump_height` 等跳跃配置 | [源码](src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp) · [入口说明](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/jump/README.md) |
+| `mpc` | 带约束滚动优化的平衡控制 | [参数文件](src/bbot_balance_controller/config/mpc_balance_params.yaml) | [实现与说明](src/bbot_balance_controller/src/README_MPC.md) · [源码](src/bbot_balance_controller/src/linear_mpc_balance_controller.cpp) |
+| `jump` | 经典多阶段跳跃与落地缓冲 | 由跳跃状态机配置控制 | [源码](src/bbot_balance_controller/src/bbot_jump_controller.cpp) · [入口说明](docs/jump/README.md) |
+| `jump_velocity` | 按目标离地速度生成跳跃动作；当前 launch 默认入口 | `jump_height` 等跳跃配置 | [源码](src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp) · [入口说明](docs/jump/README.md) |
 
-`gs_lqr_historical` 是历史对照入口：复用自适应 LQR 可执行文件并加载 [历史配置](src/bbot_balance_controller/config/gs_lqr_historical_experiment.yaml)，不作为日常默认方式。历史实验材料见[平衡报告索引](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/balance/README.md)。
+`gs_lqr_historical` 是历史对照入口：复用自适应 LQR 可执行文件并加载 [历史配置](src/bbot_balance_controller/config/gs_lqr_historical_experiment.yaml)，不作为日常默认方式。历史实验材料见[平衡报告索引](docs/balance/README.md)。
 
 示例：
 
 ```bash
 ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=torque_cascade_pid
-# 以下命令仅适用于 work/jump-repair 分支
 ros2 launch bbot_bringup bbot_gazebo.launch.py controller_type:=mpc
 ```
 
 ## 文档导航
 
-- [文档目录与文件归类](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/README.md)
-- [自平衡控制方法与配置](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/balance/README.md)
-- [跳跃入口、状态与记录](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/jump/README.md)
-- [独立实验入口与结果索引](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/experiments/jump/README.md) · [历史实验记录索引](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/experiments/jump/RECORDS.md)
-- [默认 flat-jump 版本说明](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/DEFAULT_FLAT_JUMP.md) · [跳跃修复历史](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/jump/LANDING_REPAIR_HISTORY.md)
-- [历史综合说明](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/PROJECT_REFERENCE.md) · [仿真调试手册](https://github.com/Selflove9417/Wheeled-robot-simulation/blob/work/jump-repair/docs/BBOT_SIMULATION_DEBUG_MANUAL.md)
+- [文档目录与文件归类](docs/README.md)
+- [自平衡控制方法与配置](docs/balance/README.md)
+- [跳跃入口、状态与记录](docs/jump/README.md)
+- [独立实验入口与结果索引](experiments/jump/README.md) · [历史实验记录索引](experiments/jump/RECORDS.md)
+- [默认 flat-jump 版本说明](DEFAULT_FLAT_JUMP.md) · [跳跃修复历史](docs/jump/LANDING_REPAIR_HISTORY.md)
+- [历史综合说明](docs/PROJECT_REFERENCE.md) · [仿真调试手册](docs/BBOT_SIMULATION_DEBUG_MANUAL.md)
 
 ## 工作区目录
 

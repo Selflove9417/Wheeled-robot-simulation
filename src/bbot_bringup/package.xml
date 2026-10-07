@@ -7,12 +7,27 @@
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>ignition-gazebo6</build_depend>
+  <build_depend>ignition-plugin1</build_depend>
+  <build_depend>ignition-transport11</build_depend>
+  <build_depend>ignition-msgs8</build_depend>
+  <build_depend>bbot_balance_controller</build_depend>
+  <exec_depend>ignition-gazebo6</exec_depend>
+  <exec_depend>ignition-plugin1</exec_depend>
+  <exec_depend>ignition-transport11</exec_depend>
+  <exec_depend>ignition-msgs8</exec_depend>
 
   <exec_depend>bbot_description</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>controller_manager</exec_depend>
+  <exec_depend>controller_manager_msgs</exec_depend>
+  <exec_depend>bbot_balance_controller</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>diff_drive_controller</exec_depend>
   <exec_depend>gz_ros2_control</exec_depend>

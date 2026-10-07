@@ -51,15 +51,16 @@ RESPONSE_WINDOW_S = 1.5
 RECOVERY_HOLD_S = 2.0
 
 
-def build_trials(repeats):
+def build_trials(repeats, lift_speeds=(0.05,)):
     trials = []
     for height in HEIGHTS:
         for rep in range(1, repeats + 1):
             trials.append({"job": "constant", "height": height,
                            "force": 0.0, "rep": rep})
-    for rep in range(1, repeats + 1):
-        trials.append({"job": "lift", "height": 0.30,
-                       "force": 0.0, "rep": rep})
+    for speed in lift_speeds:
+        for rep in range(1, repeats + 1):
+            trials.append({"job": "lift", "height": 0.30,
+                           "force": 0.0, "speed": speed, "rep": rep})
     for height in HEIGHTS:
         for force in (20.0, -20.0):
             for rep in range(1, repeats + 1):
@@ -69,11 +70,12 @@ def build_trials(repeats):
 
 
 def trial_tag(controller, trial):
-    prefix = "pid" if controller == "position_pid" else "gs_lqr"
+    prefix = {"position_pid": "pid", "gs_lqr": "gs_lqr",
+              "fixed_lqr": "fixed_lqr"}[controller]
     if trial["job"] == "push":
         return f"{prefix}_push_h{trial['height']:.2f}_f{trial['force']:+.0f}_rep{trial['rep']}"
     if trial["job"] == "lift":
-        return f"{prefix}_lift_rep{trial['rep']}"
+        return f"{prefix}_lift_v{trial['speed']:.2f}_rep{trial['rep']}"
     return f"{prefix}_constant_h{trial['height']:.2f}_rep{trial['rep']}"
 
 
@@ -113,6 +115,14 @@ def cleanup():
 
 
 def wait_for_startup(env, world_name, controller, timeout):
+    """Initialize the paused control graph without uncontrolled motion.
+
+    Controller spawners require simulation update cycles to complete their
+    activation.  The formal controller is launched immediately and therefore
+    continuously publishes its startup leg pose before these short steps.
+    This prevents the uncommanded robot from falling while the paused graph is
+    brought to readiness.
+    """
     node_name = ("/position_torque_cascade_pid_controller"
                  if controller == "position_pid"
                  else "/adaptive_lqr_balance_controller")
@@ -127,7 +137,7 @@ def wait_for_startup(env, world_name, controller, timeout):
         if service in services and not paused:
             paused = service_ok(service_call(env, world_name, "{world_control: {pause: true}}"))
         if paused:
-            service_call(env, world_name, "{world_control: {step: true, multi_step: 10}}")
+            service_call(env, world_name, "{world_control: {step: true, multi_step: 1}}")
         nodes = ros_cli(env, ["node", "list"])
         controllers = ros_cli(env, ["control", "list_controllers", "-c", "/controller_manager"])
         info = ros_cli(env, ["node", "info", node_name])
@@ -350,9 +360,10 @@ def capture_manifest(args, root):
     manifest = {
         "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "protocol": {
-            "conditions": 1 if lift_recheck else 10,
+            "conditions": len(args.lift_speeds) if lift_recheck else 9 + len(args.lift_speeds),
             "repetitions_per_condition": args.repeats,
-            "total_controller_runs": (2 if lift_recheck else 20) * args.repeats,
+            "total_controller_runs": (2 * len(args.lift_speeds) if lift_recheck else
+                                      (18 + 2 * len(args.lift_speeds))) * args.repeats,
             "pulse_duration_s": args.force_duration,
             "response_window_s": RESPONSE_WINDOW_S,
             "recovery_hold_s": RECOVERY_HOLD_S,
@@ -371,6 +382,7 @@ def capture_manifest(args, root):
             "high_hold_s": LIFT_HIGH_HOLD_S,
             "low_observation_hold_s": LIFT_LOW_HOLD_S,
             "gate_timeout_after_reset_s": LIFT_GATE_TIMEOUT_AFTER_RESET_S,
+            "commanded_speeds_mps": args.lift_speeds,
         } if lift_recheck else {"enabled": False}),
         "pid": {"controller_type": "position_torque_cascade_pid",
                 "gains_file": args.pid_gains_file,
@@ -397,20 +409,27 @@ def capture_manifest(args, root):
 def launch_command(args, controller, trial, csv_path):
     h = trial["height"] if trial["job"] != "lift" else 0.30
     common = (f"source {args.ws_root}/install/setup.bash && ros2 launch bbot_bringup "
-              f"bbot_gazebo.launch.py gazebo_start_paused:=true headless:=true gui:=false "
+              f"bbot_gazebo.launch.py gazebo_start_paused:=true auto_unpause:=false headless:=true gui:=false "
+              "formal_controller_start_delay:=0.0 "
+              "torque_pid_initial_roll:=0.0 "
               f"gazebo_record_path:=/tmp/bbot_gazebo_record_{os.getpid()} "
               f"gazebo_world_name:={args.world_name} adaptive_target_height:={h:.3f} "
               f"adaptive_startup_height:={args.startup_height:.3f}")
+    lift_speed = trial.get("speed", 0.05)
     if controller == "position_pid":
         return (common + " controller_type:=position_torque_cascade_pid "
                 f"position_pid_gains_file:={args.pid_gains_file} "
                 f"position_pid_log_path:={csv_path} position_pid_target_height:={h:.3f} "
                 "position_pid_kp:=0.60 position_pid_ki:=0.005 position_pid_kd:=0.45 "
                 "position_pid_v_ref_limit:=0.40 position_pid_rate_limit_u:=0.0 "
-                "position_pid_total_torque_max:=20.0 position_pid_wheel_torque_max:=10.0")
+                "position_pid_total_torque_max:=20.0 position_pid_wheel_torque_max:=10.0 "
+                f"position_pid_leg_transition_speed:={lift_speed:.6f}")
+    gain_mode = "fixed_midpoint" if controller == "fixed_lqr" else "scheduled"
     return (common + " controller_type:=gs_lqr_historical "
+            f"historical_gs_lqr_gain_mode:={gain_mode} "
             f"historical_gs_lqr_config_file:={args.gs_config_file} "
-            f"adaptive_log_path:={csv_path} adaptive_target_height:={h:.3f}")
+            f"adaptive_log_path:={csv_path} adaptive_target_height:={h:.3f} "
+            f"adaptive_leg_transition_speed:={lift_speed:.6f}")
 
 
 def run_one(args, controller, trial, root, attempt):
@@ -465,6 +484,7 @@ def run_one(args, controller, trial, root, attempt):
     startup_ready = False
     fail_reason = None
     event_state = {
+        "commanded_height_speed_mps": trial.get("speed", None),
         "target_lock_time_sim": None,
         "static_gate": {
             "height_target_m": LIFT_LOW_HEIGHT_M,
@@ -522,7 +542,7 @@ def run_one(args, controller, trial, root, attempt):
                 elif time.time() - no_data_wall > 45.0:
                     fail_reason = "controller_stopped_logging"
                     break
-                if controller == "gs_lqr" and target_reference_seen is None:
+                if controller in ("gs_lqr", "fixed_lqr") and target_reference_seen is None:
                     target_reference_seen = rec["p_target"]
                 if not reset_sent and rec["time"] >= RESET_SIM_TIME:
                     helper.fire(spec[0]["trigger"])
@@ -531,7 +551,7 @@ def run_one(args, controller, trial, root, attempt):
                 if reset_sent and target_lock_time is None:
                     if controller == "position_pid" and rec["target_latched"] > 0.5:
                         target_lock_time = rec["time"]
-                    elif controller == "gs_lqr":
+                    elif controller in ("gs_lqr", "fixed_lqr"):
                         if target_reference_seen is None:
                             target_reference_seen = rec["p_target"]
                         elif abs(rec["p_target"] - target_reference_seen) > 1e-4:
@@ -641,28 +661,45 @@ def run_one(args, controller, trial, root, attempt):
         fail_reason = "lift_incomplete"
         event_state["failure_reason"] = fail_reason
 
+    push_gate_timeout = bool(trial["job"] == "push" and startup_ready and
+                             reset_sent and not force_on and fail_reason is None and
+                             last_sim >= PUSH_END)
+    if push_gate_timeout:
+        fail_reason = "push_static_gate_timeout"
     protocol_pulse_ok = True
     if trial["job"] == "push":
         protocol_pulse_ok = pulse_state_valid(pulse_state, args.force_duration)
+    try:
+        launch_text = launch_log.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        launch_text = ""
+    controller_protection_failure = "controller disabled" in launch_text.lower()
+    physical_protection = bool(controller_protection_failure and startup_ready and reset_sent)
+    if physical_protection:
+        if fail_reason in (None, "no_csv_data", "controller_stopped_logging"):
+            fail_reason = "controller_protection_stop"
+            event_state["failure_reason"] = fail_reason
     recording_protocol_error = False
     if fail_reason in ("no_csv_data", "controller_stopped_logging"):
-        try:
-            launch_text = launch_log.read_text(encoding="utf-8", errors="ignore")
-            recording_protocol_error = (
-                "Failed to activate controller" in launch_text or
-                ("[ERROR] [spawner-" in launch_text and "]: process has died" in launch_text))
-        except OSError:
-            recording_protocol_error = False
+        recording_protocol_error = (
+            "Failed to activate controller" in launch_text or
+            ("[ERROR] [spawner-" in launch_text and "]: process has died" in launch_text))
     result = {
         "controller": controller, "trial_tag": tag, "attempt": attempt,
+        "lift_commanded_speed_mps": trial.get("speed", ""),
         "protocol_startup_ready": bool(startup_ready),
         "protocol_reset_sent": bool(reset_sent),
         "protocol_pulse_valid": bool(protocol_pulse_ok),
-        "protocol_valid": bool(startup_ready and reset_sent and protocol_pulse_ok),
+        "protocol_valid": bool(startup_ready and reset_sent and
+                               (protocol_pulse_ok or push_gate_timeout or physical_protection)),
         "retryable_protocol_error": bool((not startup_ready) or
-                                          (trial["job"] == "push" and pulse_state is not None and not protocol_pulse_ok) or
+                                          fail_reason in ("no_csv_data", "controller_stopped_logging") or
+                                          (trial["job"] == "push" and not push_gate_timeout and
+                                           not physical_protection and pulse_state is not None and not protocol_pulse_ok) or
                                           recording_protocol_error),
         "fail_reason": fail_reason,
+        "push_static_gate_passed": bool(force_on) if trial["job"] == "push" else "",
+        "controller_protection_failure": controller_protection_failure,
         "lift_static_gate_valid": bool(event_state["static_gate"]["passed"])
             if trial["job"] == "lift" and args.lift_stable_gated else "",
         "lift_completed": bool(event_state["completed"])
@@ -677,6 +714,8 @@ def run_one(args, controller, trial, root, attempt):
             result.update(response_metrics(csv_path, controller, trial, pulse_state))
         except (OSError, ValueError) as exc:
             result["analysis_error"] = str(exc)
+    if push_gate_timeout or physical_protection:
+        result["fail_reason"] = fail_reason
     if pulse_state is not None:
         with (Path(str(csv_path) + ".pulse.json")).open("w", encoding="utf-8") as handle:
             json.dump(pulse_state, handle, indent=2, sort_keys=True)
@@ -730,8 +769,12 @@ def main():
                         help="Run only the three-repetition lift recheck per controller")
     parser.add_argument("--lift-stable-gated", action="store_true",
                         help="Gate lift commands on the specified low-height static condition")
+    parser.add_argument("--lift-speeds", nargs="+", type=float, default=[0.05],
+                        help="Height-transition speeds in m/s; used by lift trials (default: 0.05)")
     parser.add_argument("--rep-filter", type=int, default=None,
                         help="Run only one repetition, used for an allowed protocol retry")
+    parser.add_argument("--append-results", action="store_true",
+                        help="Replace matching trial tags in an existing result set; used for protocol retries")
     args = parser.parse_args()
     if args.repeats != 3 and not args.smoke:
         parser.error("formal Sec. 4.2 requires exactly --repeats 3")
@@ -739,22 +782,34 @@ def main():
         parser.error("--force-duration must be within 0.19-0.21 s")
     if args.rep_filter is not None and args.rep_filter < 1:
         parser.error("--rep-filter must be positive")
+    if any(not np.isfinite(speed) or speed <= 0.0 or speed > 0.50
+           for speed in args.lift_speeds):
+        parser.error("--lift-speeds must be finite values in (0, 0.50] m/s")
+    args.lift_speeds = tuple(dict.fromkeys(args.lift_speeds))
     root = Path(args.output_root)
     root.mkdir(parents=True, exist_ok=True)
     controllers = ("position_pid", "gs_lqr") if args.controller == "both" else (args.controller,)
     for controller in controllers:
         (root / controller / "launch_logs").mkdir(parents=True, exist_ok=True)
-    capture_manifest(args, root)
-    all_results = []
+    existing_results_path = root / "formal_results.json"
+    if args.append_results and existing_results_path.exists():
+        all_results = json.loads(existing_results_path.read_text(encoding="utf-8"))
+    else:
+        capture_manifest(args, root)
+        all_results = []
     for controller in controllers:
         controller_root = root / controller
         if args.lift_only:
-            trials = [{"job": "lift", "height": 0.30, "force": 0.0, "rep": rep}
-                      for rep in ([args.rep_filter] if args.rep_filter is not None
-                                  else range(1, args.repeats + 1))]
+            trials = [
+                {"job": "lift", "height": 0.30, "force": 0.0,
+                 "speed": speed, "rep": rep}
+                for speed in args.lift_speeds
+                for rep in ([args.rep_filter] if args.rep_filter is not None
+                            else range(1, args.repeats + 1))
+            ]
         else:
             trials = ([{"job": "constant", "height": 0.30, "force": 0.0, "rep": 1}]
-                      if args.smoke else build_trials(args.repeats))
+                      if args.smoke else build_trials(args.repeats, args.lift_speeds))
         for index, trial in enumerate(trials, 1):
             tag = trial_tag(controller, trial)
             print(f"\n[{controller} {index}/{len(trials)}] {tag}", flush=True)
@@ -767,6 +822,8 @@ def main():
                     break
                 move_invalid(controller_root, result)
                 print(f"[Formal] protocol invalid; retrying {tag} ({attempt + 1}/3)", flush=True)
+            all_results = [row for row in all_results if not (
+                row.get("controller") == controller and row.get("trial_tag") == tag)]
             all_results.append(result)
             write_csv(all_results, root / "formal_results.csv")
             write_csv([r for r in all_results if r["controller"] == controller],

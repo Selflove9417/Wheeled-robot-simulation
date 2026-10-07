@@ -1,0 +1,131 @@
+{
+  "round_question": "完整接地逆解及原力矩单位反馈能否在固定低速四次往返中实际激发双髋、保留支撑并受控停稳？先通过含摩擦、时延和有界轮P伺服的离线资格检查。",
+  "changes": [
+    "新实验默认关闭 ground_contact_motion_experiment；固定profile2接地/摩擦逆解及原Kp/Kd力矩单位反馈，失败拒绝",
+    "只读ECS1直接引擎q/v与实际六输入；同物理步接触配对；sim和steady receipt双10ms门",
+    "新独立入口/构建目录，原限值、低速参考、2s交接、四trial及返回/复验要求不变"
+  ],
+  "world": {
+    "physics_step_ns": 1000000,
+    "real_time_factor": 1.0,
+    "action_speed_scale": 1.0
+  },
+  "allocator_enabled": false,
+  "wheel_servo_gain": 1.0,
+  "limits": {
+    "hip_torque_nm": 75.0,
+    "knee_torque_nm": 60.0,
+    "wheel_torque_nm": 10.0,
+    "wheel_target_rate_radps": 30.0,
+    "soft_limits_rad": [
+      1.52,
+      1.56,
+      1.52,
+      1.56
+    ],
+    "minimum_soft_margin_rad": 0.3,
+    "max_anchor_displacement_rad": 0.08,
+    "max_leg_rate_radps": 0.1,
+    "max_pitch_anchor_error_rad": 0.1,
+    "max_body_rate_radps": 0.5
+  },
+  "reference": {
+    "hip_peak_rate_radps": 0.01,
+    "knee_peak_rate_radps": -0.02,
+    "acceleration_s": 0.5,
+    "cruise_s": 0.5,
+    "normal_deceleration_s": 0.5,
+    "law_handoff_s": 2.0,
+    "stop_rate_threshold_radps": 0.005,
+    "stop_dwell_s": 0.25,
+    "stop_timeout_s": 2.0
+  },
+  "trials": [
+    {
+      "trial_id": 1,
+      "replay_id": 1,
+      "direction": 1,
+      "configuration": "standing_neighborhood",
+      "expected_phases": [
+        "acceleration",
+        "cruise",
+        "normal_stop"
+      ],
+      "minimum_hip_excitation_radps": 0.005,
+      "minimum_knee_excitation_radps": 0.01,
+      "minimum_excitation_steps": 30
+    },
+    {
+      "trial_id": 2,
+      "replay_id": 1,
+      "direction": -1,
+      "configuration": "standing_neighborhood",
+      "expected_phases": [
+        "acceleration",
+        "cruise",
+        "normal_stop"
+      ],
+      "minimum_hip_excitation_radps": 0.005,
+      "minimum_knee_excitation_radps": 0.01,
+      "minimum_excitation_steps": 30
+    },
+    {
+      "trial_id": 3,
+      "replay_id": 2,
+      "direction": 1,
+      "configuration": "standing_neighborhood",
+      "expected_phases": [
+        "acceleration",
+        "cruise",
+        "normal_stop"
+      ],
+      "minimum_hip_excitation_radps": 0.005,
+      "minimum_knee_excitation_radps": 0.01,
+      "minimum_excitation_steps": 30
+    },
+    {
+      "trial_id": 4,
+      "replay_id": 2,
+      "direction": -1,
+      "configuration": "standing_neighborhood",
+      "expected_phases": [
+        "acceleration",
+        "cruise",
+        "normal_stop"
+      ],
+      "minimum_hip_excitation_radps": 0.005,
+      "minimum_knee_excitation_radps": 0.01,
+      "minimum_excitation_steps": 30
+    }
+  ],
+  "response_gate_path": "/home/xy/bbot_ws_new/docs/jump/reviews/20261006_ground_model/response_gate.json",
+  "minimum_physics_steps_per_phase": 30,
+  "stop_envelope": {
+    "scope": "only raw-state-observed excitation/configuration/sign/delay bounds; no extrapolation",
+    "max_stop_joint_displacement_rad": 0.04,
+    "max_stop_joint_rebound_rad": 0.02,
+    "max_stop_axle_displacement_m": 0.05,
+    "required_bilateral_support": true
+  },
+  "passing_conditions": [
+    "全部物理步完整有效，时间不回退，无支撑或模式丢失，无限位/速度/力矩越界",
+    "每trial各运动/正常停止工况单独原九维绝对AND20%相对门，至少30步；冻结独立复验通过",
+    "四腿均实际激发对应低档速度，然后真实停稳；反向命令继续加速样本保留解释",
+    "交接与参考连续，故障退出只能计FAIL，刹停指标无效"
+  ],
+  "maximum_ground_runs": 1,
+  "maximum_jump_candidates": 0,
+  "airborne_jumps": 0,
+  "accepted_jumps": 0,
+  "landing_metrics": null,
+  "previous_accepted_standing_record": "native_engine_standing_probe_20261006_105035",
+  "not_certified": [
+    "其他大构型",
+    "更高速度",
+    "主动轮速运动刹停",
+    "跳跃与落地"
+  ],
+  "control_state_source": "ECS1 from direct Physics before/after records; full 9 q/v/before-v and actual six ForceCmd required; same-step bilateral contact",
+  "offline_admission": "pending; no physical run permitted until full delayed closed-loop qualification passes",
+  "profile_sha256": "b70ee1922e07042e950d831050e64a570d785be03580405754a95534c9d4fc6f"
+}

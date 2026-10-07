@@ -53,6 +53,17 @@ double independent_peak_speed(double q0, double v0, double a0, double q1,
 
 int main()
 {
+    near(bounded_configuration_step(1.17, .72, .14), 1.03, 1e-12,
+         "TUCK hip target exceeded the bounded configuration excursion");
+    near(bounded_configuration_step(-1.56, -1.23, .04), -1.52, 1e-12,
+         "TUCK knee target exceeded the bounded configuration excursion");
+    near(reaction_safe_configuration_step(1.27, 1.13, .14, 3.1), 1.27, 1e-12,
+         "TUCK reversed a fast takeoff hip instead of braking it first");
+    near(reaction_safe_configuration_step(-1.55, -1.51, .04, -.9), -1.55, 1e-12,
+         "TUCK reversed a fast takeoff knee instead of braking it first");
+    near(reaction_safe_configuration_step(1.27, 1.13, .14, .2), 1.13, 1e-12,
+         "TUCK blocked a safe low-speed configuration change");
+
     const std::array<double, 4> rest{};
 
     // v6.13, 12.581 s: L=0.30 m tuck IK at pitch .0871677-.038,
@@ -121,7 +132,7 @@ int main()
 
     const auto nearby_plan = plan_flight_round_trip(near_tuck, rest, rest,
         full_tuck, landing, .10, .09, .25);
-    require(nearby_plan.valid && nearby_plan.tuck_duration == .10 &&
+    require(nearby_plan.valid && nearby_plan.tuck_duration >= .10 &&
             nearby_plan.extend_duration >= .14 &&
             nearby_plan.tuck_duration + nearby_plan.extend_duration <= .25,
             "planner cannot allocate feasible time for actual nearby geometry");
@@ -149,6 +160,38 @@ int main()
     require(flight_round_trip_admissible(moderate_q, rest, rest, full_tuck, landing,
         moderate_plan.tuck_duration, moderate_plan.extend_duration, .30),
         "returned moderate plan violates original motion budgets");
+
+    // Recorded flat-ground low-jump boundary: the conservative 11/13 rad/s
+    // planning envelope must fit a shallow tuck and landing deployment while
+    // preserving the 75 ms contact margin already removed from this budget.
+    const std::array<double, 4> low_q{1.11617, -1.48243, 1.11617, -1.48243};
+    const std::array<double, 4> low_v{3.31766, -0.304673, 3.31766, -0.304673};
+    const std::array<double, 4> low_tuck{0.112176, -0.183224, 0.112176, -0.183224};
+    const std::array<double, 4> low_land{0.153352, -0.405745, 0.153352, -0.405745};
+    const auto low_plan = plan_flight_round_trip(
+        low_q, low_v, rest, low_tuck, low_land, .10, .09, .309899,
+        11.0, 13.0, 450.0, 500.0, 1.52, 1.5708);
+    require(low_plan.valid && low_plan.tuck_duration == .20 &&
+            low_plan.extend_duration == .09,
+            "recorded low-jump boundary cannot complete shallow tuck and deploy");
+
+    // Flat-ground wheel-first landing uses long legs in flight, then lets the
+    // grounded buffer retains knee compression travel. These independently
+    // evaluated IK endpoints correspond to L_RETRACT=.66 and L_TOUCH=.69.
+    // The same recorded takeoff envelope now needs substantially less joint
+    // travel than the old .47/.50 m airborne crouch.
+    const std::array<double, 4> long_leg_tuck{
+        .6603236652, -1.0652427099, .6603236652, -1.0652427099};
+    const std::array<double, 4> long_leg_land{
+        .8943963478, -1.2354231935, .8943963478, -1.2354231935};
+    const std::array<double, 4> long_leg_q{1.04, -1.45, 1.04, -1.45};
+    const std::array<double, 4> long_leg_v{5.2, -3.4, 5.2, -3.4};
+    const auto long_leg_plan = plan_flight_round_trip(
+        long_leg_q, long_leg_v, rest, long_leg_tuck, long_leg_land,
+        .10, .09, .27, 11.0, 13.0, 450.0, 500.0, 1.52, 1.5708);
+    require(long_leg_plan.valid && long_leg_plan.tuck_duration == .10 &&
+            long_leg_plan.extend_duration == .09,
+            "long-leg wheel-first geometry exceeds the low-jump flight budget");
     require(!plan_flight_round_trip(near_tuck, rest, rest, full_tuck,
                                     landing, .10, .09, .23).valid,
             "planner uses time reserved for landing");

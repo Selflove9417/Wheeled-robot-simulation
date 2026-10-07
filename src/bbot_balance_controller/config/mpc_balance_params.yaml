@@ -1,0 +1,78 @@
+# Phase-1 定高度线性 MPC 平衡控制器。
+#
+# 所有共用定义的参考实现是 adaptive_lqr_balance_controller.cpp（而非
+# lqr_gain_scheduled_controller.cpp）。下列每个默认值都可追溯到该节点、
+# RobotParams，或 scripts/run_mpc_balance_trials.py 的实测结果：
+#   控制周期 0.005 s            -> create_wall_timer(5ms)，adaptive :271-272
+#   节拍保护 0.0045 s           -> adaptive :668-691，原样复制
+#   H 指轮轴 -> 髋关节          -> adaptive :180-186（"匹配实机接口：高度指
+#                                   轮轴到髋关节的竖直距离"）；仿真 IK 所需的
+#                                   base_link 高度由内部换算得到（:859-867）
+#   height.hip_axle_min/max     -> adaptive :184-185（0.30 / 0.50）
+#   height.base_to_hip 0.07     -> adaptive :186，以及 URDF 髋关节原点 z
+#   height.startup_hip_axle 0.36-> adaptive :196 与 launch 默认值
+#                                   adaptive_startup_height（bbot_gazebo.launch.py:255-259）
+#   leg_transition_speed 0.05   -> adaptive :209 与 launch 默认值 :260-264
+#   height.startup_hold_time 2.0-> adaptive :204；它只延迟腿部伸展
+#                                   （:713-715），有反馈的第一拍即输出轮转矩
+#   max_pitch_error 0.50 rad    -> adaptive :210
+#   滤波系数 0.10 / 0.05        -> adaptive :497（俯仰角速度）与 :561（x_dot）
+#   wheel_torque_max 10 Nm      -> bbot_kinematics/robot_params.hpp:40，adaptive :177 使用
+#   total_torque_max 20 Nm      -> 2 x wheel_torque_max，adaptive :178
+#   theta_eq                    -> adaptive 自己的规则：legacy_safe 表质心的
+#                                   -atan2(y_com, z_com)（:300-312, :603, :615），
+#                                   每拍按指令高度重新求值。H = 0.40 m 时为
+#                                   0.052626 rad。lqr_plant_model.hpp 复现的
+#                                   y_com / z_com 误差 2.5e-8（ctest lqr_plant_model）
+#   q                            -> verify_lqr_model_and_sweep.py:62（第 2 章基线 Q0）
+#   r = 8.0                      -> 2026-09-28 粗扫描的标称值（R ∈ {0.5,1,2,4,6,8,12}，
+#                                   每格 3 个主队列控制器结果，4 种工况）：
+#                                   R=0.5/1 不可用（位置与推挤工况 0/3 过门）；
+#                                   R=2/4 顶着转矩限幅（位置工况饱和 47-59%）；
+#                                   R=6/8/12 干净（0% 饱和，各工况 3/3 过门；
+#                                   R=6 在 2/3 次静态重复中仍有抖动）。R=8 是
+#                                   唯一在所有工况、所有重复中均安静且 p95/p99
+#                                   最低的值。这是标称工作点，不是最优性结论：
+#                                   R 从 1e-6 到 1e2，最慢闭环极点钉在
+#                                   |lambda| = 0.999293（tau = 7.07 s），R 对
+#                                   位置收敛完全没有杠杆。
+#                                   证据：/tmp/mpc_r_sweep_full/aggregate.md、
+#                                   MPC_POSITION_RESIDUAL_ANALYSIS.md。
+# 根键必须等于节点名，而不是可执行文件名。
+linear_mpc_balance_controller:
+  ros__parameters:
+    use_sim_time: true
+    target_height: 0.40
+    height:
+      hip_axle_min: 0.30
+      hip_axle_max: 0.50
+      base_to_hip: 0.07
+      startup_hip_axle: 0.36
+      startup_hold_time: 2.0
+    leg_transition_speed: 0.05
+    control:
+      period_s: 0.005
+    filter:
+      pitch_rate_alpha: 0.10
+      x_dot_alpha: 0.05
+    mpc:
+      horizon: 20
+      q: [100.0, 5000.0, 3000.0, 1200.0]
+      r: 8.0
+      wheel_torque_max: 10.0
+      total_torque_max: 20.0
+      theta_error_limit: 0.20
+      use_theta_band: true
+      theta_slack_weight: 100000.0
+      max_qp_iterations: 300
+      theta_eq_source: table
+      # 仅当 theta_eq_source 为 "override" 时读取；保持 0.0，使探测值必须
+      # 显式手动输入。早期草稿用过的 0.0145 rad 是 -0.038 rad 预倾斜出生姿态
+      # 的零转矩悬挂俯仰角，属于初值伪影，不是对象的平衡角。
+      theta_eq: 0.0
+    max_pitch_error: 0.50
+    joystick:
+      walk_speed: 0.3
+      speed_ramp_time: 1.0
+    log_enabled: true
+    log_path: /home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/mpc/mpc_balance_log.csv

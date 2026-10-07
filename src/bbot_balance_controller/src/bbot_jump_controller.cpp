@@ -321,6 +321,11 @@ private:
     // 位置控制器目标缓存
     double hip_pos_cmd_left_ = 0.0, knee_pos_cmd_left_ = 0.0;
     double hip_pos_cmd_right_ = 0.0, knee_pos_cmd_right_ = 0.0;
+    bool balance_started_ = false;
+    double balance_start_time_ = 0.0;
+    bool pos_cmd_init_ = false;
+    double last_q_hip_cmd_left_ = 0.0, last_q_knee_cmd_left_ = 0.0;
+    double last_q_hip_cmd_right_ = 0.0, last_q_knee_cmd_right_ = 0.0;
 
     // 垂直方向状态估计 (正运动学)
     double current_z_ = 0.40;
@@ -743,23 +748,49 @@ private:
             was_moving_ = true;
         }
 
+        // 开机启动平稳过渡与姿态优先仲裁
+        if (!balance_started_) {
+            balance_start_time_ = this->now().seconds();
+            balance_started_ = true;
+            target_x_ = x_;
+        }
+        const double startup_elapsed = this->now().seconds() - balance_start_time_;
+
+        double dynamic_target_pitch = post_landing_gyro_reduced_ ?
+            post_landing_pitch_ref_ : balance_offset_;
+
+        // 姿态未稳定或速度较大时，target_x_ 持续跟随当前位置 x_，
+        // 绝不允许位置环拉扯干扰倒立摆俯仰平衡
+        const bool balance_not_settled = (std::abs(pitch_ - dynamic_target_pitch) > 0.035) ||
+                                         (std::abs(pitch_rate_) > 0.15) ||
+                                         (std::abs(x_dot_) > 0.25) ||
+                                         (startup_elapsed < 1.5);
+        if (balance_not_settled) {
+            target_x_ = x_;
+        }
+
+        // 位置环增益软启动淡入 (仅对位置误差 pos_error 生效，速度阻尼 k_x_dot 始终全额生效以抑制漂移)
+        double pos_gain_scale = 1.0;
+        if (startup_elapsed < 1.5) {
+            pos_gain_scale = 0.0;
+        } else if (startup_elapsed < 3.0) {
+            pos_gain_scale = (startup_elapsed - 1.5) / 1.5;
+        }
+
         // 状态误差计算 (实际值 - 目标值)
         double pos_error = x_ - target_x_;
         double vel_error = x_dot_ - target_speed;
         double gyro_val = pitch_rate_;
-        double dynamic_target_pitch = post_landing_gyro_reduced_ ?
-            post_landing_pitch_ref_ : balance_offset_;
         double theta_error = 0.0;
         double u_pitch = 0.0;
         double cmd_x = 0.0;
         const double gyro_gain_scale =
             post_landing_gyro_reduced_ ? 0.50 : 1.0;
-        const double translation_gain_scale = 1.0;
 
         if (target_speed_const_ == 0.0 && std::abs(target_speed) < 0.005) {
             theta_error = pitch_ - dynamic_target_pitch;
-            u_pitch = -(translation_gain_scale * current_gain_.k_x * pos_error +
-                        translation_gain_scale * current_gain_.k_x_dot * vel_error +
+            u_pitch = -(pos_gain_scale * current_gain_.k_x * pos_error +
+                        current_gain_.k_x_dot * vel_error +
                         current_gain_.k_theta * theta_error +
                         gyro_gain_scale * current_gain_.k_theta_dot * gyro_val);
             cmd_x = -u_pitch * cmd_scale_;
@@ -781,7 +812,8 @@ private:
             cmd_x = -u_pitch * cmd_scale_ - target_speed;
         }
 
-        cmd_x = bbot_jump::clamp_value(cmd_x, -max_cmd_x_, max_cmd_x_);
+        cmd_x = bbot_jump::clamp_value(cmd_x, -2.5, 2.5);
+
         // 落地后平移速度与变化率限制
         if (post_landing_translation_feedback_) {
             cmd_x = bbot_jump::clamp_value(cmd_x, -1.0, 1.0);
@@ -801,8 +833,8 @@ private:
 
         // 8Hz 遥测打印
         if (num_ % 25 == 0) {
-            const double term_x = translation_gain_scale * current_gain_.k_x * pos_error;
-            const double term_xdot = translation_gain_scale * current_gain_.k_x_dot * vel_error;
+            const double term_x = pos_gain_scale * current_gain_.k_x * pos_error;
+            const double term_xdot = current_gain_.k_x_dot * vel_error;
             const double term_theta = current_gain_.k_theta * theta_error;
             const double term_theta_dot = gyro_gain_scale * current_gain_.k_theta_dot * gyro_val;
             std::cout << "[BALANCE]"
@@ -1606,13 +1638,37 @@ private:
     void publish_position_leg_control_lr(double q_hip_left, double q_knee_left,
                                          double q_hip_right, double q_knee_right)
     {
-        hip_pos_cmd_left_ = q_hip_left;
-        knee_pos_cmd_left_ = q_knee_left;
-        hip_pos_cmd_right_ = q_hip_right;
-        knee_pos_cmd_right_ = q_knee_right;
+        if (!pos_cmd_init_)
+        {
+            // 首次发布时从实际测量关节位置平滑起步，杜绝开机阶跃“踹地”
+            last_q_hip_cmd_left_ = hip_pos_left_;
+            last_q_knee_cmd_left_ = knee_pos_left_;
+            last_q_hip_cmd_right_ = hip_pos_right_;
+            last_q_knee_cmd_right_ = knee_pos_right_;
+            pos_cmd_init_ = true;
+        }
+
+        constexpr double kMaxJointSlewRate = 2.0; // rad/s 最大斜坡变化率
+        constexpr double dt = 0.005;
+        const double max_step = kMaxJointSlewRate * dt;
+
+        hip_pos_cmd_left_ = last_q_hip_cmd_left_ + bbot_jump::clamp_value(
+            q_hip_left - last_q_hip_cmd_left_, -max_step, max_step);
+        knee_pos_cmd_left_ = last_q_knee_cmd_left_ + bbot_jump::clamp_value(
+            q_knee_left - last_q_knee_cmd_left_, -max_step, max_step);
+        hip_pos_cmd_right_ = last_q_hip_cmd_right_ + bbot_jump::clamp_value(
+            q_hip_right - last_q_hip_cmd_right_, -max_step, max_step);
+        knee_pos_cmd_right_ = last_q_knee_cmd_right_ + bbot_jump::clamp_value(
+            q_knee_right - last_q_knee_cmd_right_, -max_step, max_step);
+
+        last_q_hip_cmd_left_ = hip_pos_cmd_left_;
+        last_q_knee_cmd_left_ = knee_pos_cmd_left_;
+        last_q_hip_cmd_right_ = hip_pos_cmd_right_;
+        last_q_knee_cmd_right_ = knee_pos_cmd_right_;
 
         std_msgs::msg::Float64MultiArray leg_cmd;
-        leg_cmd.data = {q_hip_left, q_knee_left, q_hip_right, q_knee_right};
+        leg_cmd.data = {hip_pos_cmd_left_, knee_pos_cmd_left_,
+                        hip_pos_cmd_right_, knee_pos_cmd_right_};
         leg_pos_pub_->publish(leg_cmd);
     }
 

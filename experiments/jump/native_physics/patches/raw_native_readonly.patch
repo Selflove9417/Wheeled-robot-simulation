@@ -1,0 +1,392 @@
+--- a/src/systems/physics/Physics.cc
++++ b/src/systems/physics/Physics.cc
+@@ -23,8 +23,14 @@
+ #include <gz/msgs/Utility.hh>
+ 
+ #include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstdlib>
++#include <fstream>
++#include <iomanip>
+ #include <iostream>
+ #include <deque>
++#include <limits>
+ #include <map>
+ #include <set>
+ #include <string>
+@@ -270,6 +276,14 @@
+   public: bool GetFrameDataRelativeToWorld(const Entity _entity,
+               physics::FrameData3d &_data);
+ 
++  /// \brief Opt-in raw DART frame/joint-state diagnostic writer. This reads
++  /// the physics entities directly and never creates or mutates ECM data.
++  public: void InitializeRawNativeDiagnostic();
++  public: void WriteRawNativePhase(const EntityComponentManager &_ecm,
++              int64_t _simTimeNs, int64_t _dtNs, uint64_t _iterations,
++              const std::string &_phase, bool _timeValid);
++  public: bool RawNativeDiagnosticEnabled() const;
++
+   /// \brief Update components from physics simulation
+   /// \param[in] _ecm Mutable reference to ECM.
+   /// \param[in, out] _linkFrameData Links that experienced a pose change in the
+@@ -344,6 +358,14 @@
+   /// \brief Pointer to the underlying ign-physics Engine entity.
+   public: EnginePtrType engine = nullptr;
+ 
++  /// \brief Disabled unless BBOT_NATIVE_PHYSICS_RAW_CSV names an output file.
++  public: bool rawNativeDiagnosticInitialized{false};
++  public: bool rawNativeDiagnosticEnabled{false};
++  public: std::ofstream rawNativeDiagnosticFile;
++  public: bool rawNativeDiagnosticHasPreviousTime{false};
++  public: int64_t rawNativeDiagnosticPreviousSimTimeNs{0};
++  public: uint64_t rawNativeDiagnosticPreviousIteration{0};
++
+   /// \brief Vector3d equality comparison function.
+   public: std::function<bool(const math::Vector3d &, const math::Vector3d &)>
+           vec3Eql { [](const math::Vector3d &_a, const math::Vector3d &_b)
+@@ -849,14 +871,69 @@
+ 
+   if (this->dataPtr->engine)
+   {
+-    this->dataPtr->CreatePhysicsEntities(_ecm);
+-    this->dataPtr->UpdatePhysics(_ecm);
+-    ignition::physics::ForwardStep::Output stepOutput;
+-    // Only step if not paused.
+-    if (!_info.paused)
+-    {
+-      stepOutput = this->dataPtr->Step(_info.dt);
+-    }
++      this->dataPtr->CreatePhysicsEntities(_ecm);
++      this->dataPtr->UpdatePhysics(_ecm);
++      ignition::physics::ForwardStep::Output stepOutput;
++      this->dataPtr->InitializeRawNativeDiagnostic();
++      // Only step if not paused.
++      if (!_info.paused)
++      {
++        int64_t rawSimTimeNs = 0;
++        int64_t rawDtNs = 0;
++        bool rawTimeValid = false;
++        const bool rawEnabled =
++            this->dataPtr->RawNativeDiagnosticEnabled();
++        if (rawEnabled)
++        {
++          rawSimTimeNs =
++              std::chrono::duration_cast<std::chrono::nanoseconds>(
++                  _info.simTime).count();
++          rawDtNs =
++              std::chrono::duration_cast<std::chrono::nanoseconds>(
++                  _info.dt).count();
++          rawTimeValid = rawDtNs == 1000000 &&
++              (!this->dataPtr->rawNativeDiagnosticHasPreviousTime ||
++               (this->dataPtr->rawNativeDiagnosticPreviousSimTimeNs <=
++                    std::numeric_limits<int64_t>::max() - rawDtNs &&
++                rawSimTimeNs ==
++                    this->dataPtr->rawNativeDiagnosticPreviousSimTimeNs +
++                        1000000 &&
++                this->dataPtr->rawNativeDiagnosticPreviousIteration <
++                    std::numeric_limits<uint64_t>::max() &&
++                _info.iterations ==
++                    this->dataPtr->rawNativeDiagnosticPreviousIteration +
++                        1));
++          this->dataPtr->WriteRawNativePhase(_ecm, rawSimTimeNs, rawDtNs,
++              _info.iterations, "before_step", rawTimeValid);
++        }
++        stepOutput = this->dataPtr->Step(_info.dt);
++        if (rawEnabled)
++        {
++          this->dataPtr->WriteRawNativePhase(_ecm, rawSimTimeNs, rawDtNs,
++              _info.iterations, "after_step", rawTimeValid);
++          if (!this->dataPtr->rawNativeDiagnosticHasPreviousTime ||
++              rawSimTimeNs >=
++                  this->dataPtr->rawNativeDiagnosticPreviousSimTimeNs)
++          {
++            this->dataPtr->rawNativeDiagnosticPreviousSimTimeNs =
++                rawSimTimeNs;
++          }
++          if (!this->dataPtr->rawNativeDiagnosticHasPreviousTime ||
++              _info.iterations >=
++                  this->dataPtr->rawNativeDiagnosticPreviousIteration)
++          {
++            this->dataPtr->rawNativeDiagnosticPreviousIteration =
++                _info.iterations;
++          }
++          this->dataPtr->rawNativeDiagnosticHasPreviousTime = true;
++        }
++      }
++      else if (this->dataPtr->RawNativeDiagnosticEnabled())
++      {
++        // The runner pauses before terminating so that the final buffered rows
++        // are persisted without flushing each sample.
++        this->dataPtr->rawNativeDiagnosticFile.flush();
++      }
+     auto changedLinks = this->dataPtr->ChangedLinks(_ecm, stepOutput);
+     this->dataPtr->UpdateSim(_ecm, changedLinks);
+ 
+@@ -2708,6 +2785,266 @@
+ }
+ 
+ //////////////////////////////////////////////////
++bool PhysicsPrivate::RawNativeDiagnosticEnabled() const
++{
++  return this->rawNativeDiagnosticEnabled &&
++      this->rawNativeDiagnosticFile.good();
++}
++
++//////////////////////////////////////////////////
++void PhysicsPrivate::InitializeRawNativeDiagnostic()
++{
++  if (this->rawNativeDiagnosticInitialized)
++    return;
++  this->rawNativeDiagnosticInitialized = true;
++
++  const char *path = std::getenv("BBOT_NATIVE_PHYSICS_CSV");
++  if (nullptr == path || path[0] == '\0')
++    return;
++
++  this->rawNativeDiagnosticFile.open(path, std::ios::out | std::ios::trunc);
++  if (!this->rawNativeDiagnosticFile.is_open())
++  {
++    ignerr << "Unable to open opt-in native physics diagnostic CSV ["
++           << path << "]." << std::endl;
++    return;
++  }
++
++  this->rawNativeDiagnosticEnabled = true;
++  this->rawNativeDiagnosticFile
++      << "sim_time_ns,iteration,phase,entity_type,entity_name,entity_id,"
++      << "dt_ns,physical_state_time_ns,wall_steady_time_ns,"
++      << "entity_present,time_valid,position_valid,velocity_valid,"
++      << "position_x,position_y,position_z,quat_w,quat_x,quat_y,quat_z,"
++      << "linear_vx,linear_vy,linear_vz,angular_vx,angular_vy,angular_vz,"
++      << "joint_dof,joint_position_0,joint_velocity_0,joint_force_valid,"
++      << "joint_force_0,reason\n";
++  if (!this->rawNativeDiagnosticFile.good())
++  {
++    ignerr << "Unable to write native physics diagnostic CSV header ["
++           << path << "]; physics behavior remains unchanged." << std::endl;
++    this->rawNativeDiagnosticEnabled = false;
++    return;
++  }
++}
++
++//////////////////////////////////////////////////
++void PhysicsPrivate::WriteRawNativePhase(
++    const EntityComponentManager &_ecm, int64_t _simTimeNs, int64_t _dtNs,
++    uint64_t _iterations, const std::string &_phase, bool _timeValid)
++{
++  if (!this->RawNativeDiagnosticEnabled())
++    return;
++
++  auto &out = this->rawNativeDiagnosticFile;
++  out << std::setprecision(17);
++  const double nan = std::numeric_limits<double>::quiet_NaN();
++  const std::array<const char *, 3> linkNames{{
++      "flat_jump_world::bbot::base_link",
++      "flat_jump_world::bbot::link_004",
++      "flat_jump_world::bbot::link_007"}};
++  const std::array<const char *, 6> jointNames{{
++      "flat_jump_world::bbot::link_002_joint",
++      "flat_jump_world::bbot::link_003_joint",
++      "flat_jump_world::bbot::link_004_joint",
++      "flat_jump_world::bbot::link_005_joint",
++      "flat_jump_world::bbot::link_006_joint",
++      "flat_jump_world::bbot::link_007_joint"}};
++  std::unordered_set<std::string> foundLinks;
++  std::unordered_set<std::string> foundJoints;
++  const bool physicalTimeRepresentable = _phase != "before_step" ||
++      (_dtNs > 0 && _simTimeNs >=
++          std::numeric_limits<int64_t>::min() + _dtNs);
++  // Avoid evaluating the subtraction at all when it would overflow. The
++  // placeholder is never serialized because its validity bit stays false.
++  const int64_t physicalStateTimeNs = _phase == "before_step" ?
++      (physicalTimeRepresentable ? _simTimeNs - _dtNs : 0) : _simTimeNs;
++  auto wallSteadyNowNs = []()
++  {
++    return std::chrono::duration_cast<std::chrono::nanoseconds>(
++        std::chrono::steady_clock::now().time_since_epoch()).count();
++  };
++
++  auto writeLink = [&](const Entity _entity, const std::string &_name,
++      bool _present, const physics::FrameData3d *_frame,
++      const std::string &_reason)
++  {
++    math::Pose3d pose;
++    math::Vector3d linear = math::Vector3d::Zero;
++    math::Vector3d angular = math::Vector3d::Zero;
++    if (_frame)
++    {
++      pose = math::eigen3::convert(_frame->pose);
++      linear = math::eigen3::convert(_frame->linearVelocity);
++      angular = math::eigen3::convert(_frame->angularVelocity);
++    }
++    const auto position = pose.Pos();
++    const auto rotation = pose.Rot();
++    const bool positionFinite = _present && _frame &&
++        std::isfinite(position.X()) && std::isfinite(position.Y()) &&
++        std::isfinite(position.Z()) && std::isfinite(rotation.W()) &&
++        std::isfinite(rotation.X()) && std::isfinite(rotation.Y()) &&
++        std::isfinite(rotation.Z());
++    const bool velocityFinite = _present && _frame &&
++        std::isfinite(linear.X()) && std::isfinite(linear.Y()) &&
++        std::isfinite(linear.Z()) && std::isfinite(angular.X()) &&
++        std::isfinite(angular.Y()) && std::isfinite(angular.Z());
++    const bool positionValid = _timeValid && physicalTimeRepresentable &&
++        positionFinite;
++    const bool velocityValid = _timeValid && physicalTimeRepresentable &&
++        velocityFinite;
++    std::string reason = _reason;
++    if (!_timeValid)
++      reason = _dtNs == 1000000 ? "noncontiguous_step_clock" :
++          "unexpected_dt_ns";
++    else if (!physicalTimeRepresentable)
++      reason = "physical_time_underflow";
++    else if (_present && !positionFinite)
++      reason = "nonfinite_link_pose";
++    else if (_present && !velocityFinite)
++      reason = "nonfinite_link_velocity";
++    out << _simTimeNs << ',' << _iterations << ',' << _phase << ",link,"
++        << _name << ','
++        << (_entity == kNullEntity ? "nan" : std::to_string(_entity)) << ','
++        << _dtNs << ','
++        << ((_timeValid && physicalTimeRepresentable) ?
++            std::to_string(physicalStateTimeNs) : "nan") << ','
++        << wallSteadyNowNs() << ','
++        << (_present ? 1 : 0) << ',' << (_timeValid ? 1 : 0) << ','
++        << (positionValid ? 1 : 0) << ',' << (velocityValid ? 1 : 0) << ',';
++    const double poseValues[] = {position.X(), position.Y(), position.Z(),
++        rotation.W(), rotation.X(), rotation.Y(), rotation.Z()};
++    for (std::size_t i = 0; i < 7; ++i)
++    {
++      if (i) out << ',';
++      out << (positionValid ? poseValues[i] : nan);
++    }
++    const double velocityValues[] = {linear.X(), linear.Y(), linear.Z(),
++        angular.X(), angular.Y(), angular.Z()};
++    for (std::size_t i = 0; i < 6; ++i)
++      out << ',' << (velocityValid ? velocityValues[i] : nan);
++    out << ',' << nan << ',' << nan << ',' << nan << ',' << 0 << ',' << nan
++        << ','
++        << reason << '\n';
++  };
++
++  _ecm.Each<components::Link, components::Name>(
++      [&](const Entity &_entity, const components::Link *,
++          const components::Name *_name) -> bool
++      {
++        const std::string fullName = scopedName(_entity, _ecm, "::", false);
++        if (std::find_if(linkNames.begin(), linkNames.end(),
++            [&](const char *_candidate)
++            { return fullName == _candidate; }) ==
++            linkNames.end())
++          return true;
++        foundLinks.insert(fullName);
++        auto link = this->entityLinkMap.Get(_entity);
++        if (!link)
++        {
++          writeLink(_entity, fullName, false, nullptr,
++              "missing_physics_link");
++          return true;
++        }
++        const auto frame = link->FrameDataRelativeToWorld();
++        writeLink(_entity, fullName, true, &frame, "");
++        return true;
++      });
++
++  for (const char *name : linkNames)
++  {
++    if (foundLinks.find(name) == foundLinks.end())
++      writeLink(kNullEntity, name, false, nullptr, "missing_ecm_link");
++  }
++
++  auto writeJoint = [&](const Entity _entity, const std::string &_name,
++      bool _present, std::size_t _dof, double _position, double _velocity,
++      bool _forceValid, double _force, const std::string &_reason)
++  {
++    const bool oneDof = _present && _dof == 1;
++    const bool positionValid = _timeValid && physicalTimeRepresentable &&
++        oneDof &&
++        std::isfinite(_position);
++    const bool velocityValid = _timeValid && physicalTimeRepresentable &&
++        oneDof &&
++        std::isfinite(_velocity);
++    std::string reason = _reason;
++    if (!_timeValid)
++      reason = _dtNs == 1000000 ? "noncontiguous_step_clock" :
++          "unexpected_dt_ns";
++    else if (!physicalTimeRepresentable)
++      reason = "physical_time_underflow";
++    out << _simTimeNs << ',' << _iterations << ',' << _phase << ",joint,"
++        << _name << ','
++        << (_entity == kNullEntity ? "nan" : std::to_string(_entity)) << ','
++        << _dtNs << ','
++        << ((_timeValid && physicalTimeRepresentable) ?
++            std::to_string(physicalStateTimeNs) : "nan") << ','
++        << wallSteadyNowNs() << ','
++        << (_present ? 1 : 0) << ',' << (_timeValid ? 1 : 0) << ','
++        << (positionValid ? 1 : 0) << ',' << (velocityValid ? 1 : 0) << ',';
++    for (int i = 0; i < 13; ++i)
++      out << nan << ',';
++    out << (_present ? static_cast<double>(_dof) : nan) << ','
++        << (positionValid ? _position : nan) << ','
++        << (velocityValid ? _velocity : nan) << ','
++        << (_timeValid && physicalTimeRepresentable && _forceValid ? 1 : 0)
++        << ','
++        << (_timeValid && physicalTimeRepresentable && _forceValid ?
++            _force : nan) << ','
++        << reason << '\n';
++  };
++
++  _ecm.Each<components::Joint, components::Name>(
++      [&](const Entity &_entity, const components::Joint *,
++          const components::Name *_name) -> bool
++      {
++        const std::string fullName = scopedName(_entity, _ecm, "::", false);
++        if (std::find_if(jointNames.begin(), jointNames.end(),
++            [&](const char *_candidate)
++            { return fullName == _candidate; }) ==
++            jointNames.end())
++          return true;
++        foundJoints.insert(fullName);
++        auto joint = this->entityJointMap.Get(_entity);
++        if (!joint)
++        {
++          writeJoint(_entity, fullName, false, 0, nan, nan, false, nan,
++              "missing_physics_joint");
++          return true;
++        }
++        const std::size_t dof = joint->GetDegreesOfFreedom();
++        if (dof != 1)
++        {
++          writeJoint(_entity, fullName, true, dof, nan, nan, false, nan,
++              "joint_dof_not_1");
++          return true;
++        }
++        const double position = joint->GetPosition(0);
++        const double velocity = joint->GetVelocity(0);
++        const double force = joint->GetForce(0);
++        std::string reason;
++        if (!std::isfinite(position)) reason = "nonfinite_joint_position";
++        if (!std::isfinite(velocity))
++          reason += reason.empty() ? "nonfinite_joint_velocity" :
++              ";nonfinite_joint_velocity";
++        if (!std::isfinite(force))
++          reason += reason.empty() ? "nonfinite_joint_force" :
++              ";nonfinite_joint_force";
++        writeJoint(_entity, fullName, true, dof, position, velocity,
++            std::isfinite(force), force, reason);
++        return true;
++      });
++
++  for (const char *name : jointNames)
++  {
++    if (foundJoints.find(name) == foundJoints.end())
++      writeJoint(kNullEntity, name, false, 0, nan, nan, false, nan,
++          "missing_ecm_joint");
++  }
++}
++
++//////////////////////////////////////////////////
+ void PhysicsPrivate::UpdateSim(EntityComponentManager &_ecm,
+     std::map<Entity, physics::FrameData3d> &_linkFrameData)
+ {

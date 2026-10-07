@@ -1,0 +1,85 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="flat_jump_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Read-only Update snapshot follows all PreUpdate command writers and
+         immediately precedes Physics Update in this independent world. -->
+    <plugin filename="libbbot_native_command_observer.so"
+            name="bbot::LandingRepairWrenchRecorder"/>
+    <plugin filename="ignition-gazebo-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-contact-system"
+            name="gz::sim::systems::Contact"/>
+    <plugin filename="libbbot_ground_contact_frame_recorder.so"
+            name="bbot::GroundContactFrameRecorder"/>
+    <plugin filename="libbbot_reference_jump_geometry_recorder.so"
+            name="bbot::ReferenceJumpGeometryRecorder"/>
+    <plugin filename="ignition-gazebo-imu-system"
+            name="ignition::gazebo::systems::Imu"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 15 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.4 0.2 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <sensor name="ground_contact" type="contact">
+          <always_on>true</always_on>
+          <update_rate>1000</update_rate>
+          <visualize>false</visualize>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+        </sensor>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.82 0.82 0.85 1.0</ambient>
+            <diffuse>0.82 0.82 0.85 1.0</diffuse>
+            <specular>0.2 0.2 0.2 1.0</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

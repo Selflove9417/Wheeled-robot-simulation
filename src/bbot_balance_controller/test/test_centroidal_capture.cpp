@@ -88,6 +88,10 @@ int main() {
             "11-second drifting recovery marked stable");
     require(!centroidal_hold_ready(false,0,0,0),"stale COM permits handoff");
     require(centroidal_hold_ready(true,.005,.01,.02),"quiet COM rejected");
+    require(centroidal_hold_ready(true,-.0381,.001,.001),
+            "flat-ground standing COM offset rejected");
+    require(!centroidal_hold_ready(true,.08,.01,.001),
+            "unsafe COM lean accepted");
     require(!centroidal_hold_ready(true,0,NAN,0),"invalid rate permits handoff");
 
     // 30-second recovery hold: raise COM from buffer to standing height over
