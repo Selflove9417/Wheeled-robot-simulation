@@ -45,3 +45,9 @@ __pycache__/
 /experiments/jump/native_physics/upstream/*.tar.*
 /experiments/jump/native_physics/upstream/*.dsc
 /archive/
+
+# Local review payloads and raw recordings; tracked source/Markdown stays tracked
+/docs/jump/reviews/
+/src/bbot_balance_controller/src/data_logs/*
+!/src/bbot_balance_controller/src/data_logs/*.py
+/.claude/
