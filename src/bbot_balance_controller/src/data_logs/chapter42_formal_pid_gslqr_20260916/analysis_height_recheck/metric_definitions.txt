@@ -1,9 +1,0 @@
-{
-  "static_start": "first time >= target lock + 2s with target height held within 5mm continuously for 2s",
-  "static_steady": "last 10s",
-  "lift_position_baseline": "mean raw position over 2s before actual rise start",
-  "lift_window": "actual rise start through 10s after actual low return",
-  "pitch": "actual pitch minus nominal equilibrium angle",
-  "torque_saturation": "absolute total torque >= 19.5 Nm",
-  "statistics": "N=3 mean +/- unbiased sample SD; no significance test"
-}

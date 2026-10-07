@@ -1,8 +1,0 @@
-completed,controller,controller_protection_failure,fail_reason,protocol_valid,recording_protocol_error,retryable_protocol_error,source_root,static_gate_passed,trial_tag
-False,position_pid,True,no_csv_data,False,False,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,False,pid_lift_rep1
-True,position_pid,False,,True,,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,True,pid_lift_rep2
-False,position_pid,False,no_csv_data,False,True,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,False,pid_lift_rep3
-True,gs_lqr,False,,True,,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,True,gs_lqr_lift_rep1
-True,gs_lqr,False,,True,,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,True,gs_lqr_lift_rep2
-True,gs_lqr,False,,True,,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v3,True,gs_lqr_lift_rep3
-True,position_pid,False,,True,False,False,/home/admin/bbot_ws_new/src/bbot_balance_controller/src/data_logs/chapter42_formal_lift_recheck_20260916_v4,True,pid_lift_rep3

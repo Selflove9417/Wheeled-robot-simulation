@@ -20,3 +20,28 @@ __pycache__/
 
 # Log files
 *.log
+
+# Independent build and runtime output
+/build*/
+/install*/
+/log*/
+/.ros/
+/ros_log/
+/.pytest_cache/
+
+# Per-run simulation recordings and plots. Keep the files locally, but don't
+# add bulk experiment output to the source repository.
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/*/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.csv
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.log
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.db3
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.mcap
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.png
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**/*.pdf
+
+# Local experiment datasets and frozen per-run snapshots
+/src/bbot_balance_controller/src/data_logs/*/
+/experiments/jump/planning/
+/experiments/jump/native_physics/upstream/*.tar.*
+/experiments/jump/native_physics/upstream/*.dsc
+/archive/

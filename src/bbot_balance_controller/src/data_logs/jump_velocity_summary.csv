@@ -1,2 +1,0 @@
-jump_id,jump_height_target,target_takeoff_velocity,takeoff_velocity,apex_height_delta,apex_world_z_delta,max_abs_pitch,takeoff_pitch_rate,landing_pitch_err,touchdown_drift_x,max_abs_hip_torque,max_abs_knee_torque,mechanical_work,recovery_completed,failed,reason
-1,0.25,2.21472,0,0.0294111,0.0375366,0.201397,0,0,0,1.94312,16.2478,0,0,1,下蹲后腿长或垂直速度未稳定
