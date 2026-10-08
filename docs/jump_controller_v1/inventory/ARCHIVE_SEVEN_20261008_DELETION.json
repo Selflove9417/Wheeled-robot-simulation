@@ -1,0 +1,140 @@
+{
+  "started_utc": "2026-10-08T13:29:10.675614+00:00",
+  "prior_record": "/home/xy/bbot_jump_archives/batch_seven_20261008_212204_437853/results.json",
+  "check_log_directory": "/tmp/bbot_seven_deletion_20261008_212910",
+  "scope": [
+    "thrust_release_073_single_20261008",
+    "ground_motion_probe_20261006_134820",
+    "thrust_origin_diagnostic_20261007",
+    "native_engine_standing_probe_20261006_105035",
+    "angular_momentum_20261007",
+    "thrust_height_032_ab_20261008",
+    "thrust_terminal_forward_single_20261008"
+  ],
+  "items": [
+    {
+      "experiment": "thrust_release_073_single_20261008",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/thrust_release_073_single_20261008",
+      "archive_path": "/home/xy/bbot_jump_archives/thrust_release_073_single_20261008.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 135395268,
+      "archive_mtime_ns": 1791465728987579854,
+      "archive_inode": 15632956,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 824020992
+    },
+    {
+      "experiment": "ground_motion_probe_20261006_134820",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_motion_probe_20261006_134820",
+      "archive_path": "/home/xy/bbot_jump_archives/ground_motion_probe_20261006_134820.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 174215161,
+      "archive_mtime_ns": 1791465739184682572,
+      "archive_inode": 15632961,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 737284096
+    },
+    {
+      "experiment": "thrust_origin_diagnostic_20261007",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/thrust_origin_diagnostic_20261007",
+      "archive_path": "/home/xy/bbot_jump_archives/thrust_origin_diagnostic_20261007.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 139132494,
+      "archive_mtime_ns": 1791465748800776429,
+      "archive_inode": 15632967,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 724361216
+    },
+    {
+      "experiment": "native_engine_standing_probe_20261006_105035",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/native_engine_standing_probe_20261006_105035",
+      "archive_path": "/home/xy/bbot_jump_archives/native_engine_standing_probe_20261006_105035.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 167307356,
+      "archive_mtime_ns": 1791465758498868181,
+      "archive_inode": 15632973,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 709140480
+    },
+    {
+      "experiment": "angular_momentum_20261007",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/angular_momentum_20261007",
+      "archive_path": "/home/xy/bbot_jump_archives/angular_momentum_20261007.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 133213631,
+      "archive_mtime_ns": 1791465767706952651,
+      "archive_inode": 15632979,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 705716224
+    },
+    {
+      "experiment": "thrust_height_032_ab_20261008",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/thrust_height_032_ab_20261008",
+      "archive_path": "/home/xy/bbot_jump_archives/thrust_height_032_ab_20261008.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 135864282,
+      "archive_mtime_ns": 1791465776565031518,
+      "archive_inode": 15632985,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 700772352
+    },
+    {
+      "experiment": "thrust_terminal_forward_single_20261008",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/thrust_terminal_forward_single_20261008",
+      "archive_path": "/home/xy/bbot_jump_archives/thrust_terminal_forward_single_20261008.tar.gz",
+      "deleted": true,
+      "status": "DELETED",
+      "archive_bytes": 129994908,
+      "archive_mtime_ns": 1791465785243106549,
+      "archive_inode": 15632991,
+      "tar_list_returncode": 0,
+      "tar_diff_returncode": 0,
+      "allocated_bytes_before": 658165760
+    }
+  ],
+  "status": "COMPLETED",
+  "archives_modified": false,
+  "disk_before": {
+    "free_bytes": 397141266432,
+    "used_bytes": 95326031872,
+    "total_bytes": 518901268480
+  },
+  "disk_after": {
+    "free_bytes": 402200727552,
+    "used_bytes": 90266570752,
+    "total_bytes": 518901268480
+  },
+  "filesystem_free_increase_bytes": 5059461120,
+  "deleted_allocated_bytes": 5059461120,
+  "originals_absent": {
+    "thrust_release_073_single_20261008": true,
+    "ground_motion_probe_20261006_134820": true,
+    "thrust_origin_diagnostic_20261007": true,
+    "native_engine_standing_probe_20261006_105035": true,
+    "angular_momentum_20261007": true,
+    "thrust_height_032_ab_20261008": true,
+    "thrust_terminal_forward_single_20261008": true
+  },
+  "archives_present": {
+    "thrust_release_073_single_20261008": true,
+    "ground_motion_probe_20261006_134820": true,
+    "thrust_origin_diagnostic_20261007": true,
+    "native_engine_standing_probe_20261006_105035": true,
+    "angular_momentum_20261007": true,
+    "thrust_height_032_ab_20261008": true,
+    "thrust_terminal_forward_single_20261008": true
+  },
+  "finished_utc": "2026-10-08T13:29:44.286429+00:00"
+}

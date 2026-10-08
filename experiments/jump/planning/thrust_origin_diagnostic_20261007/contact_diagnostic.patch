@@ -1,0 +1,87 @@
+--- prior_readonly/Physics.cc
++++ contact_readonly/Physics.cc
+@@ -362,6 +362,8 @@
+   public: bool rawNativeDiagnosticInitialized{false};
+   public: bool rawNativeDiagnosticEnabled{false};
+   public: std::ofstream rawNativeDiagnosticFile;
++  public: std::ofstream contactDetailFile;
++  public: bool contactDetailInitialized = false;
+   public: std::ofstream momentumInertialsFile;
+   public: std::unordered_set<std::string> momentumInertialsWritten;
+   public: bool rawNativeDiagnosticHasPreviousTime{false};
+@@ -2839,6 +2841,75 @@
+ {
+   if (!this->RawNativeDiagnosticEnabled())
+     return;
++
++  // Read-only post-step contact detail. No ECM component creation/setters.
++  if (_phase == "after_step")
++  {
++    if (!this->contactDetailInitialized)
++    {
++      this->contactDetailInitialized = true;
++      const char *path = std::getenv("BBOT_CONTACT_DETAIL_CSV");
++      if (path && *path)
++      {
++        this->contactDetailFile.open(path);
++        this->contactDetailFile << "sim_time_ns,iteration,dt_ns,phase,time_valid,feature_valid,contact_count,index,collision1,collision2,point_valid,px,py,pz,extra_valid,fx1,fy1,fz1,nx1,ny1,nz1,depth,reason\n";
++        this->contactDetailFile << std::setprecision(17);
++      }
++    }
++    auto &csv = this->contactDetailFile;
++    if (csv.is_open())
++    {
++      const double missing = std::numeric_limits<double>::quiet_NaN();
++      const Entity world = _ecm.EntityByComponents(components::World());
++      auto api = this->entityWorldMap.EntityCast<ContactFeatureList>(world);
++      auto write = [&](bool feature, int count, int index,
++          const std::string &name1, const std::string &name2,
++          bool pointValid, const Eigen::Vector3d &point,
++          bool extraValid, const Eigen::Vector3d &force,
++          const Eigen::Vector3d &normal, double depth, const char *reason)
++      {
++        csv << _simTimeNs << ',' << _iterations << ',' << _dtNs
++            << ",after_step," << _timeValid << ',' << feature << ','
++            << count << ',' << index << ',' << name1 << ',' << name2
++            << ',' << pointValid << ',' << point.x() << ',' << point.y()
++            << ',' << point.z() << ',' << extraValid << ',' << force.x()
++            << ',' << force.y() << ',' << force.z() << ',' << normal.x()
++            << ',' << normal.y() << ',' << normal.z() << ',' << depth
++            << ',' << reason << '\n';
++      };
++      const Eigen::Vector3d absent = Eigen::Vector3d::Constant(missing);
++      if (!api)
++        write(false, -1, -1, "", "", false, absent, false,
++              absent, absent, missing, "contact_feature_unavailable");
++      else
++      {
++        const auto contacts = api->GetContactsFromLastStep();
++        if (contacts.empty())
++          write(true, 0, -1, "", "", false, absent, false,
++                absent, absent, missing, "no_contact");
++        using Extra = physics::GetContactsFromLastStepFeature::ExtraContactDataT<physics::FeaturePolicy3d>;
++        int index = 0;
++        for (const auto &item : contacts)
++        {
++          const auto &point = item.Get<WorldShapeType::ContactPoint>();
++          const auto id1 = this->entityCollisionMap.GetByPhysicsId(point.collision1->EntityID());
++          const auto id2 = this->entityCollisionMap.GetByPhysicsId(point.collision2->EntityID());
++          const auto *extra = item.Query<Extra>();
++          const bool valid = extra && extra->force.allFinite() &&
++              extra->normal.allFinite() && std::isfinite(extra->depth);
++          write(true, contacts.size(), index++,
++              id1 == kNullEntity ? "unresolved" : scopedName(id1, _ecm, "::", false),
++              id2 == kNullEntity ? "unresolved" : scopedName(id2, _ecm, "::", false),
++              point.point.allFinite(), point.point, valid,
++              valid ? extra->force : absent,
++              valid ? extra->normal : absent,
++              valid ? extra->depth : missing,
++              valid ? "" : "extra_contact_data_unavailable_or_invalid");
++        }
++      }
++      csv.flush();
++    }
++  }
+ 
+   auto &out = this->rawNativeDiagnosticFile;
+   out << std::setprecision(17);

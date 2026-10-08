@@ -31,3 +31,7 @@
 - 默认 velocity 和经典跳跃入口：[默认版本说明](../../DEFAULT_FLAT_JUMP.md)；reference 对照说明：[REFERENCE_FLAT_JUMP.md](REFERENCE_FLAT_JUMP.md)。
 - 旧版项目操作与方法背景：[PROJECT_REFERENCE.md](../../docs/PROJECT_REFERENCE.md)；仿真调试：[BBOT_SIMULATION_DEBUG_MANUAL.md](../../docs/BBOT_SIMULATION_DEBUG_MANUAL.md)。历史说明中的版本、配置和结论应按其原日期理解。
 - 所有原始运行文件仍在本地资料 `src/bbot_balance_controller/src/data_logs/flat_jump_trials/`；接触、几何、速度与输入审计工具见 [scripts/](../../src/bbot_balance_controller/scripts/)。
+
+## 第一代全期资料索引（2026-10-08）
+
+[实验分类、稳定B1/B2/B3性能及最新CATCH结果](../../docs/jump_controller_v1/EXPERIMENTS.md) · [200个本地campaign全量目录索引](../../docs/jump_controller_v1/inventory/CAMPAIGNS.csv) · [文件盘点与Git状态](../../docs/jump_controller_v1/INVENTORY.md)。两次最新单次CATCH候选均未采用；本地原报告路径与来源资料见该索引，未重复运行、移动或覆盖实验。

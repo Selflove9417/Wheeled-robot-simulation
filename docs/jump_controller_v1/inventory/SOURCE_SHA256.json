@@ -1,0 +1,7 @@
+{
+  "src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp": "a17c95bd35eb43b07051ed66777070776bb0d9b4d579ab62fe270e94a7dc09c6",
+  "src/bbot_bringup/launch/bbot_gazebo.launch.py": "8a0b4aee41582bbee4c0a916c0a571f3b521c0eed1bcb8427e3ce57b22fa339a",
+  "src/bbot_balance_controller/include/bbot_balance_controller/centroidal_state.hpp": "00ce992327f22e5daf592375289d8e3f1f6249a32313c42e84e0dcb500cd9973",
+  "src/bbot_balance_controller/src/data_logs/plot_jump_log.py": "4151757ffb9cb6002b6a10f215ab06955eb179134fdacdf08224b12dfb43d1d4",
+  "src/bbot_bringup/config/bbot_controllers.yaml": "795292302847426b000a5092198e6a5cc5a024d9eb693c5548f841c1c5912de6"
+}

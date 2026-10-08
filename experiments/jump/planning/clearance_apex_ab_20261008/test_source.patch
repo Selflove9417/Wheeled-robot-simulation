@@ -1,0 +1,12 @@
+--- /home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/clearance_apex_ab_20261008/source_baseline/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp	2026-10-03 10:16:58.066640000 +0800
++++ /home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/clearance_apex_ab_20261008/source_test/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp	2026-10-08 08:39:25.797436805 +0800
+@@ -4369,7 +4369,8 @@
+                             pitch_err);
+                 begin_protective_deploy(current_height_);
+             }
+-            else if (tuck_finished || landing_deadline_reached)
++            else if ((tuck_finished && centroidal_velocity_valid_ &&
++                      centroidal_height_.velocity() <= 0.0) || landing_deadline_reached)
+             {
+                 // v6.2：低跳没有等待apex的余量。TUCK完成后立即EXTEND；
+                 // 若剩余时间提前触及着陆deadline，即使TUCK尚差几毫秒也立即转展腿。

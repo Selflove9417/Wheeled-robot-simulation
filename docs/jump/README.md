@@ -34,3 +34,7 @@ ros2 topic pub --once /jump_cmd std_msgs/msg/String '{data: jump}'
 - 接触和净空审计：[audit_ground_contact_frames.py](../../src/bbot_balance_controller/scripts/audit_ground_contact_frames.py)、[audit_landing_geometry.py](../../src/bbot_balance_controller/scripts/audit_landing_geometry.py)。
 - 扭矩与原生只读输入记录：[record_joint_torque.py](../../src/bbot_balance_controller/scripts/record_joint_torque.py)、[landing_repair_wrench_recorder.cc](../../src/bbot_bringup/src/landing_repair_wrench_recorder.cc)。发布命令、JointForceCmd 仿真输入和关节合负载是不同量。
 - 所有原始历史运行文件保留在本地资料 `src/bbot_balance_controller/src/data_logs/flat_jump_trials/` 原路径。
+
+## 第一代实现冻结与资料整理
+
+2026-10-08：[第一代velocity跳跃技术总结](../jump_controller_v1/README.md)，含分层状态机图、模式切换、实际公式、默认与实验参数区别，以及[33项重点实验和结果](../jump_controller_v1/EXPERIMENTS.md)。默认能完整跳跃与独立候选NO_PHYSICAL_ADMISSION分开记录；未采用候选不视为默认改进。后续文件整理先审阅[迁移方案](../jump_controller_v1/MIGRATION_PLAN.md)，本轮不移动原始资料。

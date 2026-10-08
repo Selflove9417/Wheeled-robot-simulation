@@ -41,7 +41,17 @@ __pycache__/
 
 # Local experiment datasets and frozen per-run snapshots
 /src/bbot_balance_controller/src/data_logs/*/
-/experiments/jump/planning/
+/experiments/jump/planning/*
+!/experiments/jump/planning/realtime_admission_20261007/
+/experiments/jump/planning/realtime_admission_20261007/**
+!/experiments/jump/planning/realtime_admission_20261007/PLANNING.md
+!/experiments/jump/planning/realtime_admission_20261007/REVIEW.md
+!/experiments/jump/planning/finite_recovery_20261007/
+/experiments/jump/planning/finite_recovery_20261007/**
+!/experiments/jump/planning/finite_recovery_20261007/PLANNING.md
+!/experiments/jump/planning/finite_recovery_20261007/REVIEW.md
+/experiments/jump/integration/20261007_realtime_supervisor*/
+/experiments/jump/integration/*.json
 /experiments/jump/native_physics/upstream/*.tar.*
 /experiments/jump/native_physics/upstream/*.dsc
 /archive/
@@ -51,3 +61,235 @@ __pycache__/
 /src/bbot_balance_controller/src/data_logs/*
 !/src/bbot_balance_controller/src/data_logs/*.py
 /.claude/
+
+# Default velocity performance analysis: keep review and reproducible analysis source
+!/experiments/jump/planning/velocity_performance_analysis_20261007/
+/experiments/jump/planning/velocity_performance_analysis_20261007/**
+!/experiments/jump/planning/velocity_performance_analysis_20261007/REVIEW.md
+!/experiments/jump/planning/velocity_performance_analysis_20261007/analyze.py
+
+# One-factor landing capture gain acceptance review (raw records stay local)
+!/experiments/jump/planning/landing_capture_gain_ab_20261007/
+/experiments/jump/planning/landing_capture_gain_ab_20261007/**
+!/experiments/jump/planning/landing_capture_gain_ab_20261007/REVIEW.md
+
+# Read-only precontact capture-chain audit
+!/experiments/jump/planning/landing_capture_pitch_chain_20261007/
+/experiments/jump/planning/landing_capture_pitch_chain_20261007/**
+!/experiments/jump/planning/landing_capture_pitch_chain_20261007/REVIEW.md
+!/experiments/jump/planning/landing_capture_pitch_chain_20261007/analyze.py
+
+# Read-only TUCK/EXTEND boundary audit
+!/experiments/jump/planning/tuck_extend_continuity_20261007/
+/experiments/jump/planning/tuck_extend_continuity_20261007/**
+!/experiments/jump/planning/tuck_extend_continuity_20261007/REVIEW.md
+!/experiments/jump/planning/tuck_extend_continuity_20261007/analyze.py
+
+# Read-only rearward-rate onset audit
+!/experiments/jump/planning/negative_pitch_onset_20261007/
+/experiments/jump/planning/negative_pitch_onset_20261007/**
+!/experiments/jump/planning/negative_pitch_onset_20261007/REVIEW.md
+!/experiments/jump/planning/negative_pitch_onset_20261007/analyze.py
+
+# Read-only contact/airborne onset audit
+!/experiments/jump/planning/contact_vs_airborne_onset_20261007/
+/experiments/jump/planning/contact_vs_airborne_onset_20261007/**
+!/experiments/jump/planning/contact_vs_airborne_onset_20261007/REVIEW.md
+!/experiments/jump/planning/contact_vs_airborne_onset_20261007/analyze.py
+
+# Early ARREST single-logic physical A/B review
+!/experiments/jump/planning/arrest_early_decel_ab_20261007/
+/experiments/jump/planning/arrest_early_decel_ab_20261007/**
+!/experiments/jump/planning/arrest_early_decel_ab_20261007/REVIEW.md
+!/experiments/jump/planning/arrest_early_decel_ab_20261007/PROTOCOL.md
+!/experiments/jump/planning/arrest_early_decel_ab_20261007/test_source.patch
+!/experiments/jump/planning/arrest_early_decel_ab_20261007/analyze.py
+
+# Default-control angular momentum diagnostic review
+!/experiments/jump/planning/angular_momentum_20261007/
+/experiments/jump/planning/angular_momentum_20261007/**
+!/experiments/jump/planning/angular_momentum_20261007/REVIEW.md
+!/experiments/jump/planning/angular_momentum_20261007/PROTOCOL.md
+!/experiments/jump/planning/angular_momentum_20261007/diagnostic_only.patch
+!/experiments/jump/planning/angular_momentum_20261007/analyze.py
+
+!/experiments/jump/planning/hip_momentum_ab_20261007/
+/experiments/jump/planning/hip_momentum_ab_20261007/**
+!/experiments/jump/planning/hip_momentum_ab_20261007/REVIEW.md
+!/experiments/jump/planning/hip_momentum_ab_20261007/PROTOCOL.md
+!/experiments/jump/planning/hip_momentum_ab_20261007/SOURCE.md
+!/experiments/jump/planning/hip_momentum_ab_20261007/test_source.patch
+!/experiments/jump/planning/hip_momentum_ab_20261007/analyze_momentum.py
+!/experiments/jump/planning/hip_momentum_ab_20261007/analyze_performance.py
+!/experiments/jump/planning/hip_momentum_ab_20261007/audit_reference.py
+!/experiments/jump/planning/hip_momentum_ab_20261007/compare.py
+
+!/experiments/jump/planning/takeoff_variability_20261007/
+/experiments/jump/planning/takeoff_variability_20261007/**
+!/experiments/jump/planning/takeoff_variability_20261007/REVIEW.md
+!/experiments/jump/planning/takeoff_variability_20261007/analyze.py
+!/experiments/jump/planning/takeoff_variability_20261007/extract_inputs.py
+!/experiments/jump/planning/takeoff_variability_20261007/summarize.py
+
+# THRUST origin read-only physical diagnostics
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/
+/experiments/jump/planning/thrust_origin_diagnostic_20261007/**
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/PROTOCOL.md
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/REVIEW.md
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/analyze_diagnostic.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/analyze_existing.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/audit_contact.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/contact_diagnostic.patch
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/early_divergence.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/early_divergence_with_margins.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/extract_inputs.py
+!/experiments/jump/planning/thrust_origin_diagnostic_20261007/summarize.py
+
+# Frozen default THRUST early variation diagnosis
+!/experiments/jump/planning/thrust_early_repeat_20261008/
+/experiments/jump/planning/thrust_early_repeat_20261008/**
+!/experiments/jump/planning/thrust_early_repeat_20261008/PROTOCOL.md
+!/experiments/jump/planning/thrust_early_repeat_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_early_repeat_20261008/SOURCE.md
+!/experiments/jump/planning/thrust_early_repeat_20261008/analyze_diagnostic.py
+!/experiments/jump/planning/thrust_early_repeat_20261008/audit_contact.py
+!/experiments/jump/planning/thrust_early_repeat_20261008/compare.py
+!/experiments/jump/planning/thrust_early_repeat_20261008/extract_inputs.py
+!/experiments/jump/planning/thrust_early_repeat_20261008/report.py
+
+# One-factor bilateral wheel clearance A/B
+!/experiments/jump/planning/clearance_apex_ab_20261008/
+/experiments/jump/planning/clearance_apex_ab_20261008/**
+!/experiments/jump/planning/clearance_apex_ab_20261008/PROTOCOL.md
+!/experiments/jump/planning/clearance_apex_ab_20261008/REVIEW.md
+!/experiments/jump/planning/clearance_apex_ab_20261008/SOURCE.md
+!/experiments/jump/planning/clearance_apex_ab_20261008/analyze.py
+!/experiments/jump/planning/clearance_apex_ab_20261008/report.py
+!/experiments/jump/planning/clearance_apex_ab_20261008/summarize.py
+!/experiments/jump/planning/clearance_apex_ab_20261008/test_source.patch
+
+# Read-only TUCK target feasibility
+!/experiments/jump/planning/tuck_target_feasibility_20261008/
+/experiments/jump/planning/tuck_target_feasibility_20261008/**
+!/experiments/jump/planning/tuck_target_feasibility_20261008/REVIEW.md
+!/experiments/jump/planning/tuck_target_feasibility_20261008/analyze.py
+!/experiments/jump/planning/tuck_target_feasibility_20261008/report.py
+
+# Offline air trajectory design only
+!/experiments/jump/planning/airborne_reallocation_design_20261008/
+/experiments/jump/planning/airborne_reallocation_design_20261008/**
+!/experiments/jump/planning/airborne_reallocation_design_20261008/REVIEW.md
+!/experiments/jump/planning/airborne_reallocation_design_20261008/calculate.py
+!/experiments/jump/planning/airborne_reallocation_design_20261008/continuous_brake.py
+
+# Offline 20cm clearance feasibility only
+!/experiments/jump/planning/clearance_20cm_feasibility_20261008/
+/experiments/jump/planning/clearance_20cm_feasibility_20261008/**
+!/experiments/jump/planning/clearance_20cm_feasibility_20261008/REVIEW.md
+!/experiments/jump/planning/clearance_20cm_feasibility_20261008/analyze.py
+!/experiments/jump/planning/clearance_20cm_feasibility_20261008/tuck_bound.py
+!/experiments/jump/planning/clearance_20cm_feasibility_20261008/report.py
+
+# One-factor THRUST height .32 stopped-first-test record
+!/experiments/jump/planning/thrust_height_032_ab_20261008/
+/experiments/jump/planning/thrust_height_032_ab_20261008/**
+!/experiments/jump/planning/thrust_height_032_ab_20261008/PROTOCOL.md
+!/experiments/jump/planning/thrust_height_032_ab_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_height_032_ab_20261008/analyze.py
+!/experiments/jump/planning/thrust_height_032_ab_20261008/details.py
+!/experiments/jump/planning/thrust_height_032_ab_20261008/report.py
+
+# Read-only .32 pitch-formation accounting
+!/experiments/jump/planning/height_032_pitch_formation_20261008/
+/experiments/jump/planning/height_032_pitch_formation_20261008/**
+!/experiments/jump/planning/height_032_pitch_formation_20261008/REVIEW.md
+!/experiments/jump/planning/height_032_pitch_formation_20261008/momentum.py
+!/experiments/jump/planning/height_032_pitch_formation_20261008/compare.py
+!/experiments/jump/planning/height_032_pitch_formation_20261008/report.py
+
+# Read-only THRUST external angular-momentum budget
+!/experiments/jump/planning/thrust_momentum_budget_20261008/
+/experiments/jump/planning/thrust_momentum_budget_20261008/**
+!/experiments/jump/planning/thrust_momentum_budget_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_momentum_budget_20261008/analyze.py
+!/experiments/jump/planning/thrust_momentum_budget_20261008/compare.py
+
+# Single physical release-ratio trial; raw records stay local
+!/experiments/jump/planning/thrust_release_073_single_20261008/
+/experiments/jump/planning/thrust_release_073_single_20261008/**
+!/experiments/jump/planning/thrust_release_073_single_20261008/PROTOCOL.md
+!/experiments/jump/planning/thrust_release_073_single_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_release_073_single_20261008/performance.py
+!/experiments/jump/planning/thrust_release_073_single_20261008/details.py
+!/experiments/jump/planning/thrust_release_073_single_20261008/momentum.py
+!/experiments/jump/planning/thrust_release_073_single_20261008/thrust_budget.py
+!/experiments/jump/planning/thrust_release_073_single_20261008/compare.py
+
+# Read-only THRUST horizontal control feasibility
+!/experiments/jump/planning/thrust_horizontal_control_review_20261008/
+/experiments/jump/planning/thrust_horizontal_control_review_20261008/**
+!/experiments/jump/planning/thrust_horizontal_control_review_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_horizontal_control_review_20261008/analyze.py
+
+# Single terminal THRUST forward-reference physical experiment
+!/experiments/jump/planning/thrust_terminal_forward_single_20261008/
+/experiments/jump/planning/thrust_terminal_forward_single_20261008/**
+!/experiments/jump/planning/thrust_terminal_forward_single_20261008/PROTOCOL.md
+!/experiments/jump/planning/thrust_terminal_forward_single_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_terminal_forward_single_20261008/test_source.patch
+!/experiments/jump/planning/thrust_terminal_forward_single_20261008/*.py
+
+# Read-only THRUST contact-line/configuration feasibility
+!/experiments/jump/planning/thrust_configuration_feasibility_20261008/
+/experiments/jump/planning/thrust_configuration_feasibility_20261008/**
+!/experiments/jump/planning/thrust_configuration_feasibility_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_configuration_feasibility_20261008/analyze.py
+
+# Design only: THRUST vz and total momentum coordination
+!/experiments/jump/planning/thrust_vz_momentum_design_20261008/
+/experiments/jump/planning/thrust_vz_momentum_design_20261008/**
+!/experiments/jump/planning/thrust_vz_momentum_design_20261008/DESIGN.md
+
+# Read-only THRUST input-authority prerequisite audit
+!/experiments/jump/planning/thrust_input_authority_20261008/
+/experiments/jump/planning/thrust_input_authority_20261008/**
+!/experiments/jump/planning/thrust_input_authority_20261008/REVIEW.md
+!/experiments/jump/planning/thrust_input_authority_20261008/observe.py
+!/experiments/jump/planning/thrust_input_authority_20261008/plot.py
+
+# V1 publication: machine-wide inventory snapshots stay local; public indexes remain available.
+/docs/jump_controller_v1/inventory/FILES.csv
+/docs/jump_controller_v1/inventory/IDENTICAL_TEXT.json
+/docs/jump_controller_v1/inventory/SUMMARY.json
+/docs/jump_controller_v1/inventory/PATH_REFERENCES.csv
+/docs/jump_controller_v1/inventory/git_status_before.txt
+# Hardware package nested build output and accidentally copied local archives.
+/src/**/build/
+/src/**/install/
+/src/**/log/
+/bbot_jump_archives/
+
+# Existing isolated supervisor run output is local evidence, not publishable source.
+/experiments/jump/integration/20261007_supervisor_isolated_recheck1/
+
+# Exact lightweight historical reviews linked by published documentation.
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_clearance_landing_20261005_224308/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_clearance_landing_20261005_224308/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_clearance_landing_20261005_224308/REVIEW.md
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_ground_momentum_20261003_115551/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_ground_momentum_20261003_115551/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_ground_momentum_20261003_115551/REVIEW.md
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/
+/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/**
+!/src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/REVIEW.md

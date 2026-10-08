@@ -1,0 +1,3 @@
+# Frozen readonly diagnostic
+
+One fresh-world default-control jump D1, not an A/B retry. Reuse original stable startup gate, fixed20s after real native touchdown. Original controller binary and all resolved parameters unchanged except data paths; gain1.60, physics1ms, real_time_factor1. Independent Physics clone adds only contact getter CSV, no new setters/ECM mutations/callback customization. All7 native links and runtime inertia reuse previous logger. D1 validates contact force availability, force sign/frame, COM momentum impulse closure; it cannot retroactively supply missing old B2/T3 force data. No tuning or additional runs. Wheel actual motor torque unavailable until backend semantics verified; never equate GetForce0 with velocity-servo torque.

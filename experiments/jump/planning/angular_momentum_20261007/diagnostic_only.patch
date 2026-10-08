@@ -1,0 +1,64 @@
+--- frozen_Physics.cc
++++ momentum_Physics.cc
+@@ -362,6 +362,8 @@
+   public: bool rawNativeDiagnosticInitialized{false};
+   public: bool rawNativeDiagnosticEnabled{false};
+   public: std::ofstream rawNativeDiagnosticFile;
++  public: std::ofstream momentumInertialsFile;
++  public: std::unordered_set<std::string> momentumInertialsWritten;
+   public: bool rawNativeDiagnosticHasPreviousTime{false};
+   public: int64_t rawNativeDiagnosticPreviousSimTimeNs{0};
+   public: uint64_t rawNativeDiagnosticPreviousIteration{0};
+@@ -2810,6 +2812,8 @@
+     return;
+   }
+ 
++  this->momentumInertialsFile.open(std::string(path) + ".inertials.csv");
++  this->momentumInertialsFile << "entity_name,mass,cx,cy,cz,qw,qx,qy,qz,ixx,ixy,ixz,iyy,iyz,izz\n";
+   this->rawNativeDiagnosticEnabled = true;
+   this->rawNativeDiagnosticFile
+       << "sim_time_ns,iteration,phase,entity_type,entity_name,entity_id,"
+@@ -2839,9 +2843,13 @@
+   auto &out = this->rawNativeDiagnosticFile;
+   out << std::setprecision(17);
+   const double nan = std::numeric_limits<double>::quiet_NaN();
+-  const std::array<const char *, 3> linkNames{{
++  const std::array<const char *, 7> linkNames{{
+       "flat_jump_world::bbot::base_link",
++      "flat_jump_world::bbot::link_002",
++      "flat_jump_world::bbot::link_003",
+       "flat_jump_world::bbot::link_004",
++      "flat_jump_world::bbot::link_005",
++      "flat_jump_world::bbot::link_006",
+       "flat_jump_world::bbot::link_007"}};
+   const std::array<const char *, 6> jointNames{{
+       "flat_jump_world::bbot::link_002_joint",
+@@ -2933,6 +2941,28 @@
+           const components::Name *_name) -> bool
+       {
+         const std::string fullName = scopedName(_entity, _ecm, "::", false);
++        // Runtime model inventory and inertials; diagnostic getters only.
++        if (fullName.rfind("flat_jump_world::bbot::", 0) == 0 &&
++            this->momentumInertialsWritten.count(fullName) == 0)
++        {
++          const auto inertial = _ecm.Component<components::Inertial>(_entity);
++          if (inertial && this->momentumInertialsFile.good())
++          {
++            const auto &in = inertial->Data();
++            const auto &mm = in.MassMatrix();
++            const auto I = mm.Moi();
++            const auto pose = in.Pose();
++            auto &meta = this->momentumInertialsFile;
++            meta << std::setprecision(17) << fullName << ',' << mm.Mass()
++                 << ',' << pose.Pos().X() << ',' << pose.Pos().Y() << ',' << pose.Pos().Z()
++                 << ',' << pose.Rot().W() << ',' << pose.Rot().X()
++                 << ',' << pose.Rot().Y() << ',' << pose.Rot().Z()
++                 << ',' << I(0,0) << ',' << I(0,1) << ',' << I(0,2)
++                 << ',' << I(1,1) << ',' << I(1,2) << ',' << I(2,2) << '\n';
++            meta.flush();
++            this->momentumInertialsWritten.insert(fullName);
++          }
++        }
+         if (std::find_if(linkNames.begin(), linkNames.end(),
+             [&](const char *_candidate)
+             { return fullName == _candidate; }) ==

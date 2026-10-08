@@ -1,0 +1,90 @@
+{
+  "checked_utc": "2026-10-08T13:12:41.639351+00:00",
+  "prior_record": "/home/xy/bbot_jump_archives/batch_four_20261008_210618_ff270e/results.json",
+  "items": [
+    {
+      "experiment": "clearance_apex_ab_20261008",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/clearance_apex_ab_20261008",
+      "archive_path": "/home/xy/bbot_jump_archives/clearance_apex_ab_20261008.tar.gz",
+      "archive_bytes": 784731073,
+      "sha256": "2465b020cbd0e3626541c12554423a0b67f62cdbf333ee8cc2d49469e2f8d157",
+      "original_allocated_bytes": 4080799744,
+      "original_apparent_bytes": 4080032414,
+      "prior_status": "VERIFIED",
+      "integrity_recheck": {
+        "gzip_test": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "tar_list": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      },
+      "deletion_status": "PENDING_FINAL_CONFIRMATION"
+    },
+    {
+      "experiment": "hip_momentum_ab_20261007",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/hip_momentum_ab_20261007",
+      "archive_path": "/home/xy/bbot_jump_archives/hip_momentum_ab_20261007.tar.gz",
+      "archive_bytes": 710136256,
+      "sha256": "6c0c8766099c7f224631376afa4397c5f881b7368f988bbb28723c1289a16927",
+      "original_allocated_bytes": 3896229888,
+      "original_apparent_bytes": 3894448873,
+      "prior_status": "VERIFIED",
+      "integrity_recheck": {
+        "gzip_test": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "tar_list": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      },
+      "deletion_status": "PENDING_FINAL_CONFIRMATION"
+    },
+    {
+      "experiment": "landing_capture_gain_ab_20261007",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/landing_capture_gain_ab_20261007",
+      "archive_path": "/home/xy/bbot_jump_archives/landing_capture_gain_ab_20261007.tar.gz",
+      "archive_bytes": 464617833,
+      "sha256": "a0fd7edd90c786fffd2fa1a9539dbf26531c488ac9342d2fa2c4aaad23b612b2",
+      "original_allocated_bytes": 2356486144,
+      "original_apparent_bytes": 2356168907,
+      "prior_status": "VERIFIED",
+      "integrity_recheck": {
+        "gzip_test": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "tar_list": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      },
+      "deletion_status": "PENDING_FINAL_CONFIRMATION"
+    },
+    {
+      "experiment": "arrest_early_decel_ab_20261007",
+      "original_path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/arrest_early_decel_ab_20261007",
+      "archive_path": "/home/xy/bbot_jump_archives/arrest_early_decel_ab_20261007.tar.gz",
+      "archive_bytes": 353552020,
+      "sha256": "0aad68a4326634eb1035086977a3fd5b6cdec7f86e6d45dbab0d1ddc95932d24",
+      "original_allocated_bytes": 1799069696,
+      "original_apparent_bytes": 1797783669,
+      "prior_status": "VERIFIED",
+      "integrity_recheck": {
+        "gzip_test": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "tar_list": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      },
+      "deletion_status": "PENDING_FINAL_CONFIRMATION"
+    }
+  ]
+}

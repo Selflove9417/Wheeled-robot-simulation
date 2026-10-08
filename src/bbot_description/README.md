@@ -125,7 +125,7 @@ pitch_rate_raw_ = -msg->angular_velocity.x;
 
 双轮足机器人属于物理非稳定倒立摆。如果 Gazebo 物理引擎在 ROS 2 控制器加载的 2.5 秒空档期内即时运行，机器人会在无控制力矩下自由倒地，导致机身后方瘫坐在地面上，启动后无法自行恢复。
 
-### 标准启动流程（[bbot_gazebo.launch.py](bbot_bringup/launch/bbot_gazebo.launch.py)）
+### 标准启动流程（[bbot_gazebo.launch.py](../bbot_bringup/launch/bbot_gazebo.launch.py)）
 1. **$t=0.0\text{s}$**：Gazebo 以暂停模式启动（`gz_args: 'empty.sdf'`，不加 `-r`），机器人以直立姿态（$-z\ 0.403$）生成；
 2. **$t=1.0\text{s} \sim 2.0\text{s}$**：加载并激活 `joint_state_broadcaster`、`diff_drive_controller` 与 `leg_position_controller`；
 3. **$t=2.5\text{s}$**：启动 `lqr_balance_controller`，接管双腿锁位与自平衡回路；

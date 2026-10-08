@@ -1,0 +1,33 @@
+--- baseline.cpp
++++ test.cpp
+@@ -3970,6 +3970,30 @@
+             arrest_knee_left_traj_.evaluate(now_sec, q[1], v[1], a[1]);
+             arrest_hip_right_traj_.evaluate(now_sec, q[2], v[2], a[2]);
+             arrest_knee_right_traj_.evaluate(now_sec, q[3], v[3], a[3]);
++            // Independent causal experiment: change ARREST shape only.
++            // The correction and its first two derivatives vanish at both ends.
++            const std::array<const bbot_jump::QuinticTrajectory *, 4> arrest_traj{
++                &arrest_hip_left_traj_, &arrest_knee_left_traj_,
++                &arrest_hip_right_traj_, &arrest_knee_right_traj_};
++            for (size_t i = 0; i < arrest_traj.size(); ++i)
++            {
++                const auto &tr = *arrest_traj[i];
++                const double T = tr.tf - tr.t0;
++                if (T <= 1e-4 || now_sec <= tr.t0 || now_sec >= tr.tf)
++                    continue;
++                const double u = (now_sec - tr.t0) / T;
++                double qe, ve, ae;
++                tr.evaluate(tr.tf, qe, ve, ae);
++                const double dv = tr.a1 / T - ve;
++                const double u2 = u * u;
++                const double u3 = u2 * u;
++                const double u4 = u3 * u;
++                const double u5 = u4 * u;
++                const double one_minus_u = 1.0 - u;
++                q[i] += dv * T * u3 * one_minus_u * one_minus_u * one_minus_u;
++                v[i] += dv * (3.0 * u2 - 12.0 * u3 + 15.0 * u4 - 6.0 * u5);
++                a[i] += dv / T * (6.0 * u - 36.0 * u2 + 60.0 * u3 - 30.0 * u4);
++            }
+         }
+         else if (flight_subphase_ == bbot_jump::FLIGHT_SUBPHASE_PROTECTIVE_DEPLOY)
+         {

@@ -1,0 +1,148 @@
+parameter,type,cpp_default_expression,cpp_line,launch_forwarded,launch_expression,launch_line,launch_argument,launch_default_expression,launch_declare_line
+jump_forward_speed,double,0.35,218,True,"ParameterValue(
+                            LaunchConfiguration(""jump_forward_speed""),
+                            value_type=float,
+                        )",1199,jump_forward_speed,"""0.35""",330
+jump_takeoff_forward_speed,double,0.45,220,True,"ParameterValue(
+                            LaunchConfiguration(""jump_takeoff_forward_speed""),
+                            value_type=float,
+                        )",1203,jump_takeoff_forward_speed,"""0.45""",333
+jump_log_path,std::string,"""""",223,True,"LaunchConfiguration(""jump_log_path"")",1193,jump_log_path,"""""",321
+jump_summary_path,std::string,"""""",224,True,"LaunchConfiguration(""jump_summary_path"")",1194,jump_summary_path,"""""",324
+auto_return_balance,bool,true,225,True,"ParameterValue(
+                            LaunchConfiguration(""auto_return_balance""),
+                            value_type=bool,
+                        )",1195,auto_return_balance,"""true""",327
+thrust_forward_velocity_kp,double,1.20,226,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_forward_velocity_kp""),
+                            value_type=float,
+                        )",1207,thrust_forward_velocity_kp,"jump_default(""thrust_forward_velocity_kp"", 0.80)",336
+thrust_forward_attitude_taper,bool,true,230,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_forward_attitude_taper""),
+                            value_type=bool,
+                        )",1211,thrust_forward_attitude_taper,"jump_default(""thrust_forward_attitude_taper"", False)",340
+thrust_release_fast_rate_correction,bool,true,232,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_release_fast_rate_correction""),
+                            value_type=bool,
+                        )",1215,thrust_release_fast_rate_correction,"jump_default(""thrust_release_fast_rate_correction"", False)",344
+thrust_fast_rate_correction_from_gate,bool,true,234,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_fast_rate_correction_from_gate""),
+                            value_type=bool,
+                        )",1219,thrust_fast_rate_correction_from_gate,"PythonExpression(launch_gate_scope_expression(
+            controller_type, LaunchConfiguration(""thrust_release_fast_rate_correction"")))",348
+thrust_release_velocity_ratio,double,0.78,236,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_release_velocity_ratio""),
+                            value_type=float,
+                        )",1232,thrust_release_velocity_ratio,"jump_default(""thrust_release_velocity_ratio"", 0.70)",366
+thrust_forward_speed_prediction,bool,true,241,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_forward_speed_prediction""),
+                            value_type=bool,
+                        )",1236,thrust_forward_speed_prediction,"jump_default(""thrust_forward_speed_prediction"", False)",370
+thrust_wheel_kinematics_compensation,bool,true,243,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_wheel_kinematics_compensation""),
+                            value_type=bool,
+                        )",1240,thrust_wheel_kinematics_compensation,"jump_default(""thrust_wheel_kinematics_compensation"", False)",374
+arrest_dynamics_feedforward,bool,true,245,True,"ParameterValue(
+                            LaunchConfiguration(""arrest_dynamics_feedforward""),
+                            value_type=bool,
+                        )",1248,arrest_dynamics_feedforward,"jump_default(""arrest_dynamics_feedforward"", False)",382
+complete_contact_takeoff_confirmation,bool,true,247,True,"ParameterValue(
+                            LaunchConfiguration(""complete_contact_takeoff_confirmation""),
+                            value_type=bool,
+                        )",1244,complete_contact_takeoff_confirmation,"jump_default(""complete_contact_takeoff_confirmation"", False)",378
+thrust_wheel_max_decel,double,16.0,249,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_wheel_max_decel""),
+                            value_type=float,
+                        )",1170,thrust_wheel_max_decel,"jump_default(""thrust_wheel_max_decel"", 8.0)",392
+jump_pitch_offset,double,0.020,255,True,"ParameterValue(
+                            LaunchConfiguration(""jump_pitch_offset""),
+                            value_type=float,
+                        )",1252,jump_pitch_offset,"""0.020""",386
+jump_takeoff_pitch_rate,double,0.05,257,True,"ParameterValue(
+                            LaunchConfiguration(""jump_takeoff_pitch_rate""),
+                            value_type=float,
+                        )",1256,jump_takeoff_pitch_rate,"""0.05""",389
+jump_takeoff_pitch_rate_tolerance,double,0.18,261,False,,,,,0
+thrust_pitch_rate_lead_time,double,0.07,265,False,,,,,0
+landing_wheel_back_bias,double,0.120,275,False,,,,,0
+landing_capture_gain,double,1.60,283,False,,,,,0
+landing_target_x_max,double,0.10,287,False,,,,,0
+landing_capture_height,double,0.40,291,False,,,,,0
+landing_capture_speed_deadband,double,0.08,295,False,,,,,0
+landing_shank_abs_max,double,0.75,303,False,,,,,0
+landing_knee_axis_clearance_min,double,0.20,308,False,,,,,0
+landing_deploy_ready_margin,double,0.055,313,False,,,,,0
+landing_protective_deploy_min,double,0.10,317,False,,,,,0
+flight_landing_pitch_bias,double,0.055,324,False,,,,,0
+flight_pitch_transition_duration,double,0.28,328,False,,,,,0
+flight_landing_pitch_rate_max,double,0.30,334,False,,,,,0
+pre_jump_timeout,double,bbot_jump::kDefaultPreJumpTimeout,339,False,,,,,0
+pre_jump_stable_duration,double,0.08,341,False,,,,,0
+pre_jump_speed_tolerance,double,0.06,343,False,,,,,0
+pre_jump_pitch_tolerance,double,0.035,345,False,,,,,0
+pre_jump_rate_limit,double,0.30,347,False,,,,,0
+thrust_leg_reaction_ff_gain,double,0.15,378,False,,,,,0
+thrust_leg_reaction_ff_max,double,2.0,382,False,,,,,0
+flight_hip_speed_limit,double,11.0,398,False,,,,,0
+flight_knee_speed_limit,double,13.0,400,False,,,,,0
+flight_hip_acc_limit,double,450.0,402,False,,,,,0
+flight_knee_acc_limit,double,500.0,404,False,,,,,0
+flight_hip_pos_limit,double,1.52,406,False,,,,,0
+flight_knee_pos_limit,double,1.5708,408,False,,,,,0
+landing_buffer_height,double,0.34,410,True,"ParameterValue(
+                            LaunchConfiguration(""landing_buffer_height""),
+                            value_type=float,
+                        )",1174,landing_buffer_height,"""0.34""",314
+landing_joint_handoff_duration,double,0.16,415,False,,,,,0
+flight_tuck_nominal_duration,double,0.06,421,True,"ParameterValue(
+                            LaunchConfiguration(""flight_tuck_nominal_duration""),
+                            value_type=float,
+                        )",1158,flight_tuck_nominal_duration,"""0.06""",308
+body_mass,double,9.5,434,True,"LaunchConfiguration(""body_mass"")",1181,body_mass,"""9.5""",320
+position_proportional_gain,double,0.3,442,True,"LaunchConfiguration(
+                            ""position_proportional_gain""
+                        )",1178,position_proportional_gain,"""0.3""",317
+enable_position_handoff,bool,true,443,True,"LaunchConfiguration(
+                            ""enable_position_handoff""
+                        )",1182,enable_position_handoff,"""true""",460
+handoff_joint_error_limit,double,0.12,444,False,,,,,0
+handoff_height_drop_limit,double,0.04,445,False,,,,,0
+handoff_pitch_error_limit,double,0.12,446,False,,,,,0
+handoff_z_dot_limit,double,0.20,447,False,,,,,0
+failed_thrust_crouch_height,double,0.38,452,False,,,,,0
+failed_thrust_crouch_duration,double,0.32,456,False,,,,,0
+failed_thrust_settle_duration,double,0.18,460,False,,,,,0
+thrust_hard_block_timeout,double,0.12,465,False,,,,,0
+jump_height,double,0.20,471,True,"LaunchConfiguration(""jump_height"")",1137,jump_height,"""0.20""",282
+takeoff_velocity,double,0.0,472,True,"LaunchConfiguration(""takeoff_velocity"")",1138,takeoff_velocity,"""0.0""",283
+thrust_duration,double,0.24,473,True,"LaunchConfiguration(""thrust_duration"")",1139,thrust_duration,"""0.24""",286
+thrust_peak_ratio,double,2.30,474,True,"LaunchConfiguration(""thrust_peak_ratio"")",1140,thrust_peak_ratio,"""2.0""",287
+grounded_launch_boost_ratio,double,0.75,477,False,,,,,0
+thrust_shape_early,double,0.95,479,True,"LaunchConfiguration(""thrust_shape_early"")",1141,thrust_shape_early,"""0.75""",290
+thrust_shape_late,double,0.75,480,True,"LaunchConfiguration(""thrust_shape_late"")",1142,thrust_shape_late,"""0.75""",293
+thrust_velocity_kp,double,8.0,481,True,"LaunchConfiguration(""thrust_velocity_kp"")",1143,thrust_velocity_kp,"""8.0""",296
+thrust_knee_velocity_limit,double,15.0,490,False,,,,,0
+thrust_torque_margin,double,0.95,491,False,,,,,0
+sim_relax_thrust_limits,bool,false,493,True,"ParameterValue(
+                            LaunchConfiguration(""sim_relax_thrust_limits""),
+                            value_type=bool,
+                        )",1145,sim_relax_thrust_limits,"""true""",300
+thrust_timeout,double,0.60,496,True,"LaunchConfiguration(""thrust_timeout"")",1144,thrust_timeout,"""0.60""",299
+air_wheel_sign,double,-1.0,509,True,"LaunchConfiguration(""air_wheel_sign"")",1149,air_wheel_sign,"""-1.0""",305
+air_wheel_linear_speed_limit,double,2.0,514,False,,,,,0
+air_wheel_extend_kd,double,2.50,517,True,"ParameterValue(
+                            LaunchConfiguration(""air_wheel_extend_kd""),
+                            value_type=float,
+                        )",1150,air_wheel_extend_kd,"""2.50""",306
+air_wheel_tuck_kd,double,0.45,520,True,"ParameterValue(
+                            LaunchConfiguration(""air_wheel_tuck_kd""),
+                            value_type=float,
+                        )",1154,air_wheel_tuck_kd,"""0.45""",307
+flight_arrest_freewheel_duration,double,0.0,523,True,"ParameterValue(
+                            LaunchConfiguration(""flight_arrest_freewheel_duration""),
+                            value_type=float,
+                        )",1162,flight_arrest_freewheel_duration,"""0.0""",310
+thrust_terminal_hip_floor,bool,false,525,True,"ParameterValue(
+                            LaunchConfiguration(""thrust_terminal_hip_floor""),
+                            value_type=bool,
+                        )",1166,thrust_terminal_hip_floor,"""false""",312

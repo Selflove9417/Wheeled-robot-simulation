@@ -1,0 +1,19 @@
+--- baseline/bbot_velocity_jump_controller.cpp
++++ experiment/bbot_velocity_jump_controller.cpp
+@@ -3429,9 +3429,14 @@
+             now_sec, raw_forward_speed, capture_world_valid_,
+             thrust_forward_speed_prediction_enable_);
+         const double current_forward_speed = forward_speed_prediction.predicted_speed;
+-        const double forward_speed_error = jump_takeoff_forward_speed_ - current_forward_speed;
++        // Independent single-run experiment: only the existing THRUST release
++        // segment uses a 0.02 m/s lower common forward reference. All downstream
++        // attitude, kinematics, rate limits, and flight handoff remain unchanged.
++        const double thrust_local_forward_reference = jump_takeoff_forward_speed_ -
++            (thrust_release_.active() ? 0.02 : 0.0);
++        const double forward_speed_error = thrust_local_forward_reference - current_forward_speed;
+         const double thrust_forward_cmd_mag = bbot_jump::clamp_value(
+-            jump_takeoff_forward_speed_ +
++            thrust_local_forward_reference +
+                 thrust_forward_velocity_kp_ * forward_speed_error,
+             0.0, 0.85);
+         // v6.4：名义伸腿时间结束不代表可以反向制动车轮。带前倾时

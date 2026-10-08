@@ -1,0 +1,20 @@
+{
+  "kind": "documentation/source-preservation checks, not unit tests or physical validation",
+  "new_document_links_checked": 264,
+  "unresolved_links_in_checked_scope": [],
+  "core_source_config_plot_hashes_unchanged": {
+    "src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp": true,
+    "src/bbot_bringup/launch/bbot_gazebo.launch.py": true,
+    "src/bbot_balance_controller/include/bbot_balance_controller/centroidal_state.hpp": true,
+    "src/bbot_balance_controller/src/data_logs/plot_jump_log.py": true,
+    "src/bbot_bringup/config/bbot_controllers.yaml": true
+  },
+  "original_file_missing_or_size_changes_excluding_navigation_and_git": [],
+  "navigation_addition_only": {
+    "docs/README.md": true,
+    "docs/jump/README.md": true,
+    "experiments/jump/RECORDS.md": true,
+    "experiments/jump/README.md": true
+  },
+  "simulation_build_tests_runs": 0
+}

@@ -1,0 +1,129 @@
+{
+  "scope": "offline plot migration equivalence only; no physical experiment or control change",
+  "baseline_sha256": "4151757ffb9cb6002b6a10f215ab06955eb179134fdacdf08224b12dfb43d1d4",
+  "inputs": {
+    "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/catch_world_geometry_single_20261008/physical_runs/T1/velocity_log.csv": "0db9813dd0e521774a3635e7f945b6b40c7a9552d9cb36cca9bc7848cbe229b2",
+    "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/catch_world_geometry_single_20261008/physical_runs/T1/geometry.csv": "d5e4338e4cced5a46eef477fca74d8c399c7cb3ec6992dbaa5682a0f08c6e3f0",
+    "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/catch_world_geometry_single_20261008/analysis/T1/metrics.json": "ab78670ef5c0779eb8707409698eb4c420aa1be2cabc829676ddae0351bfb323"
+  },
+  "cases": [
+    {
+      "case": "seven_panels",
+      "outputs": {
+        "baseline": {
+          "sha256": "f47075a4c0eb26510a279d0985cc5493ad663f0810c0dcf5344f07020e84caa8",
+          "bytes": 548963
+        },
+        "legacy": {
+          "sha256": "f47075a4c0eb26510a279d0985cc5493ad663f0810c0dcf5344f07020e84caa8",
+          "bytes": 548963
+        },
+        "canonical": {
+          "sha256": "f47075a4c0eb26510a279d0985cc5493ad663f0810c0dcf5344f07020e84caa8",
+          "bytes": 548963
+        }
+      },
+      "png_byte_identical": true
+    },
+    {
+      "case": "eight_panels",
+      "outputs": {
+        "baseline": {
+          "sha256": "643804536b25b7c16d6bffd4b3cb42dc7e70cefb5a834354e31765dbfa6a1f56",
+          "bytes": 682223
+        },
+        "legacy": {
+          "sha256": "643804536b25b7c16d6bffd4b3cb42dc7e70cefb5a834354e31765dbfa6a1f56",
+          "bytes": 682223
+        },
+        "canonical": {
+          "sha256": "643804536b25b7c16d6bffd4b3cb42dc7e70cefb5a834354e31765dbfa6a1f56",
+          "bytes": 682223
+        }
+      },
+      "png_byte_identical": true
+    },
+    {
+      "case": "eight_panels_window",
+      "outputs": {
+        "baseline": {
+          "sha256": "772a7998792ad46fffc0e7000844467358452584e43d272d6d83e7de47b113aa",
+          "bytes": 838001
+        },
+        "legacy": {
+          "sha256": "772a7998792ad46fffc0e7000844467358452584e43d272d6d83e7de47b113aa",
+          "bytes": 838001
+        },
+        "canonical": {
+          "sha256": "772a7998792ad46fffc0e7000844467358452584e43d272d6d83e7de47b113aa",
+          "bytes": 838001
+        }
+      },
+      "png_byte_identical": true
+    },
+    {
+      "case": "help",
+      "identical_returncode_stdout_stderr": true,
+      "returncode": 0
+    },
+    {
+      "case": "missing_geometry_pair",
+      "identical_returncode_stdout_stderr": true,
+      "returncode": 1
+    },
+    {
+      "case": "default_paths_and_collision_suffix",
+      "observed": {
+        "baseline": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_velocity_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        },
+        "legacy": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_velocity_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        },
+        "canonical": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_velocity_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        }
+      },
+      "identical": true
+    },
+    {
+      "case": "default_fallback",
+      "observed": {
+        "baseline": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        },
+        "legacy": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        },
+        "canonical": {
+          "input": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_control_log.csv",
+          "output": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/jump_performance_single_1.png",
+          "native": null,
+          "window": null
+        }
+      },
+      "identical": true
+    }
+  ],
+  "implementation_identical_except_default_directory": true,
+  "inputs_sha256_unchanged": true,
+  "status": "PASS",
+  "validation_environment_note": "CLI comparisons used a shared writable temporary MPLCONFIGDIR to exclude random Matplotlib cache-warning paths; no application environment or plotting settings changed.",
+  "implementation_sha256": "a1d4952fa37e2d1fa7d066bfe592fa8014086fa610e2e7e8e72607dd55640119",
+  "legacy_entry_sha256": "e6696bd25ec9d2b490b45ee9ad7a7d9a72afc6c3d76a2f542b0d87328dce8341"
+}

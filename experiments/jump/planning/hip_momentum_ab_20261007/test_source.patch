@@ -1,0 +1,11 @@
+--- baseline/bbot_velocity_jump_controller.cpp
++++ test/bbot_velocity_jump_controller.cpp
+@@ -3601,7 +3601,7 @@
+             const double vk_r = knee_vel_right_;
+             const auto end_v_hip = [](double v)
+             {
+-                return bbot_jump::clamp_value(v, -2.0, 2.0);
++                return v - 0.25 * (v - bbot_jump::clamp_value(v, -2.0, 2.0));
+             };
+             const auto end_v_knee = [](double v)
+             {

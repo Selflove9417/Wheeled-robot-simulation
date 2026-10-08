@@ -1,0 +1,780 @@
+{
+  "scope": "publication preparation, static/offline only; no build or physical admission",
+  "branch": "work/jump-repair",
+  "head": "e32bfb5f3a29db8ad1bcfd5ee0dbcd4e1a4761a1",
+  "remote": "git@github.com:Selflove9417/Wheeled-robot-simulation.git",
+  "remote_freshness": "UNVERIFIED: GitHub DNS failure",
+  "local_tags": [],
+  "staged": [],
+  "plan": {
+    "new": [
+      "docs/RELEASE_CHECKS.json",
+      "docs/RELEASE_MANIFEST.tsv",
+      "docs/RELEASE_PREPARATION.md",
+      "docs/jump_controller_v1/ARCHIVE_INDEX.md",
+      "docs/jump_controller_v1/EXPERIMENTS.md",
+      "docs/jump_controller_v1/INVENTORY.md",
+      "docs/jump_controller_v1/MIGRATION_PLAN.md",
+      "docs/jump_controller_v1/PARAMETERS.md",
+      "docs/jump_controller_v1/README.md",
+      "docs/jump_controller_v1/inventory/ARCHIVE_FOUR_20261008_DELETION.json",
+      "docs/jump_controller_v1/inventory/ARCHIVE_FOUR_20261008_PREFLIGHT.json",
+      "docs/jump_controller_v1/inventory/ARCHIVE_SEVEN_20261008_DELETION.json",
+      "docs/jump_controller_v1/inventory/CAMPAIGNS.csv",
+      "docs/jump_controller_v1/inventory/CAMPAIGN_MIGRATION.csv",
+      "docs/jump_controller_v1/inventory/DOCUMENTATION_CHECK.json",
+      "docs/jump_controller_v1/inventory/EXPERIMENT_ASSETS.csv",
+      "docs/jump_controller_v1/inventory/PARAMETERS.csv",
+      "docs/jump_controller_v1/inventory/REPORTS.csv",
+      "docs/jump_controller_v1/inventory/SOURCE_SHA256.json",
+      "experiments/jump/planning/airborne_reallocation_design_20261008/REVIEW.md",
+      "experiments/jump/planning/airborne_reallocation_design_20261008/calculate.py",
+      "experiments/jump/planning/airborne_reallocation_design_20261008/continuous_brake.py",
+      "experiments/jump/planning/angular_momentum_20261007/PROTOCOL.md",
+      "experiments/jump/planning/angular_momentum_20261007/REVIEW.md",
+      "experiments/jump/planning/angular_momentum_20261007/analyze.py",
+      "experiments/jump/planning/angular_momentum_20261007/diagnostic_only.patch",
+      "experiments/jump/planning/arrest_early_decel_ab_20261007/PROTOCOL.md",
+      "experiments/jump/planning/arrest_early_decel_ab_20261007/REVIEW.md",
+      "experiments/jump/planning/arrest_early_decel_ab_20261007/analyze.py",
+      "experiments/jump/planning/arrest_early_decel_ab_20261007/test_source.patch",
+      "experiments/jump/planning/clearance_20cm_feasibility_20261008/REVIEW.md",
+      "experiments/jump/planning/clearance_20cm_feasibility_20261008/analyze.py",
+      "experiments/jump/planning/clearance_20cm_feasibility_20261008/report.py",
+      "experiments/jump/planning/clearance_20cm_feasibility_20261008/tuck_bound.py",
+      "experiments/jump/planning/clearance_apex_ab_20261008/PROTOCOL.md",
+      "experiments/jump/planning/clearance_apex_ab_20261008/REVIEW.md",
+      "experiments/jump/planning/clearance_apex_ab_20261008/SOURCE.md",
+      "experiments/jump/planning/clearance_apex_ab_20261008/analyze.py",
+      "experiments/jump/planning/clearance_apex_ab_20261008/report.py",
+      "experiments/jump/planning/clearance_apex_ab_20261008/summarize.py",
+      "experiments/jump/planning/clearance_apex_ab_20261008/test_source.patch",
+      "experiments/jump/planning/contact_vs_airborne_onset_20261007/REVIEW.md",
+      "experiments/jump/planning/contact_vs_airborne_onset_20261007/analyze.py",
+      "experiments/jump/planning/finite_recovery_20261007/PLANNING.md",
+      "experiments/jump/planning/finite_recovery_20261007/REVIEW.md",
+      "experiments/jump/planning/height_032_pitch_formation_20261008/REVIEW.md",
+      "experiments/jump/planning/height_032_pitch_formation_20261008/compare.py",
+      "experiments/jump/planning/height_032_pitch_formation_20261008/momentum.py",
+      "experiments/jump/planning/height_032_pitch_formation_20261008/report.py",
+      "experiments/jump/planning/hip_momentum_ab_20261007/PROTOCOL.md",
+      "experiments/jump/planning/hip_momentum_ab_20261007/REVIEW.md",
+      "experiments/jump/planning/hip_momentum_ab_20261007/SOURCE.md",
+      "experiments/jump/planning/hip_momentum_ab_20261007/analyze_momentum.py",
+      "experiments/jump/planning/hip_momentum_ab_20261007/analyze_performance.py",
+      "experiments/jump/planning/hip_momentum_ab_20261007/audit_reference.py",
+      "experiments/jump/planning/hip_momentum_ab_20261007/compare.py",
+      "experiments/jump/planning/hip_momentum_ab_20261007/test_source.patch",
+      "experiments/jump/planning/landing_capture_gain_ab_20261007/REVIEW.md",
+      "experiments/jump/planning/landing_capture_pitch_chain_20261007/REVIEW.md",
+      "experiments/jump/planning/landing_capture_pitch_chain_20261007/analyze.py",
+      "experiments/jump/planning/negative_pitch_onset_20261007/REVIEW.md",
+      "experiments/jump/planning/negative_pitch_onset_20261007/analyze.py",
+      "experiments/jump/planning/realtime_admission_20261007/PLANNING.md",
+      "experiments/jump/planning/realtime_admission_20261007/REVIEW.md",
+      "experiments/jump/planning/takeoff_variability_20261007/REVIEW.md",
+      "experiments/jump/planning/takeoff_variability_20261007/analyze.py",
+      "experiments/jump/planning/takeoff_variability_20261007/extract_inputs.py",
+      "experiments/jump/planning/takeoff_variability_20261007/summarize.py",
+      "experiments/jump/planning/thrust_configuration_feasibility_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_configuration_feasibility_20261008/analyze.py",
+      "experiments/jump/planning/thrust_early_repeat_20261008/PROTOCOL.md",
+      "experiments/jump/planning/thrust_early_repeat_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_early_repeat_20261008/SOURCE.md",
+      "experiments/jump/planning/thrust_early_repeat_20261008/analyze_diagnostic.py",
+      "experiments/jump/planning/thrust_early_repeat_20261008/audit_contact.py",
+      "experiments/jump/planning/thrust_early_repeat_20261008/compare.py",
+      "experiments/jump/planning/thrust_early_repeat_20261008/extract_inputs.py",
+      "experiments/jump/planning/thrust_early_repeat_20261008/report.py",
+      "experiments/jump/planning/thrust_height_032_ab_20261008/PROTOCOL.md",
+      "experiments/jump/planning/thrust_height_032_ab_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_height_032_ab_20261008/analyze.py",
+      "experiments/jump/planning/thrust_height_032_ab_20261008/details.py",
+      "experiments/jump/planning/thrust_height_032_ab_20261008/report.py",
+      "experiments/jump/planning/thrust_horizontal_control_review_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_horizontal_control_review_20261008/analyze.py",
+      "experiments/jump/planning/thrust_input_authority_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_input_authority_20261008/observe.py",
+      "experiments/jump/planning/thrust_input_authority_20261008/plot.py",
+      "experiments/jump/planning/thrust_momentum_budget_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_momentum_budget_20261008/analyze.py",
+      "experiments/jump/planning/thrust_momentum_budget_20261008/compare.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/PROTOCOL.md",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/REVIEW.md",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/analyze_diagnostic.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/analyze_existing.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/audit_contact.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/contact_diagnostic.patch",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/early_divergence.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/early_divergence_with_margins.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/extract_inputs.py",
+      "experiments/jump/planning/thrust_origin_diagnostic_20261007/summarize.py",
+      "experiments/jump/planning/thrust_release_073_single_20261008/PROTOCOL.md",
+      "experiments/jump/planning/thrust_release_073_single_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_release_073_single_20261008/compare.py",
+      "experiments/jump/planning/thrust_release_073_single_20261008/details.py",
+      "experiments/jump/planning/thrust_release_073_single_20261008/momentum.py",
+      "experiments/jump/planning/thrust_release_073_single_20261008/performance.py",
+      "experiments/jump/planning/thrust_release_073_single_20261008/thrust_budget.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/PROTOCOL.md",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/REVIEW.md",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/compare.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/control_effect.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/details.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/momentum.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/performance.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/report.py",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/test_source.patch",
+      "experiments/jump/planning/thrust_terminal_forward_single_20261008/thrust_budget.py",
+      "experiments/jump/planning/thrust_vz_momentum_design_20261008/DESIGN.md",
+      "experiments/jump/planning/tuck_extend_continuity_20261007/REVIEW.md",
+      "experiments/jump/planning/tuck_extend_continuity_20261007/analyze.py",
+      "experiments/jump/planning/tuck_target_feasibility_20261008/REVIEW.md",
+      "experiments/jump/planning/tuck_target_feasibility_20261008/analyze.py",
+      "experiments/jump/planning/tuck_target_feasibility_20261008/report.py",
+      "experiments/jump/planning/velocity_performance_analysis_20261007/REVIEW.md",
+      "experiments/jump/planning/velocity_performance_analysis_20261007/analyze.py",
+      "experiments/jump/tools/analysis/MIGRATION.diff",
+      "experiments/jump/tools/analysis/README.md",
+      "experiments/jump/tools/analysis/VALIDATION.json",
+      "experiments/jump/tools/analysis/analyze_flight_momentum.py",
+      "experiments/jump/tools/plotting/README.md",
+      "experiments/jump/tools/plotting/VALIDATION.json",
+      "experiments/jump/tools/plotting/plot_jump_log.py",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_ground_momentum_20261003_115551/REVIEW.md",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/REVIEW.md",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_clearance_landing_20261005_224308/REVIEW.md"
+    ],
+    "modified": [
+      ".gitignore",
+      "LANDING_REPAIR.md",
+      "README.md",
+      "docs/README.md",
+      "docs/jump/README.md",
+      "experiments/jump/README.md",
+      "experiments/jump/RECORDS.md",
+      "src/bbot_balance_controller/scripts/analyze_flight_momentum.py",
+      "src/bbot_balance_controller/src/data_logs/plot_jump_log.py",
+      "src/bbot_description/README.md"
+    ],
+    "deleted": [],
+    "deferred_modified": [
+      "experiments/jump/ground_contact_motion.launch.py",
+      "experiments/jump/ground_engine_state_bridge.py",
+      "experiments/jump/run_ground_contact_motion_trial.py",
+      "src/bbot_balance_controller/CMakeLists.txt",
+      "src/bbot_balance_controller/include/bbot_balance_controller/ground_contact_motion_fast_certificate.hpp",
+      "src/bbot_balance_controller/src/bbot_landing_repair_controller.cpp",
+      "src/bbot_balance_controller/test/offline/test_ground_contact_motion_fast_certificate.cpp"
+    ],
+    "deferred_new": [
+      "experiments/jump/ground_motion_supervisor.py",
+      "experiments/jump/integration/test_ground_motion_supervisor_ros_fake.py",
+      "experiments/jump/integration/test_ground_recovery_controller_ros.py",
+      "experiments/jump/test_ground_motion_supervisor.py",
+      "experiments/jump/test_ground_runtime_axle_bridge.py",
+      "src/bbot_balance_controller/include/bbot_balance_controller/ground_contact_recovery.hpp",
+      "src/bbot_balance_controller/include/bbot_balance_controller/ground_runtime_safety.hpp",
+      "src/bbot_balance_controller/test/offline/test_ground_contact_finite_recovery.cpp",
+      "src/bbot_balance_controller/test/test_ground_runtime_safety.cpp"
+    ]
+  },
+  "proposed_tree_file_count": 799,
+  "proposed_tree_bytes": 15589919,
+  "new_file_bytes": 2094149,
+  "modified_full_file_bytes": 98474,
+  "core_navigation_issues": [],
+  "historical_deep_link_issues": [
+    {
+      "source": "docs/PROJECT_REFERENCE.md",
+      "target": "src/bbot_balance_controller/src/data_logs/height_campaign/figures/table3_table4_draft.md",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/PROJECT_REFERENCE.md",
+      "target": "src/bbot_balance_controller/src/data_logs/paper42_pid_gslqr/pulse_metrics.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/protocol.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/response_gate.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/model_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/audit_command.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/audit_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/current_model/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/current_model/response_steps.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/current_model/window_frames.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/current_model/bridge_input.txt",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/friction_candidate/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/friction_candidate/response_steps.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/friction_candidate/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/friction_candidate/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/friction_candidate/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/friction_candidate/bridge_stderr.txt",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/20261006_ground_model/friction_candidate/REVIEW.md",
+      "target": "docs/jump/reviews/20261006_ground_model/friction_candidate/tested_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/protocol.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record1_profile0/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record1_profile1/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record1_profile2/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record2_profile0/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record2_profile1/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record2_profile2/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/root_unit.log",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/execution_version_check.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/dart_split_response_20261006_103238/REVIEW.md",
+      "target": "docs/jump/reviews/dart_split_response_20261006_103238/record2_profile2/residuals.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "docs/jump/reviews/urdf_ground_response_20261006_101829/REVIEW.md",
+      "target": "docs/jump/reviews/urdf_ground_response_20261006_101829/fixed_time_free_damping_diagnosis.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/REFERENCE_FLAT_JUMP.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_ground_momentum_20261003_115551/ground_launch_review.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/REFERENCE_FLAT_JUMP.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/torque_analysis/jump_torque_overview.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/REFERENCE_FLAT_JUMP.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/reference_jump_20261003_111540/torque_analysis/takeoff_torque_detail.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/acceptance.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/static_witness_native_crosscheck.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/static_blend_witness.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/static_blend_witness.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/ctest_final.log",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/root_checks.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/preservation_final.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/source_program_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_qualification_20261006/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_qualification_20261006/source_data_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/REALTIME_ENTRY_ADDENDUM.md",
+      "target": "src/bbot_balance_controller/src/bbot_landing_repair_controller.cpp:835",
+      "kind": "missing",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/REALTIME_ENTRY_ADDENDUM.md",
+      "target": "src/bbot_balance_controller/src/bbot_landing_repair_controller.cpp:2864",
+      "kind": "missing",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/REALTIME_ENTRY_ADDENDUM.md",
+      "target": "src/bbot_balance_controller/src/bbot_landing_repair_controller.cpp:8880",
+      "kind": "missing",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/contact_com_round4_torque_components_stateage3.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/REVIEW.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/contact_com_round4_torque_components_stateage4.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/v2_early_dwell_model_report.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/inverse_compatibility_review.md",
+      "kind": "missing",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/v2_early_dwell_model_report.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/audit_inverse_compatibility_round2.txt",
+      "kind": "missing",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/v2_early_dwell_model_report.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/contact_com_round2_summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/v2_early_dwell_model_report.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/contact_com_round2.log",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/v2_early_dwell_model_report.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v2_early_dwell/frozen_replay_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/contact_com_round4_torque_components_stateage3.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/contact_com_round4_torque_components_stateage4.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/clock_writer_index_mapping.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/run_attempts.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/frozen_replay_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/v4_model_review.md",
+      "target": "experiments/jump/planning/contact_motion_revision_20261006_round2/v4_stop_metrics/SHA256SUMS",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/finite_recovery_20261007/REVIEW.md",
+      "target": "experiments/jump/integration/test_ground_recovery_controller_ros.py",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "experiments/jump/planning/finite_recovery_20261007/REVIEW.md",
+      "target": "experiments/jump/integration/test_ground_motion_supervisor_ros_fake.py",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/protocol.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/launch_command.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/runtime_parameters.yaml",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/acceptance.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/audit/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/native9_crosscheck.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/audit/signals.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/audit/paired_frames.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/audit/input_latency.csv",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/tested_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/data_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_input_stage1_20261006_091717/protected_manifest.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/audit/signals.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/original_model/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/friction_model/summary.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/ground_velocity_component_probe_20261006_100700/native9_crosscheck.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/plots/hip_knee_torque_channels.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/plots/protected_exit.png",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/result.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/verification.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/offline_verification.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/brake_response_report.txt",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/launch_command.json",
+      "kind": "local_only",
+      "core_navigation": false
+    },
+    {
+      "source": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/REVIEW.md",
+      "target": "src/bbot_balance_controller/src/data_logs/flat_jump_trials/velocity_capture_handoff_20261006_082545/changes.patch",
+      "kind": "local_only",
+      "core_navigation": false
+    }
+  ],
+  "secret_pattern_hits": [],
+  "files_over_1MB": [],
+  "python_ast_checked": [
+    "experiments/jump/tools/analysis/analyze_flight_momentum.py",
+    "src/bbot_balance_controller/scripts/analyze_flight_momentum.py",
+    "experiments/jump/tools/plotting/plot_jump_log.py",
+    "src/bbot_balance_controller/src/data_logs/plot_jump_log.py"
+  ],
+  "package_xml_count": 7,
+  "frozen_snapshot_matches": {
+    "src/bbot_balance_controller/src/bbot_velocity_jump_controller.cpp": true,
+    "src/bbot_bringup/launch/bbot_gazebo.launch.py": true,
+    "src/bbot_balance_controller/include/bbot_balance_controller/centroidal_state.hpp": true,
+    "src/bbot_balance_controller/src/data_logs/plot_jump_log.py": false,
+    "src/bbot_bringup/config/bbot_controllers.yaml": true
+  },
+  "plot_reconstructed_baseline_matches": true,
+  "momentum_implementation_matches_38_check_record": true,
+  "limitations": [
+    "Pattern-based secret scan does not prove absence of all private information.",
+    "Historical local evidence links, old source:line pseudo-links and missing inverse-compatibility evidence remain; frozen reports unchanged.",
+    "No clean-machine build, simulation, hardware or remote freshness validation.",
+    "No complete frozen robot-model snapshot comparison: executable description/model/kinematics files have no diff versus HEAD; description README navigation only is corrected."
+  ],
+  "approved_publication_whitespace_exceptions": {
+    "authorization": "User approved CRLF tolerance and exact historical evidence exceptions in current publication turn",
+    "config": "command-local core.whitespace=cr-at-eol; no persistent Git configuration change",
+    "full_check_exit_code": 2,
+    "remaining_warning_count": 11,
+    "remaining_file_count": 10,
+    "exceptions": [
+      {
+        "path": "docs/jump_controller_v1/inventory/REPORTS.csv",
+        "warnings": 1,
+        "reason": "既有历史报告索引CSV快照；保留字段及CRLF原貌",
+        "sha256": "88d8e2533a3d1aaf925b2ace34bfbabbd47232a15fdcfd723eff1c0fee6bf6d4"
+      },
+      {
+        "path": "experiments/jump/planning/angular_momentum_20261007/diagnostic_only.patch",
+        "warnings": 1,
+        "reason": "历史诊断源码差异证据",
+        "sha256": "e7b6a66f66e1d16a4651954e4783e751e160ea4ea5361178fd29553f7f991a31"
+      },
+      {
+        "path": "experiments/jump/planning/arrest_early_decel_ab_20261007/analyze.py",
+        "warnings": 1,
+        "reason": "固定六试次历史分析脚本，与该campaign证据配套",
+        "sha256": "6fc52ee565904231a41a3f20ca3727a2865715f1fcbb007f0eddf4141c9f939d"
+      },
+      {
+        "path": "experiments/jump/planning/clearance_20cm_feasibility_20261008/REVIEW.md",
+        "warnings": 1,
+        "reason": "既有离线可行性审查报告",
+        "sha256": "1e97e9aa98134e15783e2daa21b6f21d74e5bb8b0057aca7a689434627d202e9"
+      },
+      {
+        "path": "experiments/jump/planning/clearance_20cm_feasibility_20261008/analyze.py",
+        "warnings": 1,
+        "reason": "既有离线预算分析脚本，与历史报告配套",
+        "sha256": "eac3df303532aa2b01ef8ebadbfd5068fd160d7f745b1a20d4e2e5f4a111f7e4"
+      },
+      {
+        "path": "experiments/jump/planning/hip_momentum_ab_20261007/analyze_performance.py",
+        "warnings": 1,
+        "reason": "固定六试次历史性能分析脚本",
+        "sha256": "c3c75a18a0ff07ba05501e9efeea917b5caee4057dd1a2118a0777258b5fc17d"
+      },
+      {
+        "path": "experiments/jump/planning/thrust_origin_diagnostic_20261007/contact_diagnostic.patch",
+        "warnings": 1,
+        "reason": "历史接触诊断源码差异证据",
+        "sha256": "19d6f17204ad92e627d9f5c8070e804bf515aa1ef52d4c84aa4cc7363811b2c7"
+      },
+      {
+        "path": "experiments/jump/planning/thrust_release_073_single_20261008/details.py",
+        "warnings": 1,
+        "reason": "已停止单因素实验的历史原生记录分析脚本",
+        "sha256": "6dcce54891bc51e0479319e6f8aa1972e5745b60b0129518a0c4e951b581bd04"
+      },
+      {
+        "path": "experiments/jump/planning/thrust_terminal_forward_single_20261008/details.py",
+        "warnings": 1,
+        "reason": "已停止单因素实验的历史原生记录分析脚本",
+        "sha256": "c7c9e01a552fc571382922bdc319703601962ad28d6c98ebea7006f672fd1f16"
+      },
+      {
+        "path": "experiments/jump/tools/analysis/MIGRATION.diff",
+        "warnings": 2,
+        "reason": "已验迁移的原始源码差异验证记录；补丁上下文空行保持原样",
+        "sha256": "062f696a6c81ccf508e22f603e9265feb63e34f27157f5a391c60199ae1913ff"
+      }
+    ],
+    "non_exception_check_exit_code": 0,
+    "excluded_pathspecs": [
+      ":(exclude,literal)docs/jump_controller_v1/inventory/REPORTS.csv",
+      ":(exclude,literal)experiments/jump/planning/angular_momentum_20261007/diagnostic_only.patch",
+      ":(exclude,literal)experiments/jump/planning/arrest_early_decel_ab_20261007/analyze.py",
+      ":(exclude,literal)experiments/jump/planning/clearance_20cm_feasibility_20261008/REVIEW.md",
+      ":(exclude,literal)experiments/jump/planning/clearance_20cm_feasibility_20261008/analyze.py",
+      ":(exclude,literal)experiments/jump/planning/hip_momentum_ab_20261007/analyze_performance.py",
+      ":(exclude,literal)experiments/jump/planning/thrust_origin_diagnostic_20261007/contact_diagnostic.patch",
+      ":(exclude,literal)experiments/jump/planning/thrust_release_073_single_20261008/details.py",
+      ":(exclude,literal)experiments/jump/planning/thrust_terminal_forward_single_20261008/details.py",
+      ":(exclude,literal)experiments/jump/tools/analysis/MIGRATION.diff"
+    ],
+    "historical_bytes_unchanged": true,
+    "semantic_changes": false
+  }
+}

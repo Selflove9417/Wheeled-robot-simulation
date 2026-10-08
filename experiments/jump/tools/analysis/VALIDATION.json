@@ -1,0 +1,212 @@
+{
+  "type": "offline compatibility verification; no simulation",
+  "backup": "/tmp/bbot_momentum_migration_20261008_220524/analyze_flight_momentum.py",
+  "inputs": [
+    {
+      "path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/leg_chain_repeat_20260929/trial_01_20260929_131502_log.csv",
+      "sha256": "0b4ab1e89be81215c53137d762f4329d0cf569bfb375208d388fdbf0121a74f1",
+      "rows": 4875
+    },
+    {
+      "path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/leg_chain_repeat_20260929/trial_02_20260929_131548_log.csv",
+      "sha256": "612063a24798c0b86ba0992da43094b347cb7b746743ef7212b667499b244fb8",
+      "rows": 6207
+    },
+    {
+      "path": "/home/xy/bbot_ws_new/src/bbot_balance_controller/src/data_logs/flat_jump_trials/leg_chain_repeat_20260929/trial_03_20260929_131633_log.csv",
+      "sha256": "124bac1305f28bb66f16e01d9852123e19fd804309d37e471170f0e8c4ee6788",
+      "rows": 6106
+    }
+  ],
+  "checks": [
+    {
+      "name": "implementation byte-identical to original",
+      "passed": true,
+      "sha256": "6b61d9bf340cd791656d4159d2eb3ac1a39a01968aa036760db0b40eac237d82"
+    },
+    {
+      "name": "public exports identical",
+      "passed": true,
+      "exports": [
+        "IXX",
+        "MASS",
+        "Path",
+        "add",
+        "argparse",
+        "csv",
+        "main",
+        "math",
+        "momentum",
+        "perp",
+        "rotate",
+        "sample",
+        "scale"
+      ]
+    },
+    {
+      "name": "signature add",
+      "passed": true
+    },
+    {
+      "name": "signature scale",
+      "passed": true
+    },
+    {
+      "name": "signature perp",
+      "passed": true
+    },
+    {
+      "name": "signature rotate",
+      "passed": true
+    },
+    {
+      "name": "signature momentum",
+      "passed": true
+    },
+    {
+      "name": "signature sample",
+      "passed": true
+    },
+    {
+      "name": "signature main",
+      "passed": true
+    },
+    {
+      "name": "MASS",
+      "passed": true
+    },
+    {
+      "name": "IXX",
+      "passed": true
+    },
+    {
+      "name": "momentum every row trial_01_20260929_131502_log.csv",
+      "passed": true
+    },
+    {
+      "name": "sample offsets trial_01_20260929_131502_log.csv",
+      "passed": true
+    },
+    {
+      "name": "momentum every row trial_02_20260929_131548_log.csv",
+      "passed": true
+    },
+    {
+      "name": "sample offsets trial_02_20260929_131548_log.csv",
+      "passed": true
+    },
+    {
+      "name": "momentum every row trial_03_20260929_131633_log.csv",
+      "passed": true
+    },
+    {
+      "name": "sample offsets trial_03_20260929_131633_log.csv",
+      "passed": true
+    },
+    {
+      "name": "add numerical",
+      "passed": true
+    },
+    {
+      "name": "scale numerical",
+      "passed": true
+    },
+    {
+      "name": "perp numerical",
+      "passed": true
+    },
+    {
+      "name": "rotate numerical",
+      "passed": true
+    },
+    {
+      "name": "CLI three real logs",
+      "passed": true,
+      "returncode": 0,
+      "traceback_paths_compared": true
+    },
+    {
+      "name": "CLI help",
+      "passed": true,
+      "returncode": 0,
+      "traceback_paths_compared": true
+    },
+    {
+      "name": "CLI missing argument",
+      "passed": true,
+      "returncode": 2,
+      "traceback_paths_compared": true
+    },
+    {
+      "name": "CLI unknown argument",
+      "passed": true,
+      "returncode": 2,
+      "traceback_paths_compared": true
+    },
+    {
+      "name": "CLI missing file",
+      "passed": true,
+      "returncode": 1,
+      "traceback_paths_compared": false
+    },
+    {
+      "name": "CLI empty log",
+      "passed": true,
+      "returncode": 0,
+      "traceback_paths_compared": true
+    },
+    {
+      "name": "CLI invalid timestamp",
+      "passed": true,
+      "returncode": 1,
+      "traceback_paths_compared": false
+    },
+    {
+      "name": "caller analyze_jump_joint_torque imports momentum",
+      "passed": true
+    },
+    {
+      "name": "caller analyze_jump_joint_torque executes momentum on all real rows",
+      "passed": true
+    },
+    {
+      "name": "caller analyze_jump_joint_torque CLI help",
+      "passed": true
+    },
+    {
+      "name": "caller analyze_thrust_release_window imports momentum",
+      "passed": true
+    },
+    {
+      "name": "caller analyze_thrust_release_window executes momentum on all real rows",
+      "passed": true
+    },
+    {
+      "name": "caller analyze_thrust_release_window CLI help",
+      "passed": true
+    },
+    {
+      "name": "thrust caller Trial and print_momentum real-data path",
+      "passed": true
+    },
+    {
+      "name": "input unchanged trial_01_20260929_131502_log.csv",
+      "passed": true
+    },
+    {
+      "name": "input unchanged trial_02_20260929_131548_log.csv",
+      "passed": true
+    },
+    {
+      "name": "input unchanged trial_03_20260929_131633_log.csv",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "No Gazebo/physical validation.",
+    "Caller momentum integration and help exercised; full joint-torque plotting pipeline not rerun.",
+    "Traceback stack/file locations change after migration; exception types/messages, exit statuses and stdout preserved.",
+    "Historical hard-coded /home/admin paths are unchanged and not made portable."
+  ],
+  "passed": true
+}
